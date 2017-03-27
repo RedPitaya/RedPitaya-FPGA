@@ -1,0 +1,58 @@
+/dts-v1/;
+/plugin/;
+/include/ "led-user.dtso"
+/ {
+//	fragment@0 {
+//		target = <&fpga_region0>;
+//		#address-cells = <1>;
+//		#size-cells = <1>;
+//		__overlay__ {
+//			#address-cells = <1>;
+//			#size-cells = <1>;
+//			firmware-name = "redpitaya/mercury.bin";
+//		};
+//	};
+	fragment@1 {
+		target = <&amba_pl>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		__overlay__ {
+			hwid: hwid@40000000 {
+				compatible = "generic-uio";
+				reg = <0x40000000 0x1000>;
+			};
+			pdm: pdm@40010000 {
+				compatible = "generic-uio";
+				reg = <0x40010000 0x1000>;
+			};
+			clb: clb@40030000 {
+				compatible = "generic-uio";
+				reg = <0x40030000 0x1000>;
+			};
+			osc0: osc0@40040000 {
+				compatible = "generic-uio";
+				reg = <0x40040000 0x01000>,
+				      <0x40050000 0x10000>;
+				reg-names = "ctl", "mem";
+			};
+			osc1: osc1@40040000 {
+				compatible = "generic-uio";
+				reg = <0x40060000 0x01000>,
+				      <0x40070000 0x10000>;
+				reg-names = "ctl", "mem";
+			};
+			gen0: gen0@40080000 {
+				compatible = "generic-uio";
+				reg = <0x40080000 0x01000>,
+				      <0x40090000 0x10000>;
+				reg-names = "ctl", "mem";
+			};
+			gen1: gen1@400a0000 {
+				compatible = "generic-uio";
+				reg = <0x400a0000 0x01000>,
+				      <0x400b0000 0x10000>;
+				reg-names = "ctl", "mem";
+			};
+		};
+	};
+};
