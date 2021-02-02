@@ -223,8 +223,8 @@ proc create_root_design { parentCell } {
   set In12_0 [ create_bd_port -dir I -from 0 -to 0 In12_0 ]
   set In13_0 [ create_bd_port -dir I -from 0 -to 0 In13_0 ]
   set In14_0 [ create_bd_port -dir I -from 0 -to 0 In14_0 ]
-  set adc_data_ch1 [ create_bd_port -dir I -from 15 -to 0 adc_data_ch1 ]
-  set adc_data_ch2 [ create_bd_port -dir I -from 15 -to 0 adc_data_ch2 ]
+  set adc_data_ch1 [ create_bd_port -dir I -from 13 -to 0 adc_data_ch1 ]
+  set adc_data_ch2 [ create_bd_port -dir I -from 13 -to 0 adc_data_ch2 ]
 
   # Create instance: axi_interconnect_0, and set properties
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
@@ -284,6 +284,7 @@ proc create_root_design { parentCell } {
   set intr_concat [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 intr_concat ]
   set_property -dict [ list \
    CONFIG.NUM_PORTS {16} \
+   #CONFIG.NUM_PORTS {3} \
  ] $intr_concat
 
   # Create instance: processing_system7_0, and set properties
@@ -739,14 +740,6 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_MIO_PRIMITIVE {54} \
    CONFIG.PCW_MIO_TREE_PERIPHERALS {GPIO#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#GPIO#UART 1#UART 1#SPI 1#SPI 1#SPI 1#SPI 1#UART 0#UART 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#USB Reset#GPIO#I2C 0#I2C 0#Enet 0#Enet 0} \
    CONFIG.PCW_MIO_TREE_SIGNALS {gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]/HOLD_B#qspi0_sclk#gpio[7]#tx#rx#mosi#miso#sclk#ss[0]#rx#tx#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#cd#wp#reset#gpio[49]#scl#sda#mdc#mdio} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY0 {0.080} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY1 {0.063} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY2 {0.057} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY3 {0.068} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_0 {-0.047} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_1 {-0.025} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_2 {-0.006} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_3 {-0.017} \
    CONFIG.PCW_M_AXI_GP0_ENABLE_STATIC_REMAP {0} \
    CONFIG.PCW_M_AXI_GP0_ID_WIDTH {12} \
    CONFIG.PCW_M_AXI_GP0_SUPPORT_NARROW_BURST {0} \
@@ -1107,7 +1100,7 @@ proc create_root_design { parentCell } {
   # Create instance: rp_oscilloscope, and set properties
   set rp_oscilloscope [ create_bd_cell -type ip -vlnv redpitaya.com:user:rp_oscilloscope:1.16 rp_oscilloscope ]
   set_property -dict [ list \
-   CONFIG.ADC_DATA_BITS {16} \
+   CONFIG.ADC_DATA_BITS {14} \
    CONFIG.EVENT_SRC_NUM {5} \
    CONFIG.TRIG_SRC_NUM {5} \
  ] $rp_oscilloscope
@@ -1128,7 +1121,7 @@ proc create_root_design { parentCell } {
    CONFIG.CONST_WIDTH {4} \
  ] $xlconstant_1
 
-   # Create instance: xadc, and set properties
+  # Create instance: xadc, and set properties
   set xadc [ create_bd_cell -type ip -vlnv xilinx.com:ip:xadc_wiz:3.3 xadc ]
   set_property -dict [ list \
    CONFIG.CHANNEL_ENABLE_VAUXP0_VAUXN0 {true} \
@@ -1157,8 +1150,8 @@ proc create_root_design { parentCell } {
   # Create port connections
   connect_bd_net -net adc_data_ch1_0_1 [get_bd_ports adc_data_ch1] [get_bd_pins rp_oscilloscope/adc_data_ch1]
   connect_bd_net -net adc_data_ch2_0_1 [get_bd_ports adc_data_ch2] [get_bd_pins rp_oscilloscope/adc_data_ch2]
-  connect_bd_net -net clk_gen_clk_62_5 [get_bd_pins axi_reg/ACLK] [get_bd_pins axi_reg/S00_ACLK] [get_bd_pins clk_gen/clk_62_5] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins rst_gen/slowest_sync_clk] [get_bd_pins xadc/s_axi_aclk]
-  connect_bd_net -net clk_wiz_0_adc_clk [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] [get_bd_pins axi_reg/M00_ACLK] [get_bd_pins clk_gen/clk_125] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins rp_oscilloscope/clk] [get_bd_pins rp_oscilloscope/m_axi_osc1_aclk] [get_bd_pins rp_oscilloscope/m_axi_osc2_aclk] [get_bd_pins rp_oscilloscope/s_axi_reg_aclk]
+  connect_bd_net -net clk_gen_clk_62_5 [get_bd_pins axi_reg/ACLK] [get_bd_pins axi_reg/S00_ACLK] [get_bd_pins clk_gen/clk_62_5] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins rst_gen/slowest_sync_clk]
+  connect_bd_net -net clk_wiz_0_adc_clk [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] [get_bd_pins axi_reg/M00_ACLK] [get_bd_pins clk_gen/clk_125] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins rp_oscilloscope/clk] [get_bd_pins rp_oscilloscope/m_axi_osc1_aclk] [get_bd_pins rp_oscilloscope/m_axi_osc2_aclk] [get_bd_pins rp_oscilloscope/s_axi_reg_aclk] [get_bd_pins xadc/s_axi_aclk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins processing_system7_0/FCLK_RESET0_N] [get_bd_pins rst_gen/ext_reset_in]
   connect_bd_net -net rp_concat_0_event_reset [get_bd_pins rp_concat/event_reset] [get_bd_pins rp_oscilloscope/event_ip_reset]
   connect_bd_net -net rp_concat_0_event_start [get_bd_pins rp_concat/event_start] [get_bd_pins rp_oscilloscope/event_ip_start]
@@ -1190,6 +1183,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xlconcat_0_dout [get_bd_pins intr_concat/dout] [get_bd_pins processing_system7_0/IRQ_F2P]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins rp_concat/gen1_trig_ip] [get_bd_pins rp_concat/gen2_trig_ip] [get_bd_pins rp_concat/la_trig_ip] [get_bd_pins xlconstant_0/dout]
   connect_bd_net -net xlconstant_1_dout [get_bd_pins rp_concat/gen1_event_ip] [get_bd_pins rp_concat/gen2_event_ip] [get_bd_pins rp_concat/la_event_ip] [get_bd_pins xlconstant_1/dout]
+
 
   # Create address segments
   assign_bd_address -offset 0x40000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs rp_oscilloscope/s_axi_reg/reg0] -force
