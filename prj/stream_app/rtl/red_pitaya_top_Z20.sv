@@ -72,6 +72,7 @@ module red_pitaya_top_Z20 #(
 
 // PLL signals
 logic                 adc_clk_in;
+logic                 adc_clk_daisy;
 logic                 pll_adc_clk;
 logic                 pll_dac_clk_1x;
 logic                 pll_dac_clk_2x;
@@ -84,10 +85,9 @@ logic                    dac_clk_2x;
 logic                    dac_clk_2p;
 logic                    dac_rst;
 
-logic        [14-1:0] dac_dat_a, dac_dat_b;
-
+logic        [16-1:0] dac_dat_a, dac_dat_b;
 `ifdef SLAVE
-wire adc_clk_out = adc_clk_in;
+wire adc_clk_out = adc_clk_daisy;
 `else
 wire adc_clk_out = 1'b0;
 `endif
@@ -127,11 +127,26 @@ ODDR oddr_dac_clk          (.Q(dac_clk_o), .D1(1'b0     ), .D2(1'b1     ), .C(da
 ODDR oddr_dac_wrt          (.Q(dac_wrt_o), .D1(1'b0     ), .D2(1'b1     ), .C(dac_clk_2x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
 ODDR oddr_dac_sel          (.Q(dac_sel_o), .D1(1'b1     ), .D2(1'b0     ), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
 ODDR oddr_dac_rst          (.Q(dac_rst_o), .D1(dac_rst  ), .D2(dac_rst  ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
-ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b), .D2(dac_dat_a), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
+ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b_o), .D2(dac_dat_a_o), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
 
 // DAC reset (active high)
 always @(posedge dac_clk_1x)
 dac_rst  <= ~rstn_0 | ~pll_locked;
+
+wire [ 4-1:0] loopback_sel_ch2,loopback_sel_ch1;
+wire [16-1:0] adc_dat_ch1, adc_dat_ch2;
+wire [16-1:0] dac_dat_a_o, dac_dat_b_o;
+
+assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:0]}; // inversion for DAC input
+assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:0]};
+
+assign adc_dat_ch1 = loopback_sel_ch1 == 'h0 ? adc_dat_i[0]          : dac_dat_a;
+                    //(loopback_sel_ch1 == 'h1 ? dac_dat_a             :
+                    //                          {4'h0, exp_p_io, 4'h0} );
+
+assign adc_dat_ch2 = loopback_sel_ch2 == 'h0 ? adc_dat_i[1]          : dac_dat_b;
+                    //(loopback_sel_ch2 == 'h1 ? dac_dat_b             :
+                    //                         {4'h0, exp_n_io, 4'h0} );
 
 ////////////////////////////////////////////////////////////////////////////////
 // DAC IO
@@ -169,8 +184,9 @@ dac_rst  <= ~rstn_0 | ~pll_locked;
         .dac_dat_b(dac_dat_b),
         .gpio_p(exp_p_io),
         .gpio_n(exp_n_io),
-        .adc_data_ch1(adc_dat_i[0]),
-        .adc_data_ch2(adc_dat_i[1]));
+        .loopback_sel({loopback_sel_ch2,loopback_sel_ch1}),
+        .adc_data_ch1(adc_dat_ch1),
+        .adc_data_ch2(adc_dat_ch2));
 
 OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_trig
 (
@@ -183,16 +199,24 @@ OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
-  .I  ( adc_clk_in    )
+  .I  ( adc_clk_daisy )
 );
+
+IBUFDS #() i_IBUF_clkadc
+(
+  .I  ( adc_clk_i[1]  ),
+  .IB ( adc_clk_i[0]  ),
+  .O  ( adc_clk_in    )
+);
+
 
 `ifdef SLAVE
 
-IBUFDS #() i_IBUF_clk
+IBUFDS #() i_IBUF_clkdaisy
 (
   .I  ( daisy_p_i[1]  ),
   .IB ( daisy_n_i[1]  ),
-  .O  ( adc_clk_in    )
+  .O  ( adc_clk_daisy )
 );
 
 IBUFDS #() i_IBUFDS_trig
@@ -211,6 +235,9 @@ IBUFDS #() i_IBUFDS_trig
   .IB ( daisy_n_i[0]  ),
   .O  ( trig_ext)
 );
+
+
+assign adc_clk_daisy = adc_clk_in;
 
 always @(posedge clk_125) //sync external trigger from external master to local clock
 begin

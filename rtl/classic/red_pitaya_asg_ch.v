@@ -55,6 +55,7 @@ module red_pitaya_asg_ch #(
    // configuration
    input     [RSZ+15: 0] set_size_i      ,  //!< set table data size
    input     [RSZ+15: 0] set_step_i      ,  //!< set pointer step
+   input     [  32-1: 0] set_step_lo_i   ,  //!< set pointer step, low frequency
    input     [RSZ+15: 0] set_ofs_i       ,  //!< set reset offset
    input                 set_rst_i       ,  //!< set FSM to reset
    input                 set_once_i      ,  //!< set only once  -- not used
@@ -73,20 +74,27 @@ module red_pitaya_asg_ch #(
 //
 //  DAC buffer RAM
 
+localparam PNT_SIZE = RSZ+16+32;
+
 reg   [  14-1: 0] dac_buf [0:(1<<RSZ)-1] ;
 reg   [  14-1: 0] dac_rd    ;
 reg   [  14-1: 0] dac_rdat  ;
+
 reg   [ RSZ-1: 0] dac_rp    ;
-reg   [RSZ+15: 0] dac_pnt   ; // read pointer
-reg   [RSZ+15: 0] dac_pntp  ; // previour read pointer
-wire  [RSZ+16: 0] dac_npnt  ; // next read pointer
-wire  [RSZ+16: 0] dac_npnt_sub ;
+reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
+reg   [PNT_SIZE-1: 0] dac_pntp  ; // previour read pointer
+wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
+wire  [PNT_SIZE  : 0] dac_npnt_sub ;
 wire              dac_npnt_sub_neg;
 
 reg   [  16-1: 0] cyc_cnt   ;
-reg   [  28-1: 0] dac_mult  ;
-reg   [  15-1: 0] dac_sum   ;
+reg signed  [  28-1: 0] dac_mult  ;
+reg signed  [  15-1: 0] dac_sum   ;
+
 reg               lastval;
+reg   [   5-1: 0] lastval_sr;
+reg   [   5-1: 0] zero_sr;
+
 wire              not_burst;
 
 assign not_burst = (&(~set_ncyc_i)) && (&(~set_rnum_i));
@@ -94,10 +102,16 @@ assign not_burst = (&(~set_ncyc_i)) && (&(~set_rnum_i));
 // read
 always @(posedge dac_clk_i)
 begin
-   buf_rpnt_o <= dac_pnt[RSZ+15:16];
-   dac_rp     <= dac_pnt[RSZ+15:16];
+   buf_rpnt_o <= dac_pnt[PNT_SIZE-1:16+32];
+   dac_rp     <= dac_pnt[PNT_SIZE-1:16+32];
    dac_rd     <= dac_buf[dac_rp] ;
    dac_rdat   <= dac_rd ;  // improve timing
+end
+
+always @(posedge dac_clk_i) // shift regs are needed because of processing path delay
+begin
+   lastval_sr <= {lastval_sr[3:0], lastval   };
+   zero_sr    <= {zero_sr[3:0]   , set_zero_i};
 end
 
 // write
@@ -115,9 +129,9 @@ begin
    dac_sum  <= $signed(dac_mult[28-1:13]) + $signed(set_dc_i) ;
 
    // saturation
-   if (set_zero_i)  
+   if (set_zero_i || |zero_sr)  
       dac_o <= 14'h0;
-   else if (lastval) //on last value in burst send user specified last value
+   else if (lastval || |lastval_sr) //on last value in burst send user specified last value
       dac_o <= set_last_i;
    else 
       dac_o <= ^dac_sum[15-1:15-2] ? {dac_sum[15-1], {13{~dac_sum[15-1]}}} : dac_sum[13:0];
@@ -155,9 +169,8 @@ begin
    else begin
       if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
          lastval <= 1'b1;
-      
-      if ((lastval && dly_cnt == 'd0 && |rep_cnt) || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
-         lastval <= 1'b0;
+      else if ((lastval && dly_cnt == 'd0 && (|rep_cnt || (trig_in && !dac_do)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
+         lastval <= 1'b0; // reset from lastval when a new trigger arrives
    end
 end
 
@@ -171,7 +184,7 @@ always @(posedge dac_clk_i) begin
       dac_do    <=  1'b0 ;
       dac_rep   <=  1'b0 ;
       trig_in   <=  1'b0 ;
-      dac_pntp  <= {RSZ+16{1'b0}} ;
+      dac_pntp  <= {PNT_SIZE{1'b0}} ;
       dac_trigr <=  1'b0 ;
    end
    else begin
@@ -189,8 +202,8 @@ always @(posedge dac_clk_i) begin
 
       // repetitions counter
       if (trig_in && !dac_do)
-         rep_cnt <= set_rnum_i ;
-      else if (!set_rgate_i && (|rep_cnt && dac_rep && (dac_trig && !dac_do)))
+         rep_cnt <= set_rnum_i;
+      else if (!set_rgate_i && (|rep_cnt && dac_rep && (dac_trig && !dac_do)) && (set_rnum_i != 16'hffff)) // only substract at the end of a cycle; 16'hffff is infinite pulses
          rep_cnt <= rep_cnt - 16'h1 ;
       else if (set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2) || (trig_ext_i && trig_src_i==3'd3)))
          rep_cnt <= 16'h0 ;
@@ -227,23 +240,23 @@ end
 
 assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0)) ;
 
-assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i} - 1;
-assign dac_npnt_sub_neg = dac_npnt_sub[RSZ+16];
+assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
+assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
 
 // read pointer logic
 always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) begin
-   dac_pnt  <= {RSZ+16{1'b0}};
+   dac_pnt  <= {PNT_SIZE{1'b0}};
 end else begin
    if (set_rst_i || (dac_trig && !dac_do)) // manual reset or start
-      dac_pnt <= set_ofs_i;
+      dac_pnt <= {set_ofs_i,32'h0};
    else if (dac_do) begin
-      if (~dac_npnt_sub_neg)  dac_pnt <= set_wrap_i ? dac_npnt_sub : set_ofs_i; // wrap or go to start
-      else                    dac_pnt <= dac_npnt[RSZ+15:0]; // normal increase
+      if (~dac_npnt_sub_neg)  dac_pnt <= set_wrap_i ? dac_npnt_sub : {set_ofs_i,32'h0}; // wrap or go to start
+      else                    dac_pnt <= dac_npnt[PNT_SIZE-1:0]; // normal increase
    end
 end
 
-assign dac_npnt = dac_pnt + set_step_i;
+assign dac_npnt = dac_pnt + {set_step_i,set_step_lo_i};
 assign trig_done_o = !dac_rep && trig_in;
 
 //---------------------------------------------------------------------------------

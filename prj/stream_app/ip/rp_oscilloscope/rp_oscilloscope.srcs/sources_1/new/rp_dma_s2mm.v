@@ -21,9 +21,13 @@ module rp_dma_s2mm
   //
   output wire [31:0]                    reg_ctrl,
   output wire [31:0]                    reg_sts,  
+  output wire [31:0]                    reg_diags,
   input  wire [31:0]                    reg_dst_addr1,  
   input  wire [31:0]                    reg_dst_addr2,  
   input  wire [31:0]                    reg_buf_size,
+  output wire                           ctl_start_o,
+  input  wire                           ctl_start_ext,
+
   //
   output wire [31:0]                    buf1_ms_cnt,
   output wire [31:0]                    buf2_ms_cnt,
@@ -102,9 +106,12 @@ rp_dma_s2mm_ctrl #(
   .reg_wr_we      (reg_wr_we),           
   .reg_ctrl       (reg_ctrl),  
   .reg_sts        (reg_sts),  
+  .reg_diags      (reg_diags),  
   .reg_dst_addr1  (reg_dst_addr1),  
   .reg_dst_addr2  (reg_dst_addr2),  
-  .reg_buf_size   (reg_buf_size),    
+  .reg_buf_size   (reg_buf_size), 
+  .ctl_start_o    (ctl_start_o),  
+  .ctl_start_ext  (ctl_start_ext),          
   .fifo_rst       (fifo_rst),                 
   .req_data       (req_data),
   .req_we         (req_we), 
