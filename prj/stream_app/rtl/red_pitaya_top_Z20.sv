@@ -72,6 +72,7 @@ module red_pitaya_top_Z20 #(
 
 // PLL signals
 logic                 adc_clk_in;
+logic                 adc_clk_daisy;
 logic                 pll_adc_clk;
 logic                 pll_dac_clk_1x;
 logic                 pll_dac_clk_2x;
@@ -84,10 +85,9 @@ logic                    dac_clk_2x;
 logic                    dac_clk_2p;
 logic                    dac_rst;
 
-logic        [14-1:0] dac_dat_a, dac_dat_b;
-
+logic        [16-1:0] dac_dat_a, dac_dat_b;
 `ifdef SLAVE
-wire adc_clk_out = adc_clk_in;
+wire adc_clk_out = adc_clk_daisy;
 `else
 wire adc_clk_out = 1'b0;
 `endif
@@ -199,16 +199,24 @@ OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
-  .I  ( adc_clk_in    )
+  .I  ( adc_clk_daisy )
 );
+
+IBUFDS #() i_IBUF_clkadc
+(
+  .I  ( adc_clk_i[1]  ),
+  .IB ( adc_clk_i[0]  ),
+  .O  ( adc_clk_in    )
+);
+
 
 `ifdef SLAVE
 
-IBUFDS #() i_IBUF_clk
+IBUFDS #() i_IBUF_clkdaisy
 (
   .I  ( daisy_p_i[1]  ),
   .IB ( daisy_n_i[1]  ),
-  .O  ( adc_clk_in    )
+  .O  ( adc_clk_daisy )
 );
 
 IBUFDS #() i_IBUFDS_trig
@@ -227,6 +235,9 @@ IBUFDS #() i_IBUFDS_trig
   .IB ( daisy_n_i[0]  ),
   .O  ( trig_ext)
 );
+
+
+assign adc_clk_daisy = adc_clk_in;
 
 always @(posedge clk_125) //sync external trigger from external master to local clock
 begin
