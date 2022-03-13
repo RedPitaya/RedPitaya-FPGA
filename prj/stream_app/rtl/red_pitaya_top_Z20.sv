@@ -137,8 +137,8 @@ wire [ 4-1:0] loopback_sel_ch2,loopback_sel_ch1;
 wire [16-1:0] adc_dat_ch1, adc_dat_ch2;
 wire [16-1:0] dac_dat_a_o, dac_dat_b_o;
 
-assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:0]}; // inversion for DAC input
-assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:0]};
+assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:2]}; // inversion for DAC input
+assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
 
 assign adc_dat_ch1 = loopback_sel_ch1 == 'h0 ? adc_dat_i[0]          : dac_dat_a;
                     //(loopback_sel_ch1 == 'h1 ? dac_dat_a             :
@@ -245,14 +245,6 @@ begin
   trig_ext_sync2 <= trig_ext_sync1;
 end
 assign trig_ext_syncd = trig_ext_sync2;
-
-
-IBUFDS #() i_IBUF_clk
-(
-  .I  ( adc_clk_i[1]  ),
-  .IB ( adc_clk_i[0]  ),
-  .O  ( adc_clk_in    )
-);
 
 //assign trig_ext = gpio.i[8];
 
