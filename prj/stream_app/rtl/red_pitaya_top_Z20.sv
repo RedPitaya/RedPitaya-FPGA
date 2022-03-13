@@ -135,7 +135,7 @@ dac_rst  <= ~rstn_0 | ~pll_locked;
 
 wire [ 4-1:0] loopback_sel_ch2,loopback_sel_ch1;
 wire [16-1:0] adc_dat_ch1, adc_dat_ch2;
-wire [16-1:0] dac_dat_a_o, dac_dat_b_o;
+wire [14-1:0] dac_dat_a_o, dac_dat_b_o;
 
 assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:2]}; // inversion for DAC input
 assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
