@@ -745,8 +745,8 @@ begin
       end  
     end  
     
-    FIFO_RST: begin // only happens when exiting FIFO reset state after data loss
-      if (fifo_rst_cntdwn && (&fifo_rst_cnt)) begin
+    WAIT_BUF_FULL: begin // only happens when exiting FIFO reset state after data loss
+      if (~next_buf_full) begin
           req_buf_addr_sel <= ~req_buf_addr_sel;
         end      
       end        
