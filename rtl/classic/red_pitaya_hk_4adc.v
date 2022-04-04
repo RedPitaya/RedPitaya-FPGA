@@ -228,6 +228,7 @@ if (rstn_i == 1'b0) begin
   exp_p_dir_o  <= {DWE{1'b0}};
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
+  pll_cfg_en   <= 1'b1 ;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
 
@@ -237,6 +238,8 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h1C)   exp_n_dat_o  <= sys_wdata[DWE-1:0];
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
+
+  if (sys_addr[19:0]==20'h40)   pll_cfg_en   <= sys_wdata[0];
 end
 
 always @(posedge clk_i)
@@ -322,7 +325,8 @@ localparam MODE_ADR = 16'h3;
 localparam FORM_ADR = 16'h4;
 
 localparam PDWN_DAT = 16'h0; // write mode, normal operation
-localparam TIM_DAT  = 16'h1; // write mode, normal clock polarity, no CLKOUT delay, clock duty cycle stabilizer ON
+//localparam TIM_DAT  = 16'h1; // write mode, normal clock polarity, no CLKOUT delay, clock duty cycle stabilizer ON
+localparam TIM_DAT  = 16'd1; // write mode, normal clock polarity, CLKOUT delayed by 135 degrees, clock duty cycle stabilizer ON
 localparam MODE_DAT = 16'h2; // write mode, default LVDS config, no LVDS termination, digital out enabled, DDR CMOS output mode
 localparam FORM_DAT = 16'h0; // write mode, default values
 
