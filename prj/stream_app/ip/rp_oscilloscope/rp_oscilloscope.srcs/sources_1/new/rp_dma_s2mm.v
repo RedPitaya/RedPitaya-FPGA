@@ -111,7 +111,8 @@ rp_dma_s2mm_ctrl #(
   .reg_dst_addr2  (reg_dst_addr2),  
   .reg_buf_size   (reg_buf_size), 
   .ctl_start_o    (ctl_start_o),  
-  .ctl_start_ext  (ctl_start_ext),          
+  .ctl_start_ext  (ctl_start_ext),     
+  .upsized_we     (fifo_wr_we),
   .fifo_rst       (fifo_rst),    
   .fifo_lvl       (fifo_rd_cnt),
   .req_data       (req_data),
@@ -144,7 +145,7 @@ rp_dma_s2mm_upsize #(
   .AXIS_DATA_BITS (AXIS_DATA_BITS))
   U_dma_s2mm_upsize(
   .clk            (s_axis_aclk),              
-  .rst            (fifo_rst),    
+  .rst            (~aresetn),    
   .req_data       (req_data),
   .req_we         (req_we),       
   .s_axis_tdata   (s_axis_tdata),      
