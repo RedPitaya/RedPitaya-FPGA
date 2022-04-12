@@ -29,6 +29,7 @@ module rp_dma_s2mm_ctrl
   input  wire                       ctl_start_ext, 
   //
   output reg                        fifo_rst,
+  input  wire [FIFO_CNT_BITS-1:0]   fifo_lvl,
   input  wire [7:0]                 req_data,
   input  wire                       req_we, 
   input  wire                       data_valid,
@@ -267,7 +268,7 @@ begin
     WAIT_DATA_RDY: begin
       if (reg_ctrl[CTRL_RESET])
         state_ns <= IDLE;
-      else if (fifo_empty == 0) begin
+      else if (fifo_empty == 0 && fifo_lvl > AXI_BURST_LEN) begin
         state_ns = SEND_DMA_REQ;
       end
       
@@ -872,7 +873,7 @@ begin
   case (state_cs)   
     // WAIT_DATA_RDY - Wait until there is enough data to send an AXI transfer
     WAIT_DATA_RDY: begin
-      if (fifo_empty == 0) begin
+      if (fifo_empty == 0 && fifo_lvl > AXI_BURST_LEN) begin
         fifo_rd_re = 1;
       end
     end
@@ -893,7 +894,7 @@ begin
     case (state_cs) 
        // WAIT_DATA_RDY - Wait until there is enough data to send an AXI transfer
       WAIT_DATA_RDY: begin
-        if (fifo_empty == 0) begin
+        if (fifo_empty == 0 && fifo_lvl > AXI_BURST_LEN) begin
           m_axi_awvalid <= 1;  
         end
       end
