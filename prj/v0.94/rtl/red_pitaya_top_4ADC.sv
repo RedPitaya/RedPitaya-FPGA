@@ -88,11 +88,11 @@ module red_pitaya_top_4ADC #(
   //output logic                    adc_cdcs_o, // ADC clock duty cycle stabilizer
 
   // SPI interface to ADC
-  output                spi_cs_o   ,
+  output                spi_csa_o  ,
+  output                spi_csb_o  ,
   output                spi_clk_o  ,
   output                spi_mosi_o ,
   // PLL control
-  input  logic          pll_ref_i  ,
   output logic          pll_hi_o   ,
   output logic          pll_lo_o   ,
   // PWM DAC
@@ -160,6 +160,11 @@ logic                 ser_clk ;
 logic                 pwm_clk ;
 logic                 pwm_rstn;
 
+//SPI CS
+logic                 spi_cs;
+assign spi_csa_o    = spi_cs; // only writes, no reads
+assign spi_csb_o    = spi_cs;
+
 // ADC clock/reset
 logic       adc_clk_01 , adc_clk_23 ;
 logic       adc_rstn_01, adc_rstn_23;
@@ -184,11 +189,11 @@ gpio_if #(.DW (24)) gpio ();
 ////////////////////////////////////////////////////////////////////////////////
 
 // diferential clock input
-//IBUFDS i_clk_01 (.I (adc_clk_i[0][1]), .IB (adc_clk_i[0][0]), .O (adc_clk_in[0]));  // differential clock input
-//IBUFDS i_clk_23 (.I (adc_clk_i[1][1]), .IB (adc_clk_i[1][0]), .O (adc_clk_in[1]));  // differential clock input
+IBUFDS i_clk_01 (.I (adc_clk_i[0][1]), .IB (adc_clk_i[0][0]), .O (adc_clk_in[0]));  // differential clock input
+IBUFDS i_clk_23 (.I (adc_clk_i[1][1]), .IB (adc_clk_i[1][0]), .O (adc_clk_in[1]));  // differential clock input
 
-IBUFG i_clk_01 (.I (adc_clk_i[0][1]), .O (adc_clk_in[0]));  // differential clock input
-IBUFG i_clk_23 (.I (adc_clk_i[0][0]), .O (adc_clk_in[1]));  // differential clock input
+//IBUFG i_clk_01 (.I (adc_clk_i[0][1]), .O (adc_clk_in[0]));  // differential clock input
+//IBUFG i_clk_23 (.I (adc_clk_i[0][0]), .O (adc_clk_in[1]));  // differential clock input
 
 red_pitaya_pll_4adc pll_01 (
   // inputs
@@ -238,7 +243,7 @@ pwm_rstn <=  frstn[0] &  pll_locked[0] & idly_rdy;
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
-red_pitaya_ps ps (
+red_pitaya_ps_4ADC ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
   .FIXED_IO_ps_porb   (  FIXED_IO_ps_porb            ),
@@ -332,6 +337,7 @@ logic [4*7-1:0] idly_rst ;
 logic [4*7-1:0] idly_ce  ;
 logic [4*7-1:0] idly_inc ;
 logic [4*7-1:0] [5-1:0] idly_cnt ;
+logic [4-1:0] [14-1:0] adc_dat_raw;
 
 IDELAYCTRL i_idelayctrl (
   .RDY(idly_rdy),   // 1-bit output: Ready output
@@ -382,8 +388,6 @@ for (GVC = 0; GVC < 4; GVC = GVC + 1) begin : channels
 end
 endgenerate
 
-logic [4-1:0] [14-1:0] adc_dat_raw;
-
 always @(posedge adc_clk_01) begin
   adc_dat_r[0] <= {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
   adc_dat_r[1] <= {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
@@ -420,14 +424,14 @@ red_pitaya_hk_4adc i_hk (
   .idly_inc_o      (idly_inc    ),
   .idly_cnt_i      ({idly_cnt[21],idly_cnt[14],idly_cnt[7],idly_cnt[0]}),
 
-  .spi_cs_o        (spi_cs_o   ),
+  .spi_cs_o        (spi_cs     ),
   .spi_clk_o       (spi_clk_o  ),
   .spi_mosi_o      (spi_mosi_o ),
 
   // global configuration
   .digital_loop    (digital_loop),
   .pll_sys_i       (adc_10mhz   ),    // system clock
-  .pll_ref_i       (pll_ref_i   ),    // reference clock
+  .pll_ref_i       (adc_10mhz   ),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
   // Expansion connector

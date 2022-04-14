@@ -188,13 +188,14 @@ if (dac_rstn_i == 1'b0) begin
    ren_dly     <=  3'h0    ;
    ack_dly     <=  1'b0    ;
 end else begin
-   trig_a_sw  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0]  ;
+   trig_a_sw  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[ 0] && (trig_a_src != 3'h1) ;
    if (sys_wen && (sys_addr[19:0]==20'h0))
       trig_a_src <= sys_wdata[2:0] ;
 
-   trig_b_sw  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[16]  ;
+   trig_b_sw  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[16] && (trig_b_src != 3'h1) ;
    if (sys_wen && (sys_addr[19:0]==20'h0))
       trig_b_src <= sys_wdata[19:16] ;
+
 
    if (sys_wen) begin
       if (sys_addr[19:0]==20'h0)   {set_a_rgate, set_a_zero, set_a_rst, set_a_once, set_a_wrap} <= sys_wdata[ 8: 4] ;
