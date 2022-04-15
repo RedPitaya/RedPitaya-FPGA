@@ -243,7 +243,7 @@ pwm_rstn <=  frstn[0] &  pll_locked[0] & idly_rdy;
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
-red_pitaya_ps_4ADC ps (
+red_pitaya_ps ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
   .FIXED_IO_ps_porb   (  FIXED_IO_ps_porb            ),

@@ -259,7 +259,7 @@ wire [  8-1: 0] hp3_saxi_wstrb  , hp2_saxi_wstrb  ;
 axi_master #(
   .DW   (  64    ), // data width (8,16,...,1024)
   .AW   (  32    ), // address width
-  .ID   (   0    ), // master ID // TODO, it is not OK to have two masters with same ID
+  .ID   (   1    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW   (   6    ), // master ID width
   .LW   (   4    )  // length width
 ) axi_master_2_3 [1:0] (
