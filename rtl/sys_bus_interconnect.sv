@@ -7,15 +7,15 @@
 module sys_bus_interconnect #(
   int unsigned SN = 16, // slave number
   int unsigned SW = 20, // slave width (address bus width)
-  SYNC_IN_BUS     = 0,
-  SYNC_OUT_BUS1   = 0,
-  SYNC_OUT_BUS2   = 0,
-  SYNC_OUT_BUS3   = 0,
-  SYNC_OUT_BUS4   = 0,
-  SYNC_REG_OFS1   = 0,
-  SYNC_REG_OFS2   = 0,
-  SYNC_REG_OFS3   = 0,
-  SYNC_REG_OFS4   = 0
+  SYNC_IN_BUS     = -1, // master bus for synchronised writes
+  SYNC_OUT_BUS1   = -1, // slave bus 1
+  SYNC_OUT_BUS2   = -1, // slave bus 2
+  SYNC_OUT_BUS3   = -1, // slave bus 3
+  SYNC_OUT_BUS4   = -1, // slave bus 4
+  SYNC_REG_OFS1   = -1, // synchronised reg 1
+  SYNC_REG_OFS2   = -1, // synchronised reg 2
+  SYNC_REG_OFS3   = -1, // synchronised reg 3
+  SYNC_REG_OFS4   = -1  // synchronised reg 4
 )(
   sys_bus_if.s bus_m,          // from master
   sys_bus_if.m bus_s [SN-1:0]  // to   slaves
