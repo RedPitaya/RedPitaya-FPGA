@@ -303,10 +303,13 @@ red_pitaya_ps ps (
 ////////////////////////////////////////////////////////////////////////////////
 // system bus decoder & multiplexer (it breaks memory addresses into 8 regions)
 ////////////////////////////////////////////////////////////////////////////////
-
 sys_bus_interconnect #(
   .SN (8),
-  .SW (20)
+  .SW (20),
+  .SYNC_IN_BUS   (1),
+  .SYNC_OUT_BUS1 (2),
+  .SYNC_REG_OFS1 (0),
+  .SYNC_REG_OFS2 (4)
 ) sys_bus_interconnect (
   .bus_m (ps_sys),
   .bus_s (sys)

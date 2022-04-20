@@ -173,7 +173,6 @@ int unsigned cyc=0;
 always_ff @ (posedge clk)
 cyc <= cyc+1;
 
-
 reg ext_trig;
 
 initial begin
@@ -220,9 +219,10 @@ initial begin
 
    top_tc.test_hk                 (32'h40000000, 32'h0);
    //top_tc.test_sata               (5<<20, 32'h55);
-   //top_tc.test_osc                (32'h40100000, OSC1_EVENT);
 
-   top_tc.test_asg                (32'h40200000, 32'h0, 2);
+   //top_tc.test_asg                (32'h40200000, 32'h0, 2);
+   top_tc.test_osc                (32'h40100000, OSC1_EVENT);
+   top_tc.test_osc                (32'h40200000, OSC1_EVENT);
 
 
   ##1600000000;
@@ -480,7 +480,7 @@ end
   inout  logic [ 8-1:0] led_o
 */
 wire [14-1:0] dac_dat_o;
- red_pitaya_top_sim4ch red_pitaya_top
+ red_pitaya_top_4ADC red_pitaya_top
        (.DDR_addr(),
         .DDR_ba(),
         .DDR_cas_n(),
@@ -503,7 +503,7 @@ wire [14-1:0] dac_dat_o;
         .FIXED_IO_ps_porb(),
         .FIXED_IO_ps_srstb(),
 
-        .axi_reg(axi_reg),
+        //.axi_reg(axi_reg),
         .adc_dat_i({cnter4_o, cnter3_o, cnter2_o, cnter1_o}),  // ADC data
         //`ifdef SLAVE
         //.daisy_p_i({clk,trigr}),  // ADC clock {p,n}       
@@ -512,7 +512,7 @@ wire [14-1:0] dac_dat_o;
         .adc_clk_i({{clk1,clk1n},{clk,clkn}}),  // ADC clock {p,n}
         //`endif
         //.adc_clk_o(),  // optional ADC clock source (unused)
-        .adc_cdcs_o(), // ADC clock duty cycle stabilizer
+        //.adc_cdcs_o(), // ADC clock duty cycle stabilizer
 
         // PWM DAC
         .dac_pwm_o  (),  // 1-bit PWM DAC
@@ -520,18 +520,19 @@ wire [14-1:0] dac_dat_o;
         .vinp_i     (),  // voltages p
         .vinn_i     (),  // voltages n
         // Expansion connector
-        .exp_p_io   ({7'h0,ext_trig}),
-        .exp_n_io   (8'h0),
+        //.exp_p_io   ({7'h0,ext_trig}),
+        //.exp_n_io   (8'h0),
         // SATA connector
         .daisy_p_o  (),  // line 1 is clock capable
         .daisy_n_o  (),
+        //.pll_ref_i  (pll_ref),
         //.daisy_p_i  (),  // line 1 is clock capable
         //.daisy_n_i  (),
         // LED
-        .led_o(),
-        .rstn(rstn),
-        .clkout(clkout),
-        .rstn_out(rstn_out));
+        .led_o());
+        //.rstn(rstn),
+        //.clkout(clkout),
+        //.rstn_out(rstn_out));
 /*
 reg [14-1:0] dac_cha, dac_cha_prev;
 reg [14-1:0] dac_chb, dac_chb_prev;

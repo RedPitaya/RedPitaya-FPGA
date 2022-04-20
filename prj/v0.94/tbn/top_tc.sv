@@ -89,9 +89,10 @@ task test_osc(
 9 - arbitrary wave generator application negative edge 
 */
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd0  );  // manual trigger
   axi_write(offset+'h8 ,  'd100);  // chA threshold
   axi_write(offset+'hC ,  'd200);  // chB threshold
-  axi_write(offset+'h10,  'h20A);  // delay after trigger
+  axi_write(offset+'h10,  'h1000);  // delay after trigger
   axi_write(offset+'h14,  'h1);  // decimation
   axi_read_osc1(offset+'h18,  dat);  // current WP
   axi_read_osc1(offset+'h1C,  dat);  // trigger WP
@@ -100,9 +101,8 @@ task test_osc(
   axi_write(offset+'h28,  'd1);  // enable signal average at decimation
   axi_write(offset+'h2C,  'd0);  // chA hysteresis
   axi_write(offset+'h50,  'h0);  // chA AXI low address
-  axi_write(offset+'h54,  'h0);  // chA AXI hi address
-  axi_write(offset+'h58,  'h0);  // chA AXI trig dly
-  axi_write(offset+'h5C,  'h0);  // chA AXI enable master
+  axi_write(offset+'h54,  'h10000);  // chA AXI hi address
+
   axi_read_osc1(offset+'h60,  dat);  // chA AXI WP trigger
   axi_read_osc1(offset+'h64,  dat);  // chA AXI WP current
   axi_write(offset+'h70,  'h0);  // chB AXI low address
@@ -115,22 +115,114 @@ task test_osc(
   axi_write(offset+'hA0,  'h64);  // Accumulator data sequence length
   axi_write(offset+'hA4,  'h64);  // Accumulator data offset corection ChA
   axi_write(offset+'hA8,  'h64);  // Accumulator data offset corection ChA
-
+  
+  axi_write(offset+'h0 ,  'd2  );  // ARM trigger
+  axi_write(offset+'h5C,  'h1);  // chA AXI enable master
+  axi_write(offset+'h58,  'h1000);  // chA AXI trig dly
+  
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
   axi_write(offset+'h4 ,  'd1  );  // manual trigger
-  ##5000;
-  axi_write(offset+'h14,  'd100);  // decimation
+  #100;
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd1  );  // manual trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  #100;
   ##5000;
-  axi_write(offset+'h14,  'd100);  // decimation
+  axi_write(offset+'h14,  'd1);  // decimation
+  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
+  ##5000;
+  axi_write(offset+'h14,  'd1);  // decimation
   axi_write(offset+'h28,  'd0);  // enable signal average at decimation
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd1  );  // manual trigger
+  axi_write(offset+'h4 ,  'd4  );  // manual trigger
   ##5000;
   axi_write(offset+'h14,  'h4);  // decimation
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd2  );  // pos chA trigger
+  axi_write(offset+'h4 ,  'd4  );  // pos chA trigger
 ##10000;
 endtask: test_osc
 
@@ -233,6 +325,24 @@ logic        [ 32-1: 0] rdata;
 logic signed [ 32-1: 0] rdata_blk [];
 
   ##100;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'hD1,  8'h0, 8'hD1}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'hD1,  8'h0, 8'hD1}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+
+  //axi_write(offset+32'h00000,{8'h0, 8'hD1,  8'h0, 8'hD1}  ); // write configuration
+  //axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  
 
   // CH0 DAC data
   axi_write(offset+32'h10000, 32'h1FFF     );  // write table
@@ -252,7 +362,7 @@ logic signed [ 32-1: 0] rdata_blk [];
   axi_write(offset+32'h00008,{32'h7ffff}          );  // table size
 
   axi_write(offset+32'h0000C,{2'h0, 14'h0, 16'h0}             );  // reset offset
-  axi_write(offset+32'h00010,{2'h0, 14'h0, 16'h100}             );  // table step
+  axi_write(offset+32'h00010,{2'h0, 14'h0, 16'h3610}             );  // table step
   axi_write(offset+32'h00018,{16'h0, 16'd0}                   );  // number of cycles
   axi_write(offset+32'h0001C,{16'h0, 16'd0}                   );  // number of repetitions
   axi_write(offset+32'h00020,{32'd10}                          );  // number of 1us delay between repetitions
@@ -260,7 +370,29 @@ logic signed [ 32-1: 0] rdata_blk [];
 
   ch0_set = {1'b0 ,1'b0, 1'b0, 1'b0, 1'b1,    1'b0, 3'h1} ;  // set_rgate, set_zero, set_rst, set_once(NA), set_wrap, 1'b0, trig_src
 
-
+  axi_write(offset+32'h00024,{16'h3fb1, 2'h0, 14'h1d6b}  );  // DC offset, amplitude
+  axi_write(offset+32'h00028,{16'h3fff, 16'hffff}       );  // table size
+  axi_write(offset+32'h0002C,{2'h0, 14'h0, 16'h0}             );  // reset offset
+  axi_write(offset+32'h00030,{32'h0083126e}             );  // table step 100Hz
+  //axi_write(offset+32'h00030,{32'd100000}             );  // table step 1kHz
+  axi_write(offset+32'h00038,{16'h0, 16'd3}                   );  // number of cycles
+  axi_write(offset+32'h0003C,{16'h0, 16'd999}                   );  // number of repetitions
+  axi_write(offset+32'h00040,{32'd20}                         );  // number of 1us delay between repetitions
+  axi_write(offset+32'h00048,{32'd0}                         );  // last value
+  axi_read_osc1(offset+32'h00070, rdata);  // read read pointer
+  axi_write(offset+32'h00000,{8'h0, 8'h40,  8'h0, 8'h40}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h50,  8'h0, 8'h50}  ); // write configuration
+  #100;
+  /*
+  axi_write(offset+32'h00000,{8'h0, 8'h51,  8'h0, 8'h51}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h11,  8'h0, 8'h11}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h51,  8'h0, 8'h51}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h11,  8'h0, 8'h11}  ); // write configuration*/
+  #100;
   // CH1 DAC data
   for (int k=0; k<16384; k++) begin
     axi_write(offset+32'h20000 + (k*4), k);  // write table
@@ -270,28 +402,66 @@ logic signed [ 32-1: 0] rdata_blk [];
   axi_write(offset+32'h00024,{16'h3fb1, 2'h0, 14'h1d6b}  );  // DC offset, amplitude
   axi_write(offset+32'h00028,{16'h3fff, 16'hffff}       );  // table size
   axi_write(offset+32'h0002C,{2'h0, 14'h0, 16'h0}             );  // reset offset
-  axi_write(offset+32'h00030,{32'h10000}             );  // table step 100Hz
+  //axi_write(offset+32'h00030,{32'h10000}             );  // table step 100Hz
   //axi_write(offset+32'h00030,{32'd100000}             );  // table step 1kHz
-  axi_write(offset+32'h00038,{16'h0, 16'd1}                   );  // number of cycles
-  axi_write(offset+32'h0003C,{16'h0, 16'd65535}                   );  // number of repetitions
-  axi_write(offset+32'h00040,{32'd5}                         );  // number of 1us delay between repetitions
-  axi_write(offset+32'h00048,{32'd0}                         );  // last value
+  //axi_write(offset+32'h00038,{16'h0, 16'd0}                   );  // number of cycles
+  //axi_write(offset+32'h0003C,{16'h0, 16'd1}                   );  // number of repetitions
+  //axi_write(offset+32'h00040,{32'd50}                         );  // number of 1us delay between repetitions
+  //axi_write(offset+32'h00048,{32'd0}                         );  // last value
 
   ch1_set = {1'b0, 1'b0, 1'b0, 1'b1, 1'b1,    1'b0, 3'h1} ;  // set_rgate, set_zero, set_rst, set_once(NA), set_wrap, 1'b0, trig_src
 
   //axi_write(offset+32'h00000,{8'h0, ch1_set,  8'h0, ch0_set}  ); // write configuration
-  axi_write(offset+32'h00000,{8'h0, 8'h12,  8'h0, 8'h91}  ); // write configuration
+  /*axi_write(offset+32'h00000,{8'h0, 8'h80,  8'h0, 8'h80}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h90,  8'h0, 8'h90}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'hD0,  8'h0, 8'hD0}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h40,  8'h0, 8'h40}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h50,  8'h0, 8'h50}  ); // write configuration
+  #100;
+  */
+  
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'hD1,  8'h0, 8'hD1}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'hD1,  8'h0, 8'hD1}  ); // write configuration
+  #200;
+  axi_write(offset+32'h00000,{8'h0, 8'h91,  8'h0, 8'h91}  ); // write configuration
+  #200;
+
+  /*
+  axi_write(offset+32'h00000,{8'h0, 8'h51,  8'h0, 8'h51}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h11,  8'h0, 8'h11}  ); // write configuration
+  #100;
+  axi_write(offset+32'h00000,{8'h0, 8'h51,  8'h0, 8'h51}  ); // write configuration
+  #100;*/
+  axi_write(offset+32'h00000,{8'h0, 8'h11,  8'h0, 8'h11}  ); // write configuration
+  #100;
+  axi_write(32'h40000030,8'h0  ); // write configuration
+  axi_write(32'h40000030,8'hff  ); // write configuration
+  axi_write(32'h40000030,8'h0  ); // write configuration
+  axi_write(offset+32'h00000,{8'h0, 8'h40,  8'h0, 8'h40}  ); // write configuration
+  axi_write(offset+32'h00000,{8'h0, 8'h11,  8'h0, 8'h11}  ); // write configuration
+
+/*
+  ##100000;
   axi_write(32'h40000030,8'h0  ); // write configuration
   axi_write(32'h40000030,8'hff  ); // write configuration
   axi_write(32'h40000030,8'h0  ); // write configuration
 
-  ##100000;
-  //axi_write(32'h40000030,8'h0  ); // write configuration
-  //axi_write(32'h40000030,8'hff  ); // write configuration
-  //axi_write(32'h40000030,8'h0  ); // write configuration
 
-
-  ##200;
+  ##200;*/
 /*
   // CH1 table data readback
   rdata_blk = new [80];
@@ -380,38 +550,6 @@ logic        [ 32-1: 0] rdata;
 endtask: test_sata
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // AXI4 read/write tasks
 ////////////////////////////////////////////////////////////////////////////////
@@ -420,74 +558,32 @@ task axi_read_osc1 (
   input  logic [32-1:0] adr,
   output logic [32-1:0] dat
 );
-  //top_tb.axi_bm_reg.ReadTransaction (
-  top_tb.axi_bm_reg.ReadTransaction (  
-    .ARDelay (0),  .ar ('{
-                          id    : 0,
-                          addr  : adr,
-                          region: 0,
-                          len   : 0,
-                          size  : 3'b001,
-                          burst : 0,
-                          lock  : 0,
-                          cache : 0,
-                          prot  : 0,
-                          qos   : 0
-                         }),
-     .RDelay (0),   .rdat (dat)
+  top_tb.red_pitaya_top.ps.system_i.i_m_axi_gp0.rd_single(
+    .adr_i (adr),
+    .dat_o (dat),
+    .id_i  ('h0),
+    .size_i('h1),
+    .lock_i('h0),
+    .prot_i('h0)
   );
-endtask: axi_read_osc1
 
-/*task axi_read_osc2 (
-  input  logic [32-1:0] adr,
-  output logic [32-1:0] dat
-);
-  top_tb.axi_bm_osc2.ReadTransaction (
-    .ARDelay (0),  .ar ('{
-                          id    : 0,
-                          addr  : adr,
-                          region: 0,
-                          len   : 0,
-                          size  : 3'b010,
-                          burst : 0,
-                          lock  : 0,
-                          cache : 0,
-                          prot  : 0,
-                          qos   : 0
-                         }),
-     .RDelay (0),   .rdat (dat)
-  );
-endtask: axi_read_osc2*/
+endtask: axi_read_osc1
 
 
 task axi_write (
   input  logic [32-1:0] adr,
   input  logic [32-1:0] dat
 );
-  int b;
-  //top_tb.axi_bm_reg.WriteTransaction (
-  top_tb.axi_bm_reg.WriteTransaction (  
-    .AWDelay (0),  .aw ('{
-                          id    : 0,
-                          addr  : adr,
-                          region: 0,
-                          len   : 0,
-                          size  : 3'b001,
-                          burst : 0,
-                          lock  : 0,
-                          cache : 0,
-                          prot  : 0,
-                          qos   : 0
-                         }),
-     .WDelay (0),   .w ('{
-                          id    : 0,
-                          data  : dat,
-                          strb  : '1,
-                          last  : 1
-                         }),
-     .BDelay (0),   .b (b)
+  top_tb.red_pitaya_top.ps.system_i.i_m_axi_gp0.wr_single(
+    .adr_i (adr),
+    .dat_i (dat),
+    .id_i  ('h0),
+    .size_i('h1),
+    .lock_i('h0),
+    .prot_i('h0)
   );
 endtask: axi_write
+
 
 
 
