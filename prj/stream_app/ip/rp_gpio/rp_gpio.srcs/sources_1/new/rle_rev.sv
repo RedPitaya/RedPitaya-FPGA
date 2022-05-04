@@ -40,26 +40,19 @@ axi4_stream_if #(.DN (1), .DT (DTI)) old (.ACLK (sti.ACLK), .ARESETn (sti.ARESET
 // counter
 logic [CW-1:0] cnt;
 logic [CW-1:0] nxt;
-logic          max;
 logic          endtr;
-logic [CW+BW-1:0] sti_reg;
-wire  [CW-1:0] rle_val = sti_reg[CW+BW-1:BW];
-
+wire  [CW-1:0] rle_val = sti.TDATA[0][CW+BW-1:BW];
+ 
 // new compressed value
 logic trn;
 
-assign new_read = trn; // when all RLE encoded values are sent.
+assign new_read = (cnt==rle_val-1); // when all RLE encoded values are sent.
+
 ////////////////////////////////////////////////////////////////////////////////
 // store previous value
 ////////////////////////////////////////////////////////////////////////////////
 
 assign sti.TREADY = old.TREADY | ~old.TVALID;
-always @(posedge sti.ACLK) begin
-  if (~sti.ARESETn)
-    sti_reg <= 'hFFFFFF;
-  else if (sti.transf & (sti.TDATA[0][CW+BW-1:BW] > 'h0))
-    sti_reg <= sti.TDATA[0];
-end
 
 always_ff @(posedge sti.ACLK)
 if (sti.transf) begin
@@ -94,8 +87,8 @@ end
 ////////////////////////////////////////////////////////////////////////////////
 
 assign nxt = cnt + 1;
-//assign max = &cnt;
-assign endtr = (cnt==rle_val); //modified for custom RLE decoding
+assign endtr = (cnt==rle_val) & sti.TVALID; //modified for custom RLE decoding
+
 
 always_ff @(posedge sti.ACLK)
 if (~sti.ARESETn) begin
@@ -104,7 +97,7 @@ end else begin
   if (ctl_rst) begin
     cnt <= '0;
   end else if (sti.transf) begin
-    cnt <= trn ? '0 : nxt;
+    cnt <= trn ? 'h0 : nxt;
   end
 end
 

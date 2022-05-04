@@ -14,12 +14,12 @@ module gpio_in_top   #(
   axi4_stream_if.d  sti,
   // control
   input  reg          ctl_rst,  // synchronous reset
-  input  reg [CW-1:0] cfg_dec,  // decimation factor
-  input  DT             cfg_pol,  // comparator mask
-  input  DT             cfg_cmp_msk,  // comparator mask
-  input  DT             cfg_cmp_val,  // comparator value
-  input  DT             cfg_edg_pos,  // edge positive
-  input  DT             cfg_edg_neg,  // edge negative
+  input  reg [DCW-1:0] cfg_dec,  // decimation factor
+  input  DT           cfg_pol,  // comparator mask
+  input  DT           cfg_cmp_msk,  // comparator mask
+  input  DT           cfg_cmp_val,  // comparator value
+  input  DT           cfg_edg_pos,  // edge positive
+  input  DT           cfg_edg_neg,  // edge negative
   output reg          irq_trg,  // trigger
   output reg          irq_stp,  // stop
   output reg          trg_out,
@@ -83,12 +83,16 @@ axi4_stream_if #(.DN (DN), .DT (DT)) stn            (.ACLK (sti.ACLK), .ARESETn 
 axi4_stream_if #(.DN (DN), .DT (DT)) std            (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from decimator
 axi4_stream_if #(.DN (DN), .DT (DT)) stt            (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from trigger
 axi4_stream_if #(.DN (DN), .DT (DT)) sta_str        (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
-axi4_stream_if #(.DN (1), .DT (DT)) sta            (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
-axi4_stream_if #(.DN (1), .DT (DT)) sta2           (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
+axi4_stream_if #(.DN (1),  .DT (DT)) sta            (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
+axi4_stream_if #(.DN (1),  .DT (DT)) sta2           (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
 
 axi4_stream_if #(.DN (1), .DT (reg [8+8-1:0])) sto1  (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // output
 axi4_stream_if #(.DN (1), .DT (reg [8+8-1:0])) sto2  (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // output
 
+wire   external_trig_val;
+assign external_trig_val = ctl_trg[5] & (cfg_trg == 'h20);
+
+DT latrg;
 ////////////////////////////////////////////////////////////////////////////////
 // Decimation
 ////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +141,7 @@ la_trg #(
   .cfg_edg_pos (cfg_edg_pos),
   .cfg_edg_neg (cfg_edg_neg),
   // output triggers
-  .sts_trg  (trg_out),
+  .sts_trg  (latrg),
   // stream monitor
   .sti      (stn),
   .sto      (stt)
@@ -277,6 +281,9 @@ gpio_dma_s2mm #(
   .reg_dst_addr1  (gpio_buf1_adr),
   .reg_dst_addr2  (gpio_buf2_adr),
   .reg_buf_size   (gpio_buf_size),
+  .reg_diags      (),
+  .ctl_start_o    (ctl_start_o),
+  .ctl_start_ext  (external_trig_val),
   .buf1_ms_cnt    (buf1_ms_cnt),
   .buf2_ms_cnt    (buf2_ms_cnt),
   .buf_sel_out    (buf_sel),
@@ -302,6 +309,8 @@ gpio_dma_s2mm #(
   .s_axis_tdata   ({sto2.TDATA,sto1.TDATA}),    
   .s_axis_tvalid  (sto1.TVALID),  
   .s_axis_tready  (sto1.TREADY),  
-  .s_axis_tlast   (sto1.TLAST));  
+  .s_axis_tlast   (sto1.TLAST)
+);  
+assign trg_out  = ctl_start_o || |latrg ;
 
 endmodule

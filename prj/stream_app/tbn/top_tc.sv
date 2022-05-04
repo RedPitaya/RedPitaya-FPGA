@@ -87,35 +87,37 @@ id_test = {4'h0,offset[27:20]};
   // DMA control address (80) controls ack signals for buffers. for breakdown see rp_dma_s2mm_ctrl
 
 
-  axi_write(offset+'h0,   'd4);  // start
+  axi_write(offset+'h0,   'd4);  // reset
   axi_write(offset+'h04,   evnt_in);  // osc1 events
   axi_write(offset+'h10,  'h2000);  // pre trigger samples
   axi_write(offset+'h14,  'h6000);  // pre trigger samples
-  axi_write(offset+'h20,  'd30);  // LOW LEVEL TRIG
-  axi_write(offset+'h24,  'd50);  // HI LEVEL TRIG
+  axi_write(offset+'h20,  'hFFFC);  // LOW LEVEL TRIG
+  axi_write(offset+'h24,  'h4);  // HI LEVEL TRIG
   ##5;
   axi_write(offset+'h28, 'd0);  // TRIG EDGE
   ##5
-  axi_write(offset+'h38, 'd0);  // decimation enable
-  axi_write(offset+'h3C, 'd0);  // decimation enable
-  axi_write(offset+'h30, 'd1);  // decimation factor
-  axi_write(offset+'h34, 'd1);  // decimation shift
+  axi_write(offset+'h3C, 'd1);  // filter bypass
+  axi_write(offset+'h30, 'd0);  // decimation factor
+  axi_write(offset+'h34, 'd0);  // decimation shift
+  axi_write(offset+'h38, 'd0);  // averaging enable
   axi_write(offset+'h0,   'd2);  // start
   axi_write(offset+'h08,   'd4);  // start
 
   ##5;
-  axi_write(offset+'h64, 'h1000);  // buffer 1 address
+  axi_write(offset+'h64, 'h10000);  // buffer 1 address
   ##5;
-  axi_write(offset+'h68, 'h2000);  // buffer 2 address
+  axi_write(offset+'h68, 'h20000);  // buffer 2 address
   ##5;
-  axi_write(offset+'h6C, 'd30000);  // buffer 1 address
+  axi_write(offset+'h6C, 'h30000);  // buffer 1 address
   ##5;
-  axi_write(offset+'h70, 'd40000);  // buffer 2 address
+  axi_write(offset+'h70, 'h40000);  // buffer 2 address
   ##5;
   axi_write(offset+'hC0, 'h100);  // buffer 2 address
   ##5;
   axi_read(offset+'hC0, dat);  // buffer 2 address
   ##5;
+    axi_write(offset+'hC4, 'h1000);  // buffer 2 address
+##5;
   axi_write(offset+'hD0, 'h100);  // buffer 2 address
     ##5;
   axi_read(offset+'h64, dat);  // buffer 2 address
@@ -132,25 +134,25 @@ id_test = {4'h0,offset[27:20]};
   axi_write(offset+'h78, 'h8000);  // calibration gain
   */
   ##5;
-  axi_write(offset+'h58, 'h400);  // buffer size - must be greater than axi burst size (128)
+  axi_write(offset+'h58, 'h80);  // buffer size - must be greater than axi burst size (128)
   ##5;
       axi_write(offset+'h50, 'h212);  // streaming DMA
       axi_write(offset+'h50, 'h2);  // streaming DMA
-      axi_write(offset+'h50, 'h1);  // streaming DMA
         axi_write(offset+'h0,   'd0);  // start
   axi_write(offset+'h0,   'd1);  // start
   axi_write(offset+'h0,   'd2);  // start
+  
+        axi_write(offset+'h50, 'h1);  // streaming DMA
+
+//  axi_write(offset+'h0,   'd4);  // stop
 
 
   //axi_write(offset+'h00, 4'b1000);  // trigger
 
   int_ack(offset);
-   // axi_write(offset+'h74, 'hFFFFF800);  // calibration offset
-  ##5;
-  axi_write(offset+'hC4, 'h1000);  // buffer 2 address
+  //int_ack_del(offset);
   int_ack(offset);
-  int_ack(offset);
-  int_ack(offset);
+  //int_ack_del(offset);
   int_ack(offset);
   int_ack(offset);
   int_ack(offset);
@@ -164,7 +166,6 @@ id_test = {4'h0,offset[27:20]};
   int_ack(offset);
   int_ack(offset);
 
-  /*
   int_ack(offset);
   int_ack(offset);
   int_ack(offset);
@@ -178,7 +179,19 @@ id_test = {4'h0,offset[27:20]};
   int_ack(offset);
   int_ack(offset);
   int_ack(offset);
-  int_ack(offset);*/
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
+  int_ack(offset);
   
   
   /*##1300;
@@ -246,8 +259,9 @@ id_test = {4'h0,offset[27:20]};
   axi_write(offset+'h88,   'd2);  // start
 
   int_ack(offset);
+  int_ack_del(offset);
   int_ack(offset);
-  int_ack(offset);
+
   int_ack(offset);
   int_ack(offset);
   int_ack(offset);
@@ -301,19 +315,19 @@ task int_ack(
   // DMA control address (80) controls ack signals for buffers. for breakdown see rp_dma_s2mm_ctrl
   do begin
     ##5;
-  end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[1] != 1'b1); // BUF 1 is full
+  end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[15] != 1'b1); // BUF 1 is full
   ##5;
-  axi_write(offset+'h8C, 'd2);  // INTR ACK
+  axi_write(offset+'h50, 'd2);  // INTR ACK
   ##500;
-  axi_write(offset+'h8C, 'h4);  // BUF1 ACK
+  axi_write(offset+'h50, 'h4);  // BUF1 ACK
 
   do begin
         ##5;
-  end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[1] != 1'b1); // BUF 2 is full
+  end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[15] != 1'b1); // BUF 2 is full
   ##5;
-  axi_write(offset+'h8C, 'd2);  // INTR ACK
+  axi_write(offset+'h50, 'd2);  // INTR ACK
   ##500;
-  axi_write(offset+'h8C,   'h8);  // BUF2 ACK 
+  axi_write(offset+'h50,   'h8);  // BUF2 ACK 
 
 endtask: int_ack
 
@@ -322,28 +336,28 @@ endtask: int_ack
 task int_ack_del(
   int unsigned offset
 );
-  int unsigned dat;
-  axi_read(offset+'h8C, dat);
+  //int unsigned dat;
+  //axi_read(offset+'h8C, dat);
   ##10;
 
   // configure
   // DMA control address (80) controls ack signals for buffers. for breakdown see rp_dma_s2mm_ctrl
 
-  //do begin
-  //  ##5;
-  //end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[1] != 1'b1); // BUF 1 is full
+  do begin
+    ##5;
+  end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[1] != 1'b1); // BUF 1 is full
   ##5;
-  axi_write(offset+'h8C, 'd2);  // INTR ACK
+  axi_write(offset+'h50, 'd2);  // INTR ACK
   ##40000;
-  axi_write(offset+'h8C, 'h4);  // BUF1 ACK
+  axi_write(offset+'h50, 'h4);  // BUF1 ACK
 
-  //do begin
-  //      ##5;
-  //end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[1] != 1'b1); // BUF 2 is full
+  do begin
+        ##5;
+  end while (top_tb.red_pitaya_top_sim.system_wrapper_i.system_i.processing_system7_0.IRQ_F2P[1] != 1'b1); // BUF 2 is full
   ##5;
-  axi_write(offset+'h8C, 'd2);  // INTR ACK
+  axi_write(offset+'h50, 'd2);  // INTR ACK
   ##50000;
-  axi_write(offset+'h8C, 'h8);  // BUF2 ACK
+  axi_write(offset+'h50, 'h8);  // BUF2 ACK
 
 
 endtask: int_ack_del

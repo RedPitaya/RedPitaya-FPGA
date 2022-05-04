@@ -21,9 +21,13 @@ module gpio_dma_s2mm
   //
   output wire [31:0]                    reg_ctrl,
   output wire [31:0]                    reg_sts,  
+  output wire [31:0]                    reg_diags,
   input  wire [31:0]                    reg_dst_addr1,  
   input  wire [31:0]                    reg_dst_addr2,  
   input  wire [31:0]                    reg_buf_size,
+  output wire                           ctl_start_o,
+  input  wire                           ctl_start_ext,
+
   //
   output wire [31:0]                    buf1_ms_cnt,
   output wire [31:0]                    buf2_ms_cnt,
@@ -102,10 +106,15 @@ gpio_dma_s2mm_ctrl #(
   .reg_wr_we      (reg_wr_we),           
   .reg_ctrl       (reg_ctrl),  
   .reg_sts        (reg_sts),  
+  .reg_diags      (reg_diags),  
   .reg_dst_addr1  (reg_dst_addr1),  
   .reg_dst_addr2  (reg_dst_addr2),  
-  .reg_buf_size   (reg_buf_size),    
-  .fifo_rst       (fifo_rst),                 
+  .reg_buf_size   (reg_buf_size), 
+  .ctl_start_o    (ctl_start_o),  
+  .ctl_start_ext  (ctl_start_ext),     
+  .upsized_we     (fifo_wr_we),
+  .fifo_rst       (fifo_rst),    
+  .fifo_lvl       (fifo_rd_cnt),               
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
@@ -136,7 +145,7 @@ gpio_dma_s2mm_upsize #(
   .AXIS_DATA_BITS (AXIS_DATA_BITS))
   U_dma_s2mm_upsize(
   .clk            (s_axis_aclk),              
-  .rst            (fifo_rst),    
+  .rst            (~aresetn),    
   .req_data       (req_data),
   .req_we         (req_we),       
   .s_axis_tdata   (s_axis_tdata),      
