@@ -109,6 +109,9 @@ reg                       buf2_ovr;
 reg                       data_valid_reg;
 reg  [31:0]               buf1_missed_samp;
 reg  [31:0]               buf2_missed_samp;
+reg  [31:0]               buf1_ms_lvl;
+reg  [31:0]               buf2_ms_lvl;
+
 reg  [4:0]                fifo_rst_cnt;
 wire [7:0]                fifo_wr_data; 
 wire                      fifo_wr_we;
@@ -127,8 +130,8 @@ assign m_axi_awburst = 2'b01;     // INCR
 assign m_axi_awprot  = 3'b000;
 assign m_axi_awcache = 4'b0011;
 
-assign buf1_ms_cnt = buf1_missed_samp;
-assign buf2_ms_cnt = buf2_missed_samp;
+assign buf1_ms_cnt = buf1_missed_samp + buf1_ms_lvl;
+assign buf2_ms_cnt = buf2_missed_samp + buf2_ms_lvl;
 
 assign req_buf_addr_sel_pedge = req_buf_addr_sel & ~req_buf_addr_sel_p1;
 assign req_buf_addr_sel_nedge = ~req_buf_addr_sel & req_buf_addr_sel_p1;
@@ -529,16 +532,20 @@ begin
   case (state_cs)
     // IDLE - Wait for the DMA start signal
     IDLE: begin
-      buf1_missed_samp <= 32'b0;  
+      buf1_missed_samp <= 32'h0;  
+      buf1_ms_lvl      <= 32'h0;
     end    
 
     default: begin
       // increase counter until SW confirms buffer was read
-        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF) begin // buffer1 is overflowing, there was a sample
+        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF) // buffer1 is overflowing, there was a sample
           buf1_missed_samp <= buf1_missed_samp+32'd4;  
-        end else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
+        else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
           buf1_missed_samp <= 32'd0;
-        end       
+          
+        if (req_buf_addr_sel == 1 && m_axi_wlast && next_buf_full) // save FIFO level at the end of final transfer
+          buf1_ms_lvl <= {fifo_lvl,2'h0};
+    end
   endcase
 end  
 
@@ -610,15 +617,18 @@ begin
   case (state_cs)
     // IDLE - Wait for the DMA start signal
     IDLE: begin
-      buf2_missed_samp <= 32'b0;  
+      buf2_missed_samp <= 32'h0;  
+      buf2_ms_lvl      <= 32'h0;
     end    
 
     default: begin
-        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF) begin // buffer2 is overflowing, there was a sample
+        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF) // buffer2 is overflowing, there was a sample
           buf2_missed_samp <= buf2_missed_samp+32'd4;  
-        end else if(req_buf_addr_sel_nedge) begin // number of missed samples is reset when writing into the buffer starts.
-          buf2_missed_samp <= 32'd0;
-        end   
+        else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
+          buf2_missed_samp <= 32'd0;   
+
+        if (req_buf_addr_sel == 0 && m_axi_wlast && next_buf_full) // save FIFO level at the end of final transfer
+          buf2_ms_lvl <= {fifo_lvl,2'h0};
       end     
   endcase
 end     
