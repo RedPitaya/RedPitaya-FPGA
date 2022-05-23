@@ -264,7 +264,7 @@ begin
         if (next_buf_full)
           state_ns = WAIT_BUF_FULL;
         else
-          state_ns = WAIT_DATA_RDY;
+          state_ns = BUF_FILLING;
       end
     end
     
