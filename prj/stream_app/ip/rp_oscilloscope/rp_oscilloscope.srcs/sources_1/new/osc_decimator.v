@@ -28,97 +28,8 @@ module osc_decimator
 
 localparam ACC_BITS = AXIS_DATA_BITS+CNT_BITS-1;
 
-////////////////////////////////////////////////////////////
-// Signals
-////////////////////////////////////////////////////////////
-
-wire signed [AXIS_DATA_BITS-1:0]  dec_data;
-reg         [CNT_BITS-1:0]        dec_cnt;
-//reg  signed [ACC_BITS-1:0]        dec_acc;
-
 assign s_axis_tready = 1;
-assign dec_data = s_axis_tdata; 
-/*
-////////////////////////////////////////////////////////////
-// Name : Decimation Counter
-// 
-////////////////////////////////////////////////////////////
 
-always @(posedge clk)
-begin
-  if (rst_n == 0) begin
-    dec_cnt <= 0;
-  end else begin
-    if (ctl_rst == 1) begin
-      dec_cnt <= 0;
-    end else begin
-      if ((s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-        if (dec_cnt == cfg_dec_factor) begin
-          dec_cnt <= 0; 
-        end else begin
-          dec_cnt <= dec_cnt + 1;
-        end
-      end
-    end
-  end
-end
-
-////////////////////////////////////////////////////////////
-// Name : Decimator Accumulator
-// 
-////////////////////////////////////////////////////////////
-
-always @(posedge clk)
-begin
-  if (rst_n == 0) begin
-    dec_acc <= 0;
-  end else begin
-    if (ctl_rst == 1) begin
-      dec_acc <= 0;
-    end else begin
-      if ((s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-        if (dec_cnt == cfg_dec_factor) begin
-          dec_acc <= dec_data;
-        end else begin
-          dec_acc <= dec_acc + dec_data;
-        end
-      end
-    end
-  end
-end
-
-////////////////////////////////////////////////////////////
-// Name : Master AXI-S TDATA 
-// 
-////////////////////////////////////////////////////////////
-
-always @(posedge clk)
-begin
-  if (cfg_avg_en == 1) begin
-    m_axis_tdata <= dec_acc >>> cfg_dec_rshift;
-  end else begin
-    m_axis_tdata <= s_axis_tdata;
-  end
-end
-
-////////////////////////////////////////////////////////////
-// Name : Master AXI-S TVALID 
-// 
-////////////////////////////////////////////////////////////
-
-always @(posedge clk)
-begin
-  if (rst_n == 0) begin
-    m_axis_tvalid <= 0;
-  end else begin
-    if ((s_axis_tvalid == 1) && (s_axis_tready == 1) && (dec_cnt == cfg_dec_factor)) begin
-      m_axis_tvalid <= 1;
-    end else begin
-      m_axis_tvalid <= 0;
-    end
-  end
-end
-*/
 
 //---------------------------------------------------------------------------------
 //  Decimate input data
@@ -128,38 +39,36 @@ reg  [ ACC_BITS-1: 0] sum_in      ;
 reg  [ ACC_BITS-1: 0] sum_uns     ;
 reg  [ ACC_BITS-1: 0] div_uns     ;
 reg  [ CNT_BITS-1: 0] adc_dec_cnt ;
-reg             adc_dv      ;
-reg             div_go      ;
-wire            div_ok      ;
-reg             dat_got     ;
-reg             div_dat_got ;
+reg                   adc_dv      ;
+reg                   div_go      ;
+wire                  div_ok      ;
+reg                   dat_got     ;
+reg                   div_dat_got ;
 reg  [ ACC_BITS-1: 0] dat_div     ;
 wire [ ACC_BITS-1: 0] div_out     ;
-reg             adc_dv_div  ;
-reg  [ 34-1: 0] sign_sr     ;
-reg             sign_curr   ;
+reg                   adc_dv_div  ;
+reg  [       34-1: 0] sign_sr     ;
+reg                   sign_curr   ;
 
-
-//---------------------------------------------------------------------------------------------------------------
 
 divide #(
 
-   .XDW(ACC_BITS)          , // mod(XDW, PIPE*GRAIN) == 0  !!!!!!!! x data width
-   .XDWW(6)          , // ceil(log2(XDW)) x data width, width
-   .YDW(CNT_BITS)          , //y data width
-   .PIPE(2)          , // how many parallel pipes (1 is minimal)
-   .GRAIN(1)         ,
-   .RST_ACT_LVL(0)     //positive or negative reset
+   .XDW(ACC_BITS)       ,
+   .XDWW(6)             ,
+   .YDW(CNT_BITS)       ,
+   .PIPE(2)             ,
+   .GRAIN(1)            ,
+   .RST_ACT_LVL(0)
 )
 dec_avg_div
 (
-   .clk_i(clk) ,
-   .rst_i(rst_n),
-   .x_i(sum_uns)   , // numerator (dividend) [ XDW-1: 0]
-   .y_i(cfg_dec_factor)     , // denominator (divisor)[ YDW-1: 0]   // Both input values must be unsigned !!!
-   .dv_i(div_go)     , //ready to start division
-   .q_o(div_out)   , // quotient [ XDW-1: 0]
-   .dv_o(div_ok)     // result available
+   .clk_i(clk)          ,
+   .rst_i(rst_n)        ,
+   .x_i(sum_uns)        ,
+   .y_i(cfg_dec_factor) ,
+   .dv_i(div_go)        ,
+   .q_o(div_out)        ,
+   .dv_o(div_ok)
 );
 
 
@@ -212,7 +121,7 @@ end
 wire dec_valid = (adc_dec_cnt >= cfg_dec_factor);
 
 always @(posedge clk)
-if (rst_n == 1'b0) begin
+if (rst_n == 1'b0 || ctl_rst) begin
    adc_sum   <= 32'h0 ;
    adc_dec_cnt <= 17'h0 ;
    adc_dv      <=  1'b0 ;
@@ -220,15 +129,15 @@ end else begin
   if (s_axis_tvalid) begin
     if (dec_valid) begin // start again or arm
       adc_dec_cnt <= 17'h1    ;              
-      adc_sum   <= $signed(dec_data) ;
+      adc_sum   <= $signed(s_axis_tdata) ;
     end else begin
       adc_dec_cnt <= adc_dec_cnt + 17'h1 ;
-      adc_sum   <= $signed(adc_sum) + $signed(dec_data) ;
+      adc_sum   <= $signed(adc_sum) + $signed(s_axis_tdata) ;
     end
   end
 
    case (cfg_dec_factor & {17{cfg_avg_en}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
-      17'h0     : begin m_axis_tdata <= dec_data;            m_axis_tvalid <= dec_valid;  end // if averaging is disabled
+      17'h0     : begin m_axis_tdata <= s_axis_tdata;        m_axis_tvalid <= dec_valid;  end // if averaging is disabled
       17'h1     : begin m_axis_tdata <= adc_sum[15+0 :  0];  m_axis_tvalid <= dec_valid;  end
       17'h2     : begin m_axis_tdata <= adc_sum[15+1 :  1];  m_axis_tvalid <= dec_valid;  end
       17'h4     : begin m_axis_tdata <= adc_sum[15+2 :  2];  m_axis_tvalid <= dec_valid;  end
@@ -243,7 +152,7 @@ end else begin
       17'd12, 
       17'd13, 
       17'd14, 
-      17'd15    : begin m_axis_tdata <= dec_data;            m_axis_tvalid <= dec_valid;  end // no division for any other decimation factor
+      17'd15    : begin m_axis_tdata <= s_axis_tdata;        m_axis_tvalid <= dec_valid;  end // no division for any other decimation factor
       default   : begin m_axis_tdata <= dat_div;             m_axis_tvalid <= adc_dv_div; end
    endcase
 end
