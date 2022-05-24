@@ -147,7 +147,7 @@ rp_dma_s2mm_upsize #(
   .clk            (s_axis_aclk),              
   .rst            (~aresetn),    
   .req_data       (req_data),
-  .req_we         (req_we),       
+  .req_we         (req_we),
   .s_axis_tdata   (s_axis_tdata),      
   .s_axis_tvalid  (s_axis_tvalid),     
   .s_axis_tready  (s_axis_tready),     
