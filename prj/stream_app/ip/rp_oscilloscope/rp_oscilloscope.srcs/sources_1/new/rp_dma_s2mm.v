@@ -77,6 +77,7 @@ wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt;
 wire [7:0]                req_data;
 wire                      req_we;
 wire                      fifo_dis;
+wire [1:0]                upsize_lvl;
 
 assign m_axi_wdata  = fifo_rd_data;
 assign m_axi_wstrb  = {AXI_DATA_BITS/8{1'b1}};
@@ -115,6 +116,7 @@ rp_dma_s2mm_ctrl #(
   .upsized_we     (fifo_wr_we),
   .fifo_rst       (fifo_rst),    
   .fifo_lvl       (fifo_rd_cnt),
+  .upsize_lvl     (upsize_lvl),       
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
@@ -148,6 +150,7 @@ rp_dma_s2mm_upsize #(
   .rst            (~aresetn),    
   .req_data       (req_data),
   .req_we         (req_we),
+  .upsize_lvl     (upsize_lvl),       
   .s_axis_tdata   (s_axis_tdata),      
   .s_axis_tvalid  (s_axis_tvalid),     
   .s_axis_tready  (s_axis_tready),     

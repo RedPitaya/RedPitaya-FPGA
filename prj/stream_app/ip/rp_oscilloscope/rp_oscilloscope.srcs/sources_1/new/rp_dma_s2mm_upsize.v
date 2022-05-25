@@ -9,6 +9,8 @@ module rp_dma_s2mm_upsize
   
   output reg  [7:0]                 req_data,
   output reg                        req_we,
+  output      [1:0]                 upsize_lvl,
+
 
   input  wire [AXIS_DATA_BITS-1:0]  s_axis_tdata,
   input  wire                       s_axis_tvalid,
@@ -30,6 +32,7 @@ genvar      i;
 
 assign s_axis_tready = 1'b1;
 assign req_len = xfer_cnt+1;
+assign upsize_lvl = mux_sel;
 
 ////////////////////////////////////////////////////////////
 // Name : 
