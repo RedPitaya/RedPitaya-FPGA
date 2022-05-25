@@ -545,6 +545,8 @@ begin
           
         if (req_buf_addr_sel == 1 && m_axi_wlast && next_buf_full) // save FIFO level at the end of final transfer
           buf1_ms_lvl <= {fifo_lvl,2'h0};
+        else if(req_buf_addr_sel_pedge)
+          buf1_ms_lvl <= 'h0;
     end
   endcase
 end  
@@ -629,6 +631,8 @@ begin
 
         if (req_buf_addr_sel == 0 && m_axi_wlast && next_buf_full) // save FIFO level at the end of final transfer
           buf2_ms_lvl <= {fifo_lvl,2'h0};
+        else if(req_buf_addr_sel_nedge)
+          buf2_ms_lvl <= 'h0;
       end     
   endcase
 end     
