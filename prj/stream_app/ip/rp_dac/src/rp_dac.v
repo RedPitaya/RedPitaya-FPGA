@@ -285,7 +285,7 @@ begin
   case (reg_addr[8-1:0])
     DAC_CONF_REG:           reg_rd_data <= {dac_chb_conf, dac_cha_conf};
 
-    DAC_CHA_SCALE_OFFS:     reg_rd_data <= {2'h0, cfg_cha_offs, 2'h0, cfg_cha_scale};
+    DAC_CHA_SCALE_OFFS:     reg_rd_data <= {cfg_cha_offs, cfg_cha_scale};
     DAC_CHA_CNT_STEP:       reg_rd_data <= cfg_cha_step;
     DAC_CHA_CUR_RP:         reg_rd_data <= cfg_cha_rp;
     DAC_CHB_SCALE_OFFS:     reg_rd_data <= {2'h0, cfg_chb_offs, 2'h0, cfg_chb_scale};
@@ -319,9 +319,11 @@ begin
     dac_cha_conf <= 16'h0;    
     dac_chb_conf <= 16'h0;
 
-    cfg_cha_scale       <= 14'h0;
+    cfg_cha_scale       <= 16'h8000;
+    cfg_cha_offs        <= 16'h0;
     cfg_cha_step        <= 32'h0;
-    cfg_chb_scale       <= 14'h0;
+    cfg_chb_scale       <= 16'h8000;
+    cfg_chb_offs        <= 16'h0;
     cfg_chb_step        <= 32'h0;
 
     cfg_event_sts       <=  'h0;
@@ -343,11 +345,11 @@ begin
     cfg_loopback_chb    <= 16'h0;
 
   end else begin
-    if ((reg_addr[8-1:0] == DAC_CONF_REG      ) && (reg_wr_we == 1)) begin dac_chb_conf       <= reg_wr_data[31:16];  dac_cha_conf  <= reg_wr_data[15:0]; end    
-    if ((reg_addr[8-1:0] == DAC_CHA_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_cha_offs       <= reg_wr_data[29:16];  cfg_cha_scale <= reg_wr_data[13:0]; end    
+    if ((reg_addr[8-1:0] == DAC_CONF_REG      ) && (reg_wr_we == 1)) begin dac_chb_conf       <= reg_wr_data[31:16];         dac_cha_conf  <= reg_wr_data[15:0]; end    
+    if ((reg_addr[8-1:0] == DAC_CHA_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_cha_offs       <={reg_wr_data[29:16], 2'h0};  cfg_cha_scale <={reg_wr_data[13:0], 2'h0}; end    
     if ((reg_addr[8-1:0] == DAC_CHA_CNT_STEP  ) && (reg_wr_we == 1)) begin cfg_cha_step       <= reg_wr_data; end    
   
-    if ((reg_addr[8-1:0] == DAC_CHB_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_chb_offs       <= reg_wr_data[29:16];  cfg_chb_scale <= reg_wr_data[13:0]; end    
+    if ((reg_addr[8-1:0] == DAC_CHB_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_chb_offs       <={reg_wr_data[29:16], 2'h0};  cfg_chb_scale <= {reg_wr_data[13:0], 2'h0}; end    
     if ((reg_addr[8-1:0] == DAC_CHB_CNT_STEP  ) && (reg_wr_we == 1)) begin cfg_chb_step       <= reg_wr_data; end    
 
     if ((reg_addr[8-1:0] == EVENT_STS_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sts      <= reg_wr_data; end    

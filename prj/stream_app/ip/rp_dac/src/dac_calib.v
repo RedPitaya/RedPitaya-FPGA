@@ -54,25 +54,26 @@ module dac_calib #(
 //---------------------------------------------------------------------------------
 //
 //  DAC buffer RAM
+localparam MULT_BITS = AXIS_DATA_BITS*2;
+localparam SUM_BITS  = AXIS_DATA_BITS+1;
 
-reg   [  AXIS_DATA_BITS*2-1: 0] dac_mult  ;
-reg   [  AXIS_DATA_BITS+1-1: 0] dac_sum   ;
+reg signed  [  MULT_BITS-1: 0] dac_mult  ;
+reg signed  [  SUM_BITS -1: 0] dac_sum   ;
 
-reg   [  AXIS_DATA_BITS*2-1: 0] dac_mult_r  ;
-reg   [  AXIS_DATA_BITS+1-1: 0] dac_sum_r   ;
+reg signed  [  MULT_BITS-1: 0] dac_mult_r  ;
+reg signed  [  SUM_BITS -1: 0] dac_sum_r   ;
 // scale and offset
 always @(posedge dac_clk_i)
 begin
-   dac_mult_r <= $signed(dac_rdata_i)       * $signed({1'b0,set_amp_i}) ;
+   dac_mult_r <= $signed(dac_rdata_i) * $signed({1'b0,set_amp_i}) ;
    dac_mult   <= dac_mult_r;
-   dac_sum_r  <= $signed(dac_mult[AXIS_DATA_BITS*2-3:AXIS_DATA_BITS-3]) + $signed(set_dc_i) ;
+   dac_sum_r  <= $signed(dac_mult[MULT_BITS-1:MULT_BITS-AXIS_DATA_BITS-1]) + $signed(set_dc_i) ;
    dac_sum    <= dac_sum_r;
    // saturation
    if (set_zero_i)  
       dac_o <= 'h0;
    else 
-      dac_o <= ^dac_sum[AXIS_DATA_BITS-2:AXIS_DATA_BITS-3] ? {{3{dac_sum[AXIS_DATA_BITS-2]}}, {13{~dac_sum[AXIS_DATA_BITS-2]}}} : dac_sum[AXIS_DATA_BITS-1:0]; // saturation
-
+      dac_o <= ^dac_sum[SUM_BITS-1:SUM_BITS-2] ? {{1{dac_sum[SUM_BITS-1]}}, {15{~dac_sum[SUM_BITS-1]}}} : dac_sum[AXIS_DATA_BITS-1:0]; // saturation
 end
 
 endmodule
