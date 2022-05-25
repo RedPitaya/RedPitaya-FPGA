@@ -216,7 +216,7 @@ end
 always @(posedge m_axi_aclk)
 begin
   axi_last_r  <= m_axi_wlast;
-  axi_last_r2 <= axi_last_r;
+  axi_last_r2 <= axi_last_r; // FIFO level is delayed by 2 clocks
 end
 
 ////////////////////////////////////////////////////////////
@@ -547,16 +547,16 @@ begin
 
     default: begin
       // increase counter until SW confirms buffer was read
-        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && data_valid && buf1_missed_samp < 32'hFFFFFFFF) // buffer1 is overflowing, there was a sample
-          buf1_missed_samp <= buf1_missed_samp+32'd1;  
+        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF) // buffer1 is overflowing, there was a sample
+          buf1_missed_samp <= buf1_missed_samp+32'd4;  
         else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
           buf1_missed_samp <= 32'd0;
 
-        if (req_buf_addr_sel == 1 && m_axi_wlast && next_buf_full) // save FIFO level at the end of final transfer
+        if (req_buf_addr_sel == 1 && m_axi_wlast && next_buf_full) // save the state of upsizer just in case
           upsize_lvl_r <= upsize_lvl;
 
         if (req_buf_addr_sel == 1 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf1_ms_lvl <= {fifo_lvl,2'h0}+{6'h0,upsize_lvl_r};
+          buf1_ms_lvl <= {fifo_lvl,2'h0};//+{6'h0,upsize_lvl_r};
         else if(req_buf_addr_sel_pedge)
           buf1_ms_lvl <= 'h0;
     end
@@ -636,16 +636,16 @@ begin
     end    
 
     default: begin
-        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && data_valid && buf2_missed_samp < 32'hFFFFFFFF) // buffer2 is overflowing, there was a sample
-          buf2_missed_samp <= buf2_missed_samp+32'd1;  
+        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF) // buffer2 is overflowing, there was a sample
+          buf2_missed_samp <= buf2_missed_samp+32'd4;  
         else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
           buf2_missed_samp <= 32'd0;   
 
-        if (req_buf_addr_sel == 0 && m_axi_wlast && next_buf_full) // save FIFO level at the end of final transfer
+        if (req_buf_addr_sel == 0 && m_axi_wlast && next_buf_full) // save the state of upsizer just in case
           upsize_lvl_r <= upsize_lvl;
 
         if (req_buf_addr_sel == 0 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf2_ms_lvl <= {fifo_lvl,2'h0}+{6'h0,upsize_lvl_r};
+          buf2_ms_lvl <= {fifo_lvl,2'h0};//+{6'h0,upsize_lvl_r};
         else if(req_buf_addr_sel_nedge)
           buf2_ms_lvl <= 'h0;
       end     
