@@ -78,6 +78,7 @@ wire [7:0]                req_data;
 wire                      req_we;
 wire                      fifo_dis;
 wire [1:0]                upsize_lvl;
+reg                       ctl_start_r;
 
 assign m_axi_wdata  = fifo_rd_data;
 assign m_axi_wstrb  = {AXI_DATA_BITS/8{1'b1}};
@@ -87,6 +88,10 @@ assign m_axi_bready = m_axi_bvalid;
 // Name : DMA S2MM Control
 // Accepts DMA requests and sends data over the AXI bus.
 ////////////////////////////////////////////////////////////
+
+always @(posedge m_axi_aclk) begin
+  ctl_start_r <= ctl_start_o;
+end
 
 rp_dma_s2mm_ctrl #(
   .AXI_ADDR_BITS  (AXI_ADDR_BITS),
@@ -116,7 +121,7 @@ rp_dma_s2mm_ctrl #(
   .upsized_we     (fifo_wr_we),
   .fifo_rst       (fifo_rst),    
   .fifo_lvl       (fifo_rd_cnt),
-  .upsize_lvl     (upsize_lvl),       
+  .upsize_lvl     (upsize_lvl),     
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
@@ -147,10 +152,10 @@ rp_dma_s2mm_upsize #(
   .AXIS_DATA_BITS (AXIS_DATA_BITS))
   U_dma_s2mm_upsize(
   .clk            (s_axis_aclk),              
-  .rst            (~aresetn),    
+  .rst            (~aresetn || (ctl_start_o & ~ctl_start_r)),    
   .req_data       (req_data),
   .req_we         (req_we),
-  .upsize_lvl     (upsize_lvl),       
+  .upsize_lvl     (upsize_lvl),
   .s_axis_tdata   (s_axis_tdata),      
   .s_axis_tvalid  (s_axis_tvalid),     
   .s_axis_tready  (s_axis_tready),     
