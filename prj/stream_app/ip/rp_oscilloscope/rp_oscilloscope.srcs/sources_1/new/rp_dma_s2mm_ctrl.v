@@ -167,7 +167,7 @@ fifo_axi_req U_fifo_axi_req(
   .empty  (fifo_empty));
   
 assign fifo_wr_data = req_data;
-assign fifo_wr_we   = req_we && ~fifo_dis && state_cs != BUF_FILLING; // writing request buffer is only enabled when not waiting on clearing of the next buffer. 
+assign fifo_wr_we   = req_we && ~fifo_dis; // writing request buffer is only enabled when not waiting on clearing of the next buffer. 
 
 ////////////////////////////////////////////////////////////
 // Name : Data Control
@@ -358,12 +358,12 @@ begin
       end
       
       // Buf 1 ACK
-      if (reg_ctrl[CTRL_BUF1_ACK] & state_cs != FIFO_RST) begin
+      if (reg_ctrl[CTRL_BUF1_ACK] && state_cs != FIFO_RST) begin
         reg_ctrl[CTRL_BUF1_ACK] <= 0;
       end
 
       // Buf 2 ACK
-      if (reg_ctrl[CTRL_BUF2_ACK] & state_cs != FIFO_RST) begin
+      if (reg_ctrl[CTRL_BUF2_ACK] && state_cs != FIFO_RST) begin
         reg_ctrl[CTRL_BUF2_ACK] <= 0;
       end   
       
@@ -440,8 +440,9 @@ end
 always @(posedge m_axi_aclk)
 begin
   case (state_cs)
-    IDLE: begin
-        fifo_dis <= 1'b0; // disable signal
+
+    FIFO_RST: begin
+        fifo_dis <= 1'b1; // disable signal
       end
 
     SEND_DMA_REQ: begin
@@ -451,6 +452,10 @@ begin
       
     WAIT_BUF_FULL: begin
         fifo_dis <= next_buf_full; // disable signal
+      end
+
+    default: begin
+        fifo_dis <= 1'b0; // disable signal
       end
   endcase
 end  
@@ -850,11 +855,11 @@ begin
       if (m_axi_aresetn == 0) begin
         intr <= 0;
       end else begin
-        if (((state_cs == WAIT_DATA_DONE) && (dat_ctrl_busy == 0)) ||
-          (((req_buf_addr_sel_pedge == 1 && buf_sel_in == 0) || (req_buf_addr_sel_nedge == 1 && buf_sel_in == 1)))) begin // Set if streaming mode and buffer is full
-          intr <= 1;  // interrupt only triggers if the channel is not lagging behind. 
-        end else if (reg_ctrl[CTRL_INTR_ACK] == 1)
+        if (reg_ctrl[CTRL_INTR_ACK] == 1)
           intr <= 0; 
+        else if (((state_cs == WAIT_DATA_DONE) && (dat_ctrl_busy == 0)) ||
+          (((req_buf_addr_sel_pedge == 1 && buf_sel_in == 0) || (req_buf_addr_sel_nedge == 1 && buf_sel_in == 1)))) // Set if streaming mode and buffer is full
+          intr <= 1;  // interrupt only triggers if the channel is not lagging behind.
       end
     end
   endcase

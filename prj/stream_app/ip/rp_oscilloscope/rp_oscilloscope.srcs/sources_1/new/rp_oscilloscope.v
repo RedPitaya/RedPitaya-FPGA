@@ -170,8 +170,8 @@ assign adr_is_setting = (reg_addr[REG_ADDR_BITS-1:0] <= 8'h58);
 assign adr_is_cal_ch1= (reg_addr[REG_ADDR_BITS-1:0] == 8'h74 || reg_addr[REG_ADDR_BITS-1:0] == 8'h78);
 assign adr_is_cal_ch2= (reg_addr[REG_ADDR_BITS-1:0] == 8'h7C || reg_addr[REG_ADDR_BITS-1:0] == 8'h80);
 
-assign adr_is_diag_ch1= (reg_addr[REG_ADDR_BITS-1:0] == 8'hA4);
-assign adr_is_diag_ch2= (reg_addr[REG_ADDR_BITS-1:0] == 8'hA8);
+assign adr_is_diag_ch1= (reg_addr[REG_ADDR_BITS-1:0] == 8'hA4 || reg_addr[REG_ADDR_BITS-1:0] == 8'hE0 || reg_addr[REG_ADDR_BITS-1:0] == 8'hE4 || reg_addr[REG_ADDR_BITS-1:0] == 8'hE8);
+assign adr_is_diag_ch2= (reg_addr[REG_ADDR_BITS-1:0] == 8'hA8 || reg_addr[REG_ADDR_BITS-1:0] == 8'hEC);
 
 assign adr_is_dma_ch1= (reg_addr[REG_ADDR_BITS-1:0] == 8'h64 || reg_addr[REG_ADDR_BITS-1:0] == 8'h68);
 assign adr_is_dma_ch2= (reg_addr[REG_ADDR_BITS-1:0] == 8'h6C || reg_addr[REG_ADDR_BITS-1:0] == 8'h70);
@@ -183,7 +183,7 @@ assign adr_is_filt_ch1= (reg_addr[REG_ADDR_BITS-1:0] >= 8'hC0 && reg_addr[REG_AD
 assign adr_is_filt_ch2= (reg_addr[REG_ADDR_BITS-1:0] >= 8'hD0 && reg_addr[REG_ADDR_BITS-1:0] <= 8'hDC);
 
 assign adr_is_ch1     = (adr_is_dma_ch1 || adr_is_cal_ch1 || adr_is_diag_ch1 || adr_is_filt_ch1);
-assign adr_is_ch2     = (adr_is_dma_ch2 || adr_is_cal_ch2 || adr_is_diag_ch1 || adr_is_filt_ch2);
+assign adr_is_ch2     = (adr_is_dma_ch2 || adr_is_cal_ch2 || adr_is_diag_ch2 || adr_is_filt_ch2);
 
 assign trig_out = trig_out1 | trig_out2;
 ////////////////////////////////////////////////////////////

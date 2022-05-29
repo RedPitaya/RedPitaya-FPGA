@@ -869,7 +869,7 @@ begin
     DIAG_REG1:              reg_rd_data <= intr_cnt;
     DIAG_REG2:              reg_rd_data <= trig_cnt;
     DIAG_REG3:              reg_rd_data <= clk_cnt;
-    DIAG_REG4:              reg_rd_data <= trig_ip;
+    DIAG_REG4:              reg_rd_data <= intr_cnt;
 
     default                 reg_rd_data <= 32'd0;                                
   endcase
