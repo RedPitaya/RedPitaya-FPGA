@@ -134,22 +134,27 @@ always @(posedge dac_clk_1x)
 dac_rst  <= ~rstn_0 | ~pll_locked;
 
 wire [ 4-1:0] loopback_sel_ch2,loopback_sel_ch1;
-wire [14-1:0] adc_dat_ch1, adc_dat_ch2;
+reg  [14-1:0] adc_dat_ch1, adc_dat_ch2;
+reg  [14-1:0] adc_dat_ch1_r, adc_dat_ch2_r;
 wire [14-1:0] dac_dat_a_o, dac_dat_b_o;
-
-//assign dac_dat_a_o = {dac_dat_a[14-1], ~dac_dat_a[14-2:0]};
-//assign dac_dat_b_o = {dac_dat_b[14-1], ~dac_dat_b[14-2:0]};
 
 assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:2]};
 assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
 
-assign adc_dat_ch1 = loopback_sel_ch1 == 'h0 ? adc_dat_i[0][16-1:2]    : dac_dat_a[16-1:2];
-                   // (loopback_sel_ch1 == 'h1 ? dac_dat_a             :
-                   //                           {3'h0, exp_p_io, 3'h0} );
+always @(posedge clk_125) begin
+  adc_dat_ch1_r <= adc_dat_i[0][16-1:2];
+  adc_dat_ch2_r <= adc_dat_i[1][16-1:2];
 
-assign adc_dat_ch2 = loopback_sel_ch2 == 'h0 ? adc_dat_i[1][16-1:2]    : dac_dat_b[16-1:2];
-                    //(loopback_sel_ch2 == 'h1 ? dac_dat_b             :
-                    //                          {3'h0, exp_n_io, 3'h0} );
+  if (loopback_sel_ch1)
+    adc_dat_ch1 <= dac_dat_a[16-1:2];
+  else
+    adc_dat_ch1 <= adc_dat_ch1_r;
+
+  if (loopback_sel_ch2)
+    adc_dat_ch2 <= dac_dat_b[16-1:2];
+  else
+    adc_dat_ch2 <= adc_dat_ch2_r;
+end
 
 assign adc_cdcs_o = 1'b1 ;
 ////////////////////////////////////////////////////////////////////////////////

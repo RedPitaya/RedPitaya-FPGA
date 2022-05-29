@@ -130,8 +130,16 @@ BUFIO i_BUFIO_clk
   .I (  ser_clk_dly  )
 );
 
-  
+`ifdef SLAVE
 // BUFR generates slow clock
+BUFR #(.SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("1")) i_BUFR_clk
+(
+  .O   (  par_clk      ),
+  .CE  (  1'b1         ),
+  .CLR (  1'b0         ),
+  .I   (  ser_clk_dly  )
+);
+`else
 BUFR #(.SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("2")) i_BUFR_clk
 (
   .O   (  par_clk      ),
@@ -139,8 +147,7 @@ BUFR #(.SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("2")) i_BUFR_clk
   .CLR (  1'b0         ),
   .I   (  ser_clk_dly  )
 );
-
-
+`endif
 
 // Reset on receive clock domain
 always @(posedge par_clk or negedge cfg_en_i) begin

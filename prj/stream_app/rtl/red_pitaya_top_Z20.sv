@@ -134,20 +134,29 @@ always @(posedge dac_clk_1x)
 dac_rst  <= ~rstn_0 | ~pll_locked;
 
 wire [ 4-1:0] loopback_sel_ch2,loopback_sel_ch1;
-wire [16-1:0] adc_dat_ch1, adc_dat_ch2;
+reg  [16-1:0] adc_dat_ch1, adc_dat_ch2;
+reg  [16-1:0] adc_dat_ch1_r, adc_dat_ch2_r;
 wire [14-1:0] dac_dat_a_o, dac_dat_b_o;
 
 assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:2]}; // inversion for DAC input
 assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
 
-assign adc_dat_ch1 = loopback_sel_ch1 == 'h0 ? adc_dat_i[0]          : dac_dat_a;
-                    //(loopback_sel_ch1 == 'h1 ? dac_dat_a             :
-                    //                          {4'h0, exp_p_io, 4'h0} );
+always @(posedge clk_125) begin
+  adc_dat_ch1_r <= adc_dat_i[0];
+  adc_dat_ch2_r <= adc_dat_i[1];
 
-assign adc_dat_ch2 = loopback_sel_ch2 == 'h0 ? adc_dat_i[1]          : dac_dat_b;
-                    //(loopback_sel_ch2 == 'h1 ? dac_dat_b             :
-                    //                         {4'h0, exp_n_io, 4'h0} );
+  if (loopback_sel_ch1)
+    adc_dat_ch1 <= dac_dat_a;
+  else
+    adc_dat_ch1 <= adc_dat_ch1_r;
 
+  if (loopback_sel_ch2)
+    adc_dat_ch2 <= dac_dat_b;
+  else
+    adc_dat_ch2 <= adc_dat_ch2_r;
+end
+
+assign adc_cdcs_o = 1'b1 ;
 ////////////////////////////////////////////////////////////////////////////////
 // DAC IO
 ////////////////////////////////////////////////////////////////////////////////
