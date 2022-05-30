@@ -125,6 +125,7 @@ reg                       fifo_rst_cntdwn;
 reg                       transf_end;
 reg                       bit_start;
 reg                       axi_last_r, axi_last_r2;
+reg                       first_rst;
 
 wire                      full_immed;
 assign m_axi_awaddr  = req_addr;
@@ -181,7 +182,7 @@ rp_dma_s2mm_data_ctrl U_dma_s2mm_data_ctrl(
   .busy           (dat_ctrl_busy),
   .req_data       (dat_ctrl_req_data),              
   .req_we         (dat_ctrl_req_we),            
-  .req_xfer_cnt   (req_xfer_cnt),                         
+  .req_xfer_cnt   (req_xfer_cnt),
   .m_axi_wvalid   (m_axi_wvalid),          
   .m_axi_wready   (m_axi_wready),          
   .m_axi_wlast    (m_axi_wlast));
@@ -301,7 +302,10 @@ begin
           else if (req_xfer_last == 1) begin // Test for the last transfer
             state_ns = WAIT_DATA_DONE;   
           end else begin
-            state_ns = WAIT_DATA_RDY;     
+            if (fifo_lvl < AXI_BURST_LEN)
+              state_ns = BUF_FILLING;     
+            else
+              state_ns = WAIT_DATA_RDY;     
           end  
         end  
     end    
@@ -402,6 +406,27 @@ begin
   end
 end
 
+////////////////////////////////////////////////////////////
+// First reset
+// Indicates first reset from IDLE state
+////////////////////////////////////////////////////////////
+
+always @(posedge m_axi_aclk)
+begin
+  case (state_cs)
+    IDLE: begin
+      first_rst <= 1'b1; // go back to filling FIFOs
+    end
+
+    BUF_FILLING: begin
+      first_rst <= 1'b0;
+    end
+
+    WAIT_BUF_FULL: begin
+      first_rst <= 1'b0;
+    end
+  endcase
+end  
 ////////////////////////////////////////////////////////////
 // FIFO reset countdown active
 // only activates after data loss FIFO reset
@@ -552,7 +577,7 @@ begin
 
     default: begin
       // increase counter until SW confirms buffer was read
-        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF) // buffer1 is overflowing, there was a sample
+        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF && ~first_rst) // buffer1 is overflowing, there was a sample
           buf1_missed_samp <= buf1_missed_samp+32'd4;  
         else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
           buf1_missed_samp <= 32'd0;
@@ -641,7 +666,7 @@ begin
     end    
 
     default: begin
-        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF) // buffer2 is overflowing, there was a sample
+        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF && ~first_rst) // buffer2 is overflowing, there was a sample
           buf2_missed_samp <= buf2_missed_samp+32'd4;  
         else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
           buf2_missed_samp <= 32'd0;   
