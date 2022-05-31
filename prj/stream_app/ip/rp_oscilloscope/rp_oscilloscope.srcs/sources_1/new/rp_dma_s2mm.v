@@ -27,6 +27,7 @@ module rp_dma_s2mm
   input  wire [31:0]                    reg_buf_size,
   output wire                           ctl_start_o,
   input  wire                           ctl_start_ext,
+  input  wire                           use_8bit,
 
   //
   output wire [31:0]                    buf1_ms_cnt,
@@ -79,6 +80,7 @@ wire                      req_we;
 wire                      fifo_dis;
 wire [1:0]                upsize_lvl;
 reg                       ctl_start_r;
+reg                       use_8bit_r;
 
 assign m_axi_wdata  = fifo_rd_data;
 assign m_axi_wstrb  = {AXI_DATA_BITS/8{1'b1}};
@@ -91,6 +93,7 @@ assign m_axi_bready = m_axi_bvalid;
 
 always @(posedge m_axi_aclk) begin
   ctl_start_r <= ctl_start_o;
+  use_8bit_r  <= use_8bit;
 end
 
 rp_dma_s2mm_ctrl #(
@@ -152,10 +155,11 @@ rp_dma_s2mm_upsize #(
   .AXIS_DATA_BITS (AXIS_DATA_BITS))
   U_dma_s2mm_upsize(
   .clk            (s_axis_aclk),              
-  .rst            (~aresetn || (ctl_start_o & ~ctl_start_r)),    
+  .rst            (~aresetn || (ctl_start_o & ~ctl_start_r) || (use_8bit ^ use_8bit_r)),    
   .req_data       (req_data),
   .req_we         (req_we),
   .upsize_lvl     (upsize_lvl),
+  .use_8bit       (use_8bit),
   .s_axis_tdata   (s_axis_tdata),      
   .s_axis_tvalid  (s_axis_tvalid),     
   .s_axis_tready  (s_axis_tready),     
