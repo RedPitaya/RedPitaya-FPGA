@@ -9,32 +9,33 @@ module rp_dma_s2mm_ctrl
     parameter CTRL_ADDR     = 1)(
   input  wire                       m_axi_aclk,
   input  wire                       s_axis_aclk,
-  input  wire                       m_axi_aresetn,      
+  input  wire                       m_axi_aresetn,
   //
   output reg                        busy,
-  output reg                        intr,  
+  output reg                        intr,
   output reg                        mode,
   //
   input  wire [REG_ADDR_BITS-1:0]   reg_addr,
   input  wire [31:0]                reg_wr_data,
-  input  wire                       reg_wr_we,    
+  input  wire                       reg_wr_we,
   //
   output reg  [31:0]                reg_ctrl,
   output wire [31:0]                reg_sts,
   output reg  [31:0]                reg_diags,
-  input  wire [31:0]                reg_dst_addr1,  
-  input  wire [31:0]                reg_dst_addr2,  
-  input  wire [31:0]                reg_buf_size,      
-  output wire                       ctl_start_o, 
-  input  wire                       ctl_start_ext, 
+  input  wire [31:0]                reg_dst_addr1,
+  input  wire [31:0]                reg_dst_addr2,
+  input  wire [31:0]                reg_buf_size,
+  output wire                       ctl_start_o,
+  input  wire                       ctl_start_ext,
   //
 
   input  wire                       upsized_we,
   output reg                        fifo_rst,
   input  wire [FIFO_CNT_BITS-1:0]   fifo_lvl,
   input  wire [1:0]                 upsize_lvl,
+  input  wire                       use_8bit,
   input  wire [7:0]                 req_data,
-  input  wire                       req_we, 
+  input  wire                       req_we,
   input  wire                       data_valid,
   output wire [31:0]                buf1_ms_cnt,
   output wire [31:0]                buf2_ms_cnt,
@@ -42,17 +43,17 @@ module rp_dma_s2mm_ctrl
   output wire                       buf_sel_out,
   output reg                        fifo_dis,
   //
-  output wire [(AXI_ADDR_BITS-1):0] m_axi_awaddr,     
-  output reg  [7:0]                 m_axi_awlen,      
-  output wire [2:0]                 m_axi_awsize,     
-  output wire [1:0]                 m_axi_awburst,    
-  output wire [2:0]                 m_axi_awprot,     
-  output wire [3:0]                 m_axi_awcache,    
-  output reg                        m_axi_awvalid,    
-  input  wire                       m_axi_awready,    
-  output wire                       m_axi_wvalid,    
-  input  wire                       m_axi_wready,      
-  output wire                       m_axi_wlast          
+  output wire [(AXI_ADDR_BITS-1):0] m_axi_awaddr,
+  output reg  [7:0]                 m_axi_awlen,
+  output wire [2:0]                 m_axi_awsize,
+  output wire [1:0]                 m_axi_awburst,
+  output wire [2:0]                 m_axi_awprot,
+  output wire [3:0]                 m_axi_awcache,
+  output reg                        m_axi_awvalid,
+  input  wire                       m_axi_awready,
+  output wire                       m_axi_wvalid,
+  input  wire                       m_axi_wready,
+  output wire                       m_axi_wlast
 );
 
 ///////////////////////////////////////////////////////////
@@ -128,6 +129,8 @@ reg                       axi_last_r, axi_last_r2;
 reg                       first_rst;
 
 wire                      full_immed;
+wire [2-1:0]              shift=2'h2+{1'b0,use_8bit};
+
 assign m_axi_awaddr  = req_addr;
 assign m_axi_awsize  = $clog2(AXI_DATA_BITS/8);   
 assign m_axi_awburst = 2'b01;     // INCR
@@ -578,7 +581,7 @@ begin
     default: begin
       // increase counter until SW confirms buffer was read
         if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF && ~first_rst) // buffer1 is overflowing, there was a sample
-          buf1_missed_samp <= buf1_missed_samp+32'd4;  
+          buf1_missed_samp <= buf1_missed_samp+(1<<shift);
         else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
           buf1_missed_samp <= 32'd0;
 
@@ -586,7 +589,7 @@ begin
           upsize_lvl_r <= upsize_lvl;
 
         if (req_buf_addr_sel == 1 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf1_ms_lvl <= {fifo_lvl,2'h0};//+{6'h0,upsize_lvl_r};
+          buf1_ms_lvl <= fifo_lvl << shift;
         else if(req_buf_addr_sel_pedge)
           buf1_ms_lvl <= 'h0;
     end
@@ -667,7 +670,7 @@ begin
 
     default: begin
         if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF && ~first_rst) // buffer2 is overflowing, there was a sample
-          buf2_missed_samp <= buf2_missed_samp+32'd4;  
+          buf2_missed_samp <= buf2_missed_samp+(1<<shift);  
         else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
           buf2_missed_samp <= 32'd0;   
 
@@ -675,7 +678,7 @@ begin
           upsize_lvl_r <= upsize_lvl;
 
         if (req_buf_addr_sel == 0 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf2_ms_lvl <= {fifo_lvl,2'h0};//+{6'h0,upsize_lvl_r};
+          buf2_ms_lvl <= fifo_lvl << shift;
         else if(req_buf_addr_sel_nedge)
           buf2_ms_lvl <= 'h0;
       end     
