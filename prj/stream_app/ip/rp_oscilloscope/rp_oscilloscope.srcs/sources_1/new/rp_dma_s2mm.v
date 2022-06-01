@@ -82,6 +82,12 @@ wire [1:0]                upsize_lvl;
 reg                       ctl_start_r;
 reg                       use_8bit_r;
 
+wire [32-1:0]             missed_samps_ch1, missed_samps_ch2;
+wire [ 2-1:0]             shift=2'h2+{1'b0,use_8bit};
+
+assign                    buf1_ms_cnt = missed_samps_ch1 << shift;
+assign                    buf2_ms_cnt = missed_samps_ch2 << shift;
+
 assign m_axi_wdata  = fifo_rd_data;
 assign m_axi_wstrb  = {AXI_DATA_BITS/8{1'b1}};
 assign m_axi_bready = m_axi_bvalid;
@@ -129,8 +135,8 @@ rp_dma_s2mm_ctrl #(
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
-  .buf1_ms_cnt    (buf1_ms_cnt),
-  .buf2_ms_cnt    (buf2_ms_cnt),
+  .buf1_ms_cnt    (missed_samps_ch1),
+  .buf2_ms_cnt    (missed_samps_ch2),
   .buf_sel_in     (buf_sel_in),
   .buf_sel_out    (buf_sel_out),
   .fifo_dis       (fifo_dis),

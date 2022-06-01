@@ -129,7 +129,6 @@ reg                       axi_last_r, axi_last_r2;
 reg                       first_rst;
 
 wire                      full_immed;
-wire [2-1:0]              shift=2'h2+{1'b0,use_8bit};
 
 assign m_axi_awaddr  = req_addr;
 assign m_axi_awsize  = $clog2(AXI_DATA_BITS/8);   
@@ -580,8 +579,8 @@ begin
 
     default: begin
       // increase counter until SW confirms buffer was read
-        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF && ~first_rst) // buffer1 is overflowing, there was a sample
-          buf1_missed_samp <= buf1_missed_samp+(1<<shift);
+        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFF && ~first_rst) // buffer1 is overflowing, there was a sample
+          buf1_missed_samp <= buf1_missed_samp+32'h1;
         else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
           buf1_missed_samp <= 32'd0;
 
@@ -589,7 +588,7 @@ begin
           upsize_lvl_r <= upsize_lvl;
 
         if (req_buf_addr_sel == 1 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf1_ms_lvl <= fifo_lvl << shift;
+          buf1_ms_lvl <= fifo_lvl;
         else if(req_buf_addr_sel_pedge)
           buf1_ms_lvl <= 'h0;
     end
@@ -669,8 +668,8 @@ begin
     end    
 
     default: begin
-        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF && ~first_rst) // buffer2 is overflowing, there was a sample
-          buf2_missed_samp <= buf2_missed_samp+(1<<shift);  
+        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFF && ~first_rst) // buffer2 is overflowing, there was a sample
+          buf2_missed_samp <= buf2_missed_samp+32'h1;
         else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
           buf2_missed_samp <= 32'd0;   
 
@@ -678,7 +677,7 @@ begin
           upsize_lvl_r <= upsize_lvl;
 
         if (req_buf_addr_sel == 0 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf2_ms_lvl <= fifo_lvl << shift;
+          buf2_ms_lvl <= fifo_lvl;
         else if(req_buf_addr_sel_nedge)
           buf2_ms_lvl <= 'h0;
       end     
