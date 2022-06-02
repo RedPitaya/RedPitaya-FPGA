@@ -42,6 +42,8 @@ module dac_top
 
   input [DAC_DATA_BITS-1:0]               dac_scale,
   input [DAC_DATA_BITS-1:0]               dac_offs,
+  input [ 5-1:0]                          dac_outshift,
+
   input [M_AXI_DAC_ADDR_BITS-1:0]         dac_step,
   input [M_AXI_DAC_ADDR_BITS-1:0]         dac_buf_size,
   input [M_AXI_DAC_ADDR_BITS-1:0]         dac_buf1_adr,
@@ -106,11 +108,13 @@ wire                        event_sts_reset;
 wire                        ctl_trg;
 wire                        dac_rvalid;           
 wire [DAC_DATA_BITS-1:0]    dac_data_raw;
+wire [DAC_DATA_BITS-1:0]    dac_data_shiftr;
 wire [DAC_DATA_BITS-1:0]    dac_calibrated;
 
 wire set_zero = dac_conf[OUT_ZERO];
 
 assign dac_data_o = loopback_en ? dac_data_raw : dac_calibrated;
+assign dac_data_shiftr = dac_data_raw >>> dac_outshift;
 ////////////////////////////////////////////////////////////
 // Name : DMA S2MM
 // 
@@ -174,7 +178,7 @@ dac_calib #(
   .dac_rstn_i     (rst_n),
 
   .dac_o          (dac_calibrated),
-  .dac_rdata_i    (dac_data_raw),
+  .dac_rdata_i    (dac_data_shiftr),
   .dac_rvalid_i   (dac_rvalid),
   // conf
   .set_amp_i      (dac_scale),

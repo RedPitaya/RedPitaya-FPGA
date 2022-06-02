@@ -133,10 +133,13 @@ localparam ERRS_CNT_CHA         = 8'h54;
 localparam ERRS_CNT_CHB         = 8'h58;
 localparam LOOPBACK_EN          = 8'h5C;
 
-localparam DIAG_REG_ADDR1     = 8'h60;
-localparam DIAG_REG_ADDR2     = 8'h64;
-localparam DIAG_REG_ADDR3     = 8'h68;
-localparam DIAG_REG_ADDR4     = 8'h6c;
+localparam OUT_SHIFT_CH1        = 8'h60;
+localparam OUT_SHIFT_CH2        = 8'h64;
+
+localparam DIAG_REG_ADDR1     = 8'h70;
+localparam DIAG_REG_ADDR2     = 8'h74;
+localparam DIAG_REG_ADDR3     = 8'h78;
+localparam DIAG_REG_ADDR4     = 8'h8C;
 
 ////////////////////////////////////////////////////////////
 // Signals
@@ -153,6 +156,7 @@ wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_cha_rp;
 reg [16-1:0]                    cfg_cha_num_cyc;
 reg [16-1:0]                    cfg_cha_num_reps;
 reg [16-1:0]                    cfg_cha_burst_dly;
+reg [ 5-1:0]                    cfg_cha_outshift;
 
 reg [DAC_DATA_BITS-1:0]         cfg_chb_scale;
 reg [DAC_DATA_BITS-1:0]         cfg_chb_offs;
@@ -163,6 +167,7 @@ wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_chb_rp;
 reg [16-1:0]                    cfg_chb_num_cyc;
 reg [16-1:0]                    cfg_chb_num_reps;
 reg [16-1:0]                    cfg_chb_burst_dly;
+reg [ 5-1:0]                    cfg_chb_outshift;
 
 reg [16-1:0]                    cfg_cha_setdec;
 reg [16-1:0]                    cfg_chb_setdec;
@@ -288,13 +293,13 @@ begin
     DAC_CHA_SCALE_OFFS:     reg_rd_data <= {cfg_cha_offs, cfg_cha_scale};
     DAC_CHA_CNT_STEP:       reg_rd_data <= cfg_cha_step;
     DAC_CHA_CUR_RP:         reg_rd_data <= cfg_cha_rp;
-    DAC_CHB_SCALE_OFFS:     reg_rd_data <= {2'h0, cfg_chb_offs, 2'h0, cfg_chb_scale};
+    DAC_CHB_SCALE_OFFS:     reg_rd_data <= {cfg_chb_offs, cfg_chb_scale};
     DAC_CHB_CNT_STEP:       reg_rd_data <= cfg_chb_step;
     DAC_CHB_CUR_RP:         reg_rd_data <= cfg_chb_rp;
 
-    EVENT_STS_ADDR:         reg_rd_data <= cfg_event_sts;
-    EVENT_SEL_ADDR:         reg_rd_data <= cfg_event_sel;
-    TRIG_MASK_ADDR:         reg_rd_data <= cfg_trig_mask;
+    EVENT_STS_ADDR:         reg_rd_data <= {{32-EVENT_SRC_NUM{1'b0}}, cfg_event_sts};
+    EVENT_SEL_ADDR:         reg_rd_data <= {{32-EVENT_SRC_NUM{1'b0}}, cfg_event_sel};
+    TRIG_MASK_ADDR:         reg_rd_data <= {{32-TRIG_SRC_NUM{1'b0}} , cfg_trig_mask};
 
     DMA_CTRL_ADDR:          reg_rd_data <= {ctrl_chb_o[15:0], ctrl_cha_o[15:0]};      
     DMA_STS_ADDR:           reg_rd_data <= {sts_chb_o[15:0] , sts_cha_o[15:0]};   
@@ -304,8 +309,12 @@ begin
     DMA_BUF1_ADR_CHB:       reg_rd_data <= cfg_buf1_adr_chb;
     DMA_BUF2_ADR_CHA:       reg_rd_data <= cfg_buf2_adr_cha;
     DMA_BUF2_ADR_CHB:       reg_rd_data <= cfg_buf2_adr_chb;     
-    ERRS_CNT_CHA:           reg_rd_data <= errs_cnt_cha;                            
-    ERRS_CNT_CHB:           reg_rd_data <= errs_cnt_chb;    
+    ERRS_CNT_CHA:           reg_rd_data <= errs_cnt_cha;
+    ERRS_CNT_CHB:           reg_rd_data <= errs_cnt_chb;
+
+    OUT_SHIFT_CH1:          reg_rd_data <= {{32-5{1'b0}}, cfg_cha_outshift};
+    OUT_SHIFT_CH2:          reg_rd_data <= {{32-5{1'b0}}, cfg_chb_outshift};
+
     DIAG_REG_ADDR1:         reg_rd_data <= diag_reg;                            
     DIAG_REG_ADDR2:         reg_rd_data <= diag_reg2;                            
     DIAG_REG_ADDR3:         reg_rd_data <= diag_reg;                            
@@ -322,9 +331,11 @@ begin
     cfg_cha_scale       <= 16'h8000;
     cfg_cha_offs        <= 16'h0;
     cfg_cha_step        <= 32'h0;
+    cfg_cha_outshift    <= 8'h0;
     cfg_chb_scale       <= 16'h8000;
     cfg_chb_offs        <= 16'h0;
     cfg_chb_step        <= 32'h0;
+    cfg_chb_outshift    <= 8'h0;
 
     cfg_event_sts       <=  'h0;
     cfg_event_sel       <=  'h0;
@@ -332,7 +343,6 @@ begin
 
     cfg_ctrl_reg_cha    <=  8'h0;
     cfg_ctrl_reg_chb    <=  8'h0;
-
 
     cfg_dma_buf_size    <= 32'h0;    
     cfg_buf1_adr_cha    <= 32'h0;
@@ -352,9 +362,9 @@ begin
     if ((reg_addr[8-1:0] == DAC_CHB_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_chb_offs       <={reg_wr_data[29:16], 2'h0};  cfg_chb_scale <= {reg_wr_data[13:0], 2'h0}; end    
     if ((reg_addr[8-1:0] == DAC_CHB_CNT_STEP  ) && (reg_wr_we == 1)) begin cfg_chb_step       <= reg_wr_data; end    
 
-    if ((reg_addr[8-1:0] == EVENT_STS_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sts      <= reg_wr_data; end    
-    if ((reg_addr[8-1:0] == EVENT_SEL_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sel      <= reg_wr_data; end
-    if ((reg_addr[8-1:0] == TRIG_MASK_ADDR    ) && (reg_wr_we == 1)) begin cfg_trig_mask      <= reg_wr_data; end
+    if ((reg_addr[8-1:0] == EVENT_STS_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sts      <= reg_wr_data[EVENT_SRC_NUM-1:0]; end    
+    if ((reg_addr[8-1:0] == EVENT_SEL_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sel      <= reg_wr_data[EVENT_SRC_NUM-1:0]; end
+    if ((reg_addr[8-1:0] == TRIG_MASK_ADDR    ) && (reg_wr_we == 1)) begin cfg_trig_mask      <= reg_wr_data[TRIG_SRC_NUM -1:0]; end
   
     if ((reg_addr[8-1:0] == DMA_CTRL_ADDR     ) && (reg_wr_we == 1)) begin {cfg_ctrl_reg_chb, cfg_ctrl_reg_cha} <= reg_wr_data; end    
     if ((reg_addr[8-1:0] == DMA_BUF_SIZE_ADDR ) && (reg_wr_we == 1)) begin cfg_dma_buf_size   <= reg_wr_data; end    
@@ -362,6 +372,9 @@ begin
     if ((reg_addr[8-1:0] == DMA_BUF1_ADR_CHB  ) && (reg_wr_we == 1)) begin cfg_buf1_adr_chb   <= reg_wr_data; end   
     if ((reg_addr[8-1:0] == DMA_BUF2_ADR_CHA  ) && (reg_wr_we == 1)) begin cfg_buf2_adr_cha   <= reg_wr_data; end    
     if ((reg_addr[8-1:0] == DMA_BUF2_ADR_CHB  ) && (reg_wr_we == 1)) begin cfg_buf2_adr_chb   <= reg_wr_data; end   
+
+    if ((reg_addr[8-1:0] == OUT_SHIFT_CH1     ) && (reg_wr_we == 1)) begin cfg_cha_outshift   <= reg_wr_data[4:0]; end
+    if ((reg_addr[8-1:0] == OUT_SHIFT_CH2     ) && (reg_wr_we == 1)) begin cfg_chb_outshift   <= reg_wr_data[4:0]; end
 
     if ((reg_addr[8-1:0] == SETDEC_CHA        ) && (reg_wr_we == 1)) begin cfg_cha_setdec     <= reg_wr_data[15:0]; end    
     if ((reg_addr[8-1:0] == SETDEC_CHB        ) && (reg_wr_we == 1)) begin cfg_chb_setdec     <= reg_wr_data[15:0]; end 
@@ -418,6 +431,7 @@ dac_top #(
   .dac_conf         (dac_cha_conf),
   .dac_scale        (cfg_cha_scale),
   .dac_offs         (cfg_cha_offs),
+  .dac_outshift     (cfg_cha_outshift),
   .dac_step         (cfg_cha_step),
   .dac_rp           (cfg_cha_rp),
   .dac_trig         (cfg_trig_mask),
@@ -485,6 +499,7 @@ dac_top #(
   .dac_conf         (dac_chb_conf),
   .dac_scale        (cfg_chb_scale),
   .dac_offs         (cfg_chb_offs),
+  .dac_outshift     (cfg_chb_outshift),
   .dac_step         (cfg_chb_step),
   .dac_rp           (cfg_chb_rp),
   .dac_trig         (cfg_trig_mask),
