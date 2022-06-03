@@ -77,6 +77,14 @@ wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt;
 wire [7:0]                req_data;
 wire                      req_we;
 wire                      fifo_dis;
+wire [1:0]                upsize_lvl;
+reg                       ctl_start_r;
+
+wire [32-1:0]             missed_samps_ch1, missed_samps_ch2;
+wire [ 2-1:0]             shift=2'h2;
+
+assign                    buf1_ms_cnt = missed_samps_ch1 << shift;
+assign                    buf2_ms_cnt = missed_samps_ch2 << shift;
 
 assign m_axi_wdata  = fifo_rd_data;
 assign m_axi_wstrb  = {AXI_DATA_BITS/8{1'b1}};
@@ -86,6 +94,10 @@ assign m_axi_bready = m_axi_bvalid;
 // Name : DMA S2MM Control
 // Accepts DMA requests and sends data over the AXI bus.
 ////////////////////////////////////////////////////////////
+
+always @(posedge m_axi_aclk) begin
+  ctl_start_r <= ctl_start_o;
+end
 
 gpio_dma_s2mm_ctrl #(
   .AXI_ADDR_BITS  (AXI_ADDR_BITS),
@@ -118,8 +130,8 @@ gpio_dma_s2mm_ctrl #(
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
-  .buf1_ms_cnt    (buf1_ms_cnt),
-  .buf2_ms_cnt    (buf2_ms_cnt),
+  .buf1_ms_cnt    (missed_samps_ch1),
+  .buf2_ms_cnt    (missed_samps_ch2),
   .buf_sel_in     (buf_sel_in),
   .buf_sel_out    (buf_sel_out),
   .fifo_dis       (fifo_dis),
@@ -145,7 +157,7 @@ gpio_dma_s2mm_upsize #(
   .AXIS_DATA_BITS (AXIS_DATA_BITS))
   U_dma_s2mm_upsize(
   .clk            (s_axis_aclk),              
-  .rst            (~aresetn),    
+  .rst            (~aresetn || (ctl_start_o & ~ctl_start_r)),    
   .req_data       (req_data),
   .req_we         (req_we),       
   .s_axis_tdata   (s_axis_tdata),      
