@@ -106,6 +106,25 @@ ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_out), .CE(
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
 
+logic [32-1:0] led_cnt;
+logic          clk_rec_blnk;
+
+always @(posedge clk_125) //shows FPGA is loaded and has a clock
+begin
+  if (~rstn_0) begin
+    led_cnt <= 32'h0;
+    clk_rec_blnk <= 'h0;
+  end else begin 
+    if (led_cnt < 32'd62500000)
+      led_cnt <= led_cnt + 'h1;
+    else begin
+      led_cnt <= 32'h0;
+      clk_rec_blnk <= ~clk_rec_blnk;
+    end
+  end
+end
+assign led_o = {7'h0, clk_rec_blnk};
+
 red_pitaya_pll pll (
   // inputs
   .clk         (adc_clk_in),  // clock
