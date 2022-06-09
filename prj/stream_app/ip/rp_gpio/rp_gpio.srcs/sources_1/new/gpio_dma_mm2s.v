@@ -19,8 +19,6 @@ module gpio_dma_mm2s
   output      [31:0]                    reg_sts,
   input  wire                           sts_val, 
 
-  //input [AXI_ADDR_BITS-1:0]             dac_wrap,
-  //input [AXI_ADDR_BITS-1:0]             dac_start_offs,
   input [AXI_ADDR_BITS-1:0]             dac_step,
   input [AXI_ADDR_BITS-1:0]             dac_buf_size,
   input [AXI_ADDR_BITS-1:0]             dac_buf1_adr,
@@ -30,18 +28,16 @@ module gpio_dma_mm2s
 
   input                                 dac_trig,
   input  [ 8-1:0]                       dac_ctrl_reg,
-  output [ 5-1:0]                       dac_sts_reg,
-
   //
   output wire [AXIS_DATA_BITS-1: 0]     dac_rdata_o,
   output wire                           dac_rvalid_o,
+  output [32-1:0]                       diag_reg,
+  output [32-1:0]                       diag_reg2,
   input  wire                           gpio_rready_i,
-  output wire                           fifo_r,
-
   // 
   output wire [3:0]                       m_axi_arid_o     , // read address ID
   output wire [AXI_ADDR_BITS-1: 0]        m_axi_araddr_o   , // read address
-  output wire [3:0]                       m_axi_arlen_o    , // read burst length
+  output wire [7:0]                       m_axi_arlen_o    , // read burst length
   output wire [2:0]                       m_axi_arsize_o   , // read burst size
   output wire [1:0]                       m_axi_arburst_o  , // read burst type
   output wire [1:0]                       m_axi_arlock_o   , // read lock type
@@ -49,6 +45,7 @@ module gpio_dma_mm2s
   output wire [2:0]                       m_axi_arprot_o   , // read protection type
   output wire                             m_axi_arvalid_o  , // read address valid
   input  wire                             m_axi_arready_i  , // read address ready
+  output wire [3:0]                       m_axi_arqos_o    , // read QOS
   input  wire [    3: 0]                  m_axi_rid_i      , // read response ID
   input  wire [AXI_DATA_BITS-1: 0]        m_axi_rdata_i    , // read data
   input  wire [    1: 0]                  m_axi_rresp_i    , // read response
@@ -62,6 +59,7 @@ module gpio_dma_mm2s
 ////////////////////////////////////////////////////////////
 
 localparam FIFO_CNT_BITS = 10;  // Size of the FIFO data counter
+localparam FIFO_MAX      = (1<<FIFO_CNT_BITS)-2-64;
 
 ////////////////////////////////////////////////////////////
 // Signals
@@ -75,12 +73,8 @@ wire                      fifo_rd_re;
 wire                      fifo_empty;
 wire                      fifo_full;
 wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt;
-wire [7:0]                req_data;
-wire                      req_we;
-//wire                      fifo_dis;
-reg full_pedge;
+wire                      fifo_almost_full = fifo_wr_cnt > FIFO_MAX;
 
-reg first, second;
 
 wire [AXIS_DATA_BITS-1:0] downsized_data;
 wire                      downsized_valid;
@@ -101,52 +95,20 @@ assign dac_rvalid_o = downsized_valid;
 
 assign fifo_wr_data  = m_axi_rdata_i;
 assign fifo_wr_we = m_axi_rvalid_i && m_axi_rready_o;
+
 assign m_axi_arlock_o  = 2'b00;
+assign m_axi_arsize_o  = $clog2(AXI_DATA_BITS/8); // how many bytes per beat  
+assign m_axi_arburst_o = 2'b01;     // Incrementing burst
+assign m_axi_arprot_o  = 3'b000;    // no protected read
+assign m_axi_arcache_o = 4'b0011;   // buffering allowed, cached
+assign m_axi_arid_o = 'h1;   // different IDs for each channel
+assign m_axi_arqos_o = 4'h0;        // elevate QOS priority
 
-
-//assign m_axi_dac_araddr_o  = req_addr;
-assign m_axi_arsize_o  = $clog2(AXI_DATA_BITS/8);   
-assign m_axi_arburst_o = 2'b01;     // INCR
-assign m_axi_arprot_o  = 3'b000;
-assign m_axi_arcache_o = 4'b0011;
-assign m_axi_arid_o = 4'h0;
-assign fifo_r = fifo_rst;
-
-/* not needed in MM2S
-  input  wire [M_AXI_DAC_ADDR_BITS-1: 0]  m_axi_dac_rdata_i    , // read data
-*/  
-
-/* needed in MM2S
-  output wire [M_AXI_DAC_ADDR_BITS-1: 0]  m_axi_dac_araddr_o   , // read address
-  output wire [3:0]                       m_axi_dac_arlen_o    , // read burst length
-  output wire                             m_axi_dac_arvalid_o  , // read address valid
-  input  wire                             m_axi_dac_arready_i  , // read address ready
-  input  wire                             m_axi_dac_rvalid_i   , // read response valid      
-  input  wire                             m_axi_dac_rlast_i    , // read last
-  output wire                             m_axi_dac_rready_o     // read response ready                   
-*/
-
-/* UNUSED OUTPUTS
-  output wire [3:0]                       m_axi_dac_arid_o     , // read address ID
-  output wire [2:0]                       m_axi_dac_arsize_o   , // read burst size
-  output wire [1:0]                       m_axi_dac_arburst_o  , // read burst type
-  output wire [3:0]                       m_axi_dac_arcache_o  , // read cache type
-  output wire [2:0]                       m_axi_dac_arprot_o   , // read protection type
-  output wire [1:0]                       m_axi_dac_arlock_o   , // read lock type
-*/
-
-/* UNUSED INPUTS
-  input  wire [    3: 0]                  m_axi_dac_rid_i      , // read response ID
-  input  wire [    1: 0]                  m_axi_dac_rresp_i    , // read response
-*/
 
 ////////////////////////////////////////////////////////////
 // Name : DMA MM2S Control
 // Accepts DMA requests and sends data over the AXI bus.
 ////////////////////////////////////////////////////////////
-reg         fifo_re_reg;
-reg         fifo_dis_reg;
-
 gpio_dma_mm2s_ctrl #(
   .AXI_ADDR_BITS  (AXI_ADDR_BITS),
   .AXI_DATA_BITS  (AXI_DATA_BITS),
@@ -160,8 +122,6 @@ gpio_dma_mm2s_ctrl #(
   .busy           (busy),
   .intr           (intr),      
   .mode           (mode),    
-  .req_data       (req_data),
-  .req_we         (req_we),
   .reg_ctrl       (reg_ctrl),
   .ctrl_val       (ctrl_val),
   .reg_sts        (reg_sts),
@@ -178,9 +138,9 @@ gpio_dma_mm2s_ctrl #(
   .dac_buf2_adr     (dac_buf2_adr),
   .dac_trig         (dac_trig),
   .dac_ctrl_reg     (dac_ctrl_reg),
-  .dac_sts_reg      (dac_sts_reg),
   .fifo_rst         (fifo_rst),
-  .valid_dis        (valid_dis),
+  .fifo_full        (fifo_full | fifo_almost_full),   
+  .fifo_re          ((fifo_rd_re | fifo_empty)),  
   .m_axi_dac_araddr_o   (m_axi_araddr_o),       
   .m_axi_dac_arlen_o    (m_axi_arlen_o),      
   .m_axi_dac_arvalid_o  (m_axi_arvalid_o), 
@@ -197,19 +157,14 @@ gpio_dma_mm2s_ctrl #(
 gpio_dma_mm2s_downsize #(
   .AXI_DATA_BITS  (AXI_DATA_BITS),
   .AXIS_DATA_BITS (AXIS_DATA_BITS),
-  .AXI_BURST_LEN  (2))
+  .AXI_BURST_LEN  (AXI_BURST_LEN))
   U_dma_mm2s_downsize(
   .clk            (s_axis_aclk),              
-  .rst            (fifo_rst),    
-  .req_data       (req_data),
-  .req_we         (req_we),       
+  .rst            (aresetn ),        
   .fifo_empty     (fifo_empty),
-  .fifo_full      (fifo_full),
-  .fifo_rd_data   (fifo_rd_data),      
-  .fifo_valid     (valid_reg),     
-  .fifo_rd_re     (fifo_rd_re),     
-  .fifo_last      (last_reg), 
-  .valid_dis      (valid_dis),
+  .fifo_full      (fifo_full | fifo_almost_full),
+  .fifo_rd_data   (fifo_rd_data),          
+  .fifo_rd_re     (fifo_rd_re),    
   .m_axis_tdata   (downsized_data),      
   .m_axis_tvalid  (downsized_valid),
   .m_axis_tready  (gpio_rready_i ));         
@@ -220,21 +175,20 @@ gpio_dma_mm2s_downsize #(
 // Stores the data to transfer.
 ////////////////////////////////////////////////////////////
 
-fifo_axi_data 
+
+fifo_axi_data
   U_fifo_axi_data(
   .wr_clk         (m_axi_aclk),               
   .rd_clk         (s_axis_aclk),               
-  .rst            (fifo_rst),     
-  .din            (fifo_wr_data),                     
-  .wr_en          (fifo_wr_we),             
+  .rst            (~aresetn),     
+  .din            (fifo_wr_data),                                 
+  .wr_en          (fifo_wr_we),            
   .full           (fifo_full),   
   .dout           (fifo_rd_data),    
-  .rd_en          (fifo_rd_re),                                 
-  .empty          (fifo_empty),                 
-  .rd_data_count  (fifo_rd_cnt), 
-  .wr_rst_busy    (),     
-  .rd_rst_busy    ());
-  
-//assign fifo_rd_re = m_axi_wvalid & m_axi_wready;  
+  .rd_en          (fifo_rd_re),
+  .rd_data_count  (fifo_rd_cnt),
+  .wr_data_count  (fifo_wr_cnt),
+  .empty          (fifo_empty)
+); 
  
 endmodule

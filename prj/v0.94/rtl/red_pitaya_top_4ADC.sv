@@ -243,7 +243,7 @@ pwm_rstn <=  frstn[0] &  pll_locked[0] & idly_rdy;
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
-red_pitaya_ps_4ADC ps (
+red_pitaya_ps ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
   .FIXED_IO_ps_porb   (  FIXED_IO_ps_porb            ),
@@ -303,10 +303,13 @@ red_pitaya_ps_4ADC ps (
 ////////////////////////////////////////////////////////////////////////////////
 // system bus decoder & multiplexer (it breaks memory addresses into 8 regions)
 ////////////////////////////////////////////////////////////////////////////////
-
 sys_bus_interconnect #(
   .SN (8),
-  .SW (20)
+  .SW (20),
+  .SYNC_IN_BUS   (1),
+  .SYNC_OUT_BUS1 (2),
+  .SYNC_REG_OFS1 (0),
+  .SYNC_REG_OFS2 (4)
 ) sys_bus_interconnect (
   .bus_m (ps_sys),
   .bus_s (sys)

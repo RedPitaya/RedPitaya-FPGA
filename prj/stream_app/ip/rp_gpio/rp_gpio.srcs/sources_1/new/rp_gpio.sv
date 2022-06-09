@@ -574,7 +574,6 @@ gpio_out_top #(
   .ctl_rst          (event_num_reset),
   .reg_sts          (dma_sts_reg_out),
   .gpio_ctrl_reg    (cfg_ctrl_reg_out),
-  .gpio_sts_reg     (cfg_sts_reg_out),
   .gpio_step        (cfg_dma_step),
   .gpio_buf_size    (cfg_dma_buf_size),
   .gpio_buf1_adr    (cfg_buf1_adr_out),

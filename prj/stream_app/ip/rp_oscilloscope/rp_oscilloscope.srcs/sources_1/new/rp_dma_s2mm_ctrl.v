@@ -9,31 +9,33 @@ module rp_dma_s2mm_ctrl
     parameter CTRL_ADDR     = 1)(
   input  wire                       m_axi_aclk,
   input  wire                       s_axis_aclk,
-  input  wire                       m_axi_aresetn,      
+  input  wire                       m_axi_aresetn,
   //
   output reg                        busy,
-  output reg                        intr,  
+  output reg                        intr,
   output reg                        mode,
   //
   input  wire [REG_ADDR_BITS-1:0]   reg_addr,
   input  wire [31:0]                reg_wr_data,
-  input  wire                       reg_wr_we,    
+  input  wire                       reg_wr_we,
   //
   output reg  [31:0]                reg_ctrl,
   output wire [31:0]                reg_sts,
   output reg  [31:0]                reg_diags,
-  input  wire [31:0]                reg_dst_addr1,  
-  input  wire [31:0]                reg_dst_addr2,  
-  input  wire [31:0]                reg_buf_size,      
-  output wire                       ctl_start_o, 
-  input  wire                       ctl_start_ext, 
+  input  wire [31:0]                reg_dst_addr1,
+  input  wire [31:0]                reg_dst_addr2,
+  input  wire [31:0]                reg_buf_size,
+  output wire                       ctl_start_o,
+  input  wire                       ctl_start_ext,
   //
 
   input  wire                       upsized_we,
   output reg                        fifo_rst,
   input  wire [FIFO_CNT_BITS-1:0]   fifo_lvl,
+  input  wire [1:0]                 upsize_lvl,
+  input  wire                       use_8bit,
   input  wire [7:0]                 req_data,
-  input  wire                       req_we, 
+  input  wire                       req_we,
   input  wire                       data_valid,
   output wire [31:0]                buf1_ms_cnt,
   output wire [31:0]                buf2_ms_cnt,
@@ -41,17 +43,17 @@ module rp_dma_s2mm_ctrl
   output wire                       buf_sel_out,
   output reg                        fifo_dis,
   //
-  output wire [(AXI_ADDR_BITS-1):0] m_axi_awaddr,     
-  output reg  [7:0]                 m_axi_awlen,      
-  output wire [2:0]                 m_axi_awsize,     
-  output wire [1:0]                 m_axi_awburst,    
-  output wire [2:0]                 m_axi_awprot,     
-  output wire [3:0]                 m_axi_awcache,    
-  output reg                        m_axi_awvalid,    
-  input  wire                       m_axi_awready,    
-  output wire                       m_axi_wvalid,    
-  input  wire                       m_axi_wready,      
-  output wire                       m_axi_wlast          
+  output wire [(AXI_ADDR_BITS-1):0] m_axi_awaddr,
+  output reg  [7:0]                 m_axi_awlen,
+  output wire [2:0]                 m_axi_awsize,
+  output wire [1:0]                 m_axi_awburst,
+  output wire [2:0]                 m_axi_awprot,
+  output wire [3:0]                 m_axi_awcache,
+  output reg                        m_axi_awvalid,
+  input  wire                       m_axi_awready,
+  output wire                       m_axi_wvalid,
+  input  wire                       m_axi_wready,
+  output wire                       m_axi_wlast
 );
 
 ///////////////////////////////////////////////////////////
@@ -109,6 +111,10 @@ reg                       buf2_ovr;
 reg                       data_valid_reg;
 reg  [31:0]               buf1_missed_samp;
 reg  [31:0]               buf2_missed_samp;
+reg  [31:0]               buf1_ms_lvl;
+reg  [31:0]               buf2_ms_lvl;
+reg  [1:0]                upsize_lvl_r;
+
 reg  [4:0]                fifo_rst_cnt;
 wire [7:0]                fifo_wr_data; 
 wire                      fifo_wr_we;
@@ -119,16 +125,19 @@ reg                       next_buf_full;
 reg                       fifo_rst_cntdwn;
 reg                       transf_end;
 reg                       bit_start;
+reg                       axi_last_r, axi_last_r2;
+reg                       first_rst;
 
 wire                      full_immed;
+
 assign m_axi_awaddr  = req_addr;
 assign m_axi_awsize  = $clog2(AXI_DATA_BITS/8);   
 assign m_axi_awburst = 2'b01;     // INCR
 assign m_axi_awprot  = 3'b000;
 assign m_axi_awcache = 4'b0011;
 
-assign buf1_ms_cnt = buf1_missed_samp;
-assign buf2_ms_cnt = buf2_missed_samp;
+assign buf1_ms_cnt = buf1_missed_samp + buf1_ms_lvl;
+assign buf2_ms_cnt = buf2_missed_samp + buf2_ms_lvl;
 
 assign req_buf_addr_sel_pedge = req_buf_addr_sel & ~req_buf_addr_sel_p1;
 assign req_buf_addr_sel_nedge = ~req_buf_addr_sel & req_buf_addr_sel_p1;
@@ -161,7 +170,7 @@ fifo_axi_req U_fifo_axi_req(
   .empty  (fifo_empty));
   
 assign fifo_wr_data = req_data;
-assign fifo_wr_we   = req_we && ~fifo_dis && state_cs != BUF_FILLING; // writing request buffer is only enabled when not waiting on clearing of the next buffer. 
+assign fifo_wr_we   = req_we && ~fifo_dis; // writing request buffer is only enabled when not waiting on clearing of the next buffer. 
 
 ////////////////////////////////////////////////////////////
 // Name : Data Control
@@ -175,7 +184,7 @@ rp_dma_s2mm_data_ctrl U_dma_s2mm_data_ctrl(
   .busy           (dat_ctrl_busy),
   .req_data       (dat_ctrl_req_data),              
   .req_we         (dat_ctrl_req_we),            
-  .req_xfer_cnt   (req_xfer_cnt),                         
+  .req_xfer_cnt   (req_xfer_cnt),
   .m_axi_wvalid   (m_axi_wvalid),          
   .m_axi_wready   (m_axi_wready),          
   .m_axi_wlast    (m_axi_wlast));
@@ -205,6 +214,12 @@ end
 always @(posedge m_axi_aclk)
 begin
   bit_start <= (reg_ctrl[CTRL_STRT] == 1) | ctl_start_ext;
+end
+
+always @(posedge m_axi_aclk)
+begin
+  axi_last_r  <= m_axi_wlast;
+  axi_last_r2 <= axi_last_r; // FIFO level is delayed by 2 clocks
 end
 
 ////////////////////////////////////////////////////////////
@@ -264,7 +279,7 @@ begin
         if (next_buf_full)
           state_ns = WAIT_BUF_FULL;
         else
-          state_ns = WAIT_DATA_RDY;
+          state_ns = BUF_FILLING;
       end
     end
     
@@ -289,7 +304,10 @@ begin
           else if (req_xfer_last == 1) begin // Test for the last transfer
             state_ns = WAIT_DATA_DONE;   
           end else begin
-            state_ns = WAIT_DATA_RDY;     
+            if (fifo_lvl < AXI_BURST_LEN)
+              state_ns = BUF_FILLING;     
+            else
+              state_ns = WAIT_DATA_RDY;     
           end  
         end  
     end    
@@ -346,12 +364,12 @@ begin
       end
       
       // Buf 1 ACK
-      if (reg_ctrl[CTRL_BUF1_ACK] & state_cs != FIFO_RST) begin
+      if (reg_ctrl[CTRL_BUF1_ACK] && state_cs != FIFO_RST) begin
         reg_ctrl[CTRL_BUF1_ACK] <= 0;
       end
 
       // Buf 2 ACK
-      if (reg_ctrl[CTRL_BUF2_ACK] & state_cs != FIFO_RST) begin
+      if (reg_ctrl[CTRL_BUF2_ACK] && state_cs != FIFO_RST) begin
         reg_ctrl[CTRL_BUF2_ACK] <= 0;
       end   
       
@@ -391,6 +409,27 @@ begin
 end
 
 ////////////////////////////////////////////////////////////
+// First reset
+// Indicates first reset from IDLE state
+////////////////////////////////////////////////////////////
+
+always @(posedge m_axi_aclk)
+begin
+  case (state_cs)
+    IDLE: begin
+      first_rst <= 1'b1; // go back to filling FIFOs
+    end
+
+    BUF_FILLING: begin
+      first_rst <= 1'b0;
+    end
+
+    WAIT_BUF_FULL: begin
+      first_rst <= 1'b0;
+    end
+  endcase
+end  
+////////////////////////////////////////////////////////////
 // FIFO reset countdown active
 // only activates after data loss FIFO reset
 // used to increase missed sample counter during FIFO reset
@@ -428,8 +467,9 @@ end
 always @(posedge m_axi_aclk)
 begin
   case (state_cs)
-    IDLE: begin
-        fifo_dis <= 1'b0; // disable signal
+
+    FIFO_RST: begin
+        fifo_dis <= 1'b1; // disable signal
       end
 
     SEND_DMA_REQ: begin
@@ -439,6 +479,10 @@ begin
       
     WAIT_BUF_FULL: begin
         fifo_dis <= next_buf_full; // disable signal
+      end
+
+    default: begin
+        fifo_dis <= 1'b0; // disable signal
       end
   endcase
 end  
@@ -529,16 +573,25 @@ begin
   case (state_cs)
     // IDLE - Wait for the DMA start signal
     IDLE: begin
-      buf1_missed_samp <= 32'b0;  
+      buf1_missed_samp <= 32'h0;  
+      buf1_ms_lvl      <= 32'h0;
     end    
 
     default: begin
       // increase counter until SW confirms buffer was read
-        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFFF) begin // buffer1 is overflowing, there was a sample
-          buf1_missed_samp <= buf1_missed_samp+32'd4;  
-        end else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
+        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFF && ~first_rst) // buffer1 is overflowing, there was a sample
+          buf1_missed_samp <= buf1_missed_samp+32'h1;
+        else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
           buf1_missed_samp <= 32'd0;
-        end       
+
+        if (req_buf_addr_sel == 1 && m_axi_wlast && next_buf_full) // save the state of upsizer just in case
+          upsize_lvl_r <= upsize_lvl;
+
+        if (req_buf_addr_sel == 1 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
+          buf1_ms_lvl <= fifo_lvl;
+        else if(req_buf_addr_sel_pedge)
+          buf1_ms_lvl <= 'h0;
+    end
   endcase
 end  
 
@@ -610,15 +663,23 @@ begin
   case (state_cs)
     // IDLE - Wait for the DMA start signal
     IDLE: begin
-      buf2_missed_samp <= 32'b0;  
+      buf2_missed_samp <= 32'h0;  
+      buf2_ms_lvl      <= 32'h0;
     end    
 
     default: begin
-        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFFF) begin // buffer2 is overflowing, there was a sample
-          buf2_missed_samp <= buf2_missed_samp+32'd4;  
-        end else if(req_buf_addr_sel_nedge) begin // number of missed samples is reset when writing into the buffer starts.
-          buf2_missed_samp <= 32'd0;
-        end   
+        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFF && ~first_rst) // buffer2 is overflowing, there was a sample
+          buf2_missed_samp <= buf2_missed_samp+32'h1;
+        else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
+          buf2_missed_samp <= 32'd0;   
+
+        if (req_buf_addr_sel == 0 && m_axi_wlast && next_buf_full) // save the state of upsizer just in case
+          upsize_lvl_r <= upsize_lvl;
+
+        if (req_buf_addr_sel == 0 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
+          buf2_ms_lvl <= fifo_lvl;
+        else if(req_buf_addr_sel_nedge)
+          buf2_ms_lvl <= 'h0;
       end     
   endcase
 end     
@@ -821,11 +882,11 @@ begin
       if (m_axi_aresetn == 0) begin
         intr <= 0;
       end else begin
-        if (((state_cs == WAIT_DATA_DONE) && (dat_ctrl_busy == 0)) ||
-          (((req_buf_addr_sel_pedge == 1 && buf_sel_in == 0) || (req_buf_addr_sel_nedge == 1 && buf_sel_in == 1)))) begin // Set if streaming mode and buffer is full
-          intr <= 1;  // interrupt only triggers if the channel is not lagging behind. 
-        end else if (reg_ctrl[CTRL_INTR_ACK] == 1)
+        if (reg_ctrl[CTRL_INTR_ACK] == 1)
           intr <= 0; 
+        else if (((state_cs == WAIT_DATA_DONE) && (dat_ctrl_busy == 0)) ||
+          (((req_buf_addr_sel_pedge == 1 && buf_sel_in == 0) || (req_buf_addr_sel_nedge == 1 && buf_sel_in == 1)))) // Set if streaming mode and buffer is full
+          intr <= 1;  // interrupt only triggers if the channel is not lagging behind.
       end
     end
   endcase

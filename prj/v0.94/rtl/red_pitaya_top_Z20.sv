@@ -150,6 +150,7 @@ logic                 pwm_rstn;
 // ADC clock/reset
 logic                 adc_clk;
 logic                 adc_rstn;
+logic                 adc_clk_daisy;
 
 // stream bus type
 //localparam type SBA_T = logic signed [14-1:0];  // acquire
@@ -336,9 +337,14 @@ red_pitaya_pdm pdm (
 ////////////////////////////////////////////////////////////////////////////////
 
 // generating ADC clock is disabled
-assign adc_clk_o = 2'b10;
-//ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(fclk[0]), .CE(1'b1), .R(1'b0), .S(1'b0));
-//ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(fclk[0]), .CE(1'b1), .R(1'b0), .S(1'b0));
+`ifdef SLAVE
+wire adc_clk_out = adc_clk_daisy;
+`else
+wire adc_clk_out = 1'b0;
+`endif
+
+ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_out), .CE(1'b1), .R(1'b0), .S(1'b0));
+ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_out), .CE(1'b1), .R(1'b0), .S(1'b0));
 
 // ADC clock duty cycle stabilizer is enabled
 assign adc_cdcs_o = 1'b1 ;
@@ -535,7 +541,7 @@ red_pitaya_daisy i_daisy (
   .par_dv_i        (  daisy_rx_rdy               ),
   .par_dat_i       (  16'h1234                   ),
    // RX
-  .par_clk_o       (                             ),
+  .par_clk_o       ( adc_clk_daisy               ),
   .par_rstn_o      (                             ),
   .par_dv_o        (                             ),
   .par_dat_o       (                             ),

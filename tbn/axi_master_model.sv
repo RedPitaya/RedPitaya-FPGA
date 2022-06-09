@@ -120,7 +120,7 @@ task wr_single ;
    input   [  3-1: 0] size_i      ;
    input   [  2-1: 0] lock_i      ;
    input   [  3-1: 0] prot_i      ;
-   output  [  2-1: 0] resp_o      ;
+   //output  [  2-1: 0] resp_o      ;
 
    reg     [  2-1: 0] dat_resp    ;
    reg                in_use      ;
@@ -201,7 +201,7 @@ begin:main
    wr_idle   <= 1'b1 ;
    @(posedge aclk_i) ;
 
-   resp_o <= bresp_i ;
+   //resp_o <= bresp_i ;
 end
 endtask: wr_single
 
@@ -216,7 +216,7 @@ task rd_single ;
    input   [  2-1: 0] lock_i      ;
    input   [  3-1: 0] prot_i      ;
    output  [ DW-1: 0] dat_o       ;  
-   output  [  2-1: 0] resp_o      ;
+ //  output  [  2-1: 0] resp_o      ;
   
 
    reg     [  2-1: 0] dat_resp    ;
@@ -285,7 +285,7 @@ begin:main
    rd_idle   <= 1'b1 ;
    @(posedge aclk_i) ;
 
-   resp_o <= rresp_i ;
+   //resp_o <= rresp_i ;
 end
 endtask: rd_single
 

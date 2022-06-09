@@ -181,8 +181,8 @@ reg          [ 8-1:0] gpio_n_o;
 
 reg          [10-1:0] gpio_cnt;
 
-//assign gpio_p_o = 8'h01;
-//assign gpio_n_o = 8'hFE;
+assign gpio_p_o = 8'h01;
+assign gpio_n_o = 8'hFE;
 /*
 always @(posedge clk) begin
   if (~rstn) begin

@@ -37,7 +37,6 @@ module gpio_out_top   #(
   input [32-1:0]                        buf2_ms_cnt,
   output [M_AXI_GPIO_ADDR_BITS-1:0]     gpio_wp,
   input  [ 8-1:0]                       gpio_ctrl_reg,
-  output [ 5-1:0]                       gpio_sts_reg,
 
   output wire [3:0]                       m_axi_gpio_arid_o     , // read address ID
   output wire [M_AXI_GPIO_ADDR_BITS-1: 0] m_axi_gpio_araddr_o   , // read address
@@ -111,12 +110,10 @@ gpio_dma_mm2s #(
 
   .dac_trig         (ctl_trg),
   .dac_ctrl_reg     (gpio_ctrl_reg),
-  .dac_sts_reg      (gpio_sts_reg),
 
   .dac_rdata_o      (gpio_data_o),
   .dac_rvalid_o     (gpio_rvalid),
   .gpio_rready_i    (new_read),
-  .fifo_r           (fifo_rst),
   
   .m_axi_arid_o   (m_axi_gpio_arid_o), 
   .m_axi_araddr_o    (m_axi_gpio_araddr_o),  
@@ -136,7 +133,7 @@ gpio_dma_mm2s #(
   .m_axi_rready_o   (m_axi_gpio_rready_o));
   
   
-assign sti1.TDATA  = {gpio_data_o[31:16],gpio_data_o[7:0]};
+assign sti1.TDATA  = {gpio_data_o[7:0],gpio_data_o[31:16]};
 assign sti1.TVALID = gpio_rvalid;
 assign sti1.TLAST  = 1'b0;
 

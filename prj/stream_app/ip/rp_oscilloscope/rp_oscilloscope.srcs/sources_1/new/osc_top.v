@@ -84,6 +84,7 @@ localparam DEC_RSHIFT_ADDR      = 8'h34;  //52 Decimation right shift address
 localparam AVG_EN_ADDR          = 8'h38;  //56 Average enable address
 localparam FILT_BYPASS_ADDR     = 8'h3C;  //60 Filter bypass address
 localparam LOOPBACK_ADDR        = 8'h40;  //64 Digital loopback
+localparam SHIFT_8BIT           = 8'h44;  //
 
 localparam DMA_CTRL_ADDR_CH1    = 8'h50;  //80 DMA control register
 localparam DMA_STS_ADDR_CH1     = 8'h54;  //84 DMA status register
@@ -170,6 +171,7 @@ reg  [31:0]                 cfg_dma_dst_addr2;
 reg  [31:0]                 cfg_dma_buf_size;
 wire [31:0]                 cfg_dma_diags_reg;
 
+reg                         cfg_8bit_dat;
 
 reg  [15:0]                 cfg_calib_offset;
 reg  [15:0]                 cfg_calib_gain;
@@ -406,6 +408,7 @@ rp_dma_s2mm #(
   .reg_buf_size   (cfg_dma_buf_size),
   .ctl_start_o    (ctl_start_o),
   .ctl_start_ext  (external_trig_val),
+  .use_8bit       (cfg_8bit_dat),
   .buf1_ms_cnt    (buf1_ms_cnt),
   .buf2_ms_cnt    (buf2_ms_cnt),
   .buf_sel_in     (buf_sel_in),
@@ -817,6 +820,21 @@ begin
 end
 
 ////////////////////////////////////////////////////////////
+// Name : Use 8 bit ADC data
+// 
+////////////////////////////////////////////////////////////
+always @(posedge clk)
+begin
+  if (rst_n == 0) begin
+    cfg_8bit_dat <= 1'b0; //Use full ADC range by default
+  end else begin
+    if ((reg_addr[8-1:0] == SHIFT_8BIT ) && (reg_wr_we == 1)) begin
+      cfg_8bit_dat <= reg_wr_data[0];
+    end
+    
+  end
+end
+////////////////////////////////////////////////////////////
 // Name : Register Read Data
 // 
 ////////////////////////////////////////////////////////////
@@ -825,51 +843,52 @@ always @(posedge clk)
 begin
   case (reg_addr[8-1:0])
     EVENT_STS_ADDR:         reg_rd_data <= {28'd0, event_sts_trig, event_sts_stop, event_sts_start, event_sts_reset};
-    EVENT_SEL_ADDR:         reg_rd_data <= cfg_event_sel;
-    TRIG_MASK_ADDR:         reg_rd_data <= cfg_trig_mask;
-    TRIG_PRE_SAMP_ADDR:     reg_rd_data <= cfg_trig_pre_samp;
-    TRIG_POST_SAMP_ADDR:    reg_rd_data <= cfg_trig_post_samp;
+    EVENT_SEL_ADDR:         reg_rd_data <= {{32-EVENT_NUM_LOG2{1'b0}}   , cfg_event_sel};
+    TRIG_MASK_ADDR:         reg_rd_data <= {{32-TRIG_SRC_NUM{1'b0}}     , cfg_trig_mask};
+    TRIG_PRE_SAMP_ADDR:     reg_rd_data <= {{32-TRIG_CNT_BITS{1'b0}}    , cfg_trig_pre_samp};
+    TRIG_POST_SAMP_ADDR:    reg_rd_data <= {{32-TRIG_CNT_BITS{1'b0}}    , cfg_trig_post_samp};
     TRIG_PRE_CNT_ADDR:      reg_rd_data <= {sts_trig_pre_overflow, sts_trig_pre_cnt[30:0]};
     TRIG_POST_CNT_ADDR:     reg_rd_data <= {sts_trig_post_overflow, sts_trig_post_cnt[30:0]};
-    TRIG_LOW_LEVEL_ADDR:    reg_rd_data <= cfg_trig_low_level;     
-    TRIG_HIGH_LEVEL_ADDR:   reg_rd_data <= cfg_trig_high_level;  
-    TRIG_EDGE_ADDR:         reg_rd_data <= cfg_trig_edge;  
-    DEC_FACTOR_ADDR:        reg_rd_data <= cfg_dec_factor;  
-    DEC_RSHIFT_ADDR:        reg_rd_data <= cfg_dec_rshift;  
-    AVG_EN_ADDR:            reg_rd_data <= cfg_avg_en;  
-    LOOPBACK_ADDR:          reg_rd_data <= cfg_loopback;                           
-    CALIB_OFFSET_ADDR_CH1:  reg_rd_data <= cfg_calib_offset;
-    CALIB_GAIN_ADDR_CH1:    reg_rd_data <= cfg_calib_gain;
-    CALIB_OFFSET_ADDR_CH2:  reg_rd_data <= cfg_calib_offset;
-    CALIB_GAIN_ADDR_CH2:    reg_rd_data <= cfg_calib_gain;
-    FILT_BYPASS_ADDR:       reg_rd_data <= cfg_filt_bypass;                           
-    DMA_CTRL_ADDR_CH1:      reg_rd_data <= cfg_dma_ctrl_reg;    
-    DMA_STS_ADDR_CH1:       reg_rd_data <= cfg_dma_sts_reg;    
-    DMA_CTRL_ADDR_CH2:      reg_rd_data <= cfg_dma_ctrl_reg;    
-    DMA_STS_ADDR_CH2:       reg_rd_data <= cfg_dma_sts_reg;   
-    DMA_DST_ADDR1_CH1:      reg_rd_data <= cfg_dma_dst_addr1; 
-    DMA_DST_ADDR2_CH1:      reg_rd_data <= cfg_dma_dst_addr2; 
-    DMA_DST_ADDR1_CH2:      reg_rd_data <= cfg_dma_dst_addr1; 
-    DMA_DST_ADDR2_CH2:      reg_rd_data <= cfg_dma_dst_addr2; 
-    DMA_BUF_SIZE_ADDR:      reg_rd_data <= cfg_dma_buf_size; 
-    BUF1_LOST_SAMP_CNT_CH1: reg_rd_data <= buf1_ms_cnt; 
-    BUF2_LOST_SAMP_CNT_CH1: reg_rd_data <= buf2_ms_cnt; 
-    BUF1_LOST_SAMP_CNT_CH2: reg_rd_data <= buf1_ms_cnt; 
-    BUF2_LOST_SAMP_CNT_CH2: reg_rd_data <= buf2_ms_cnt; 
-    CURR_WP_CH1:            reg_rd_data <= m_axi_awaddr;
-    CURR_WP_CH2:            reg_rd_data <= m_axi_awaddr;
-    FILT_COEFF_AA_CH1:      reg_rd_data <= cfg_filt_coeff_aa;
-    FILT_COEFF_BB_CH1:      reg_rd_data <= cfg_filt_coeff_bb;
-    FILT_COEFF_KK_CH1:      reg_rd_data <= cfg_filt_coeff_kk;
-    FILT_COEFF_PP_CH1:      reg_rd_data <= cfg_filt_coeff_pp;
-    FILT_COEFF_AA_CH2:      reg_rd_data <= cfg_filt_coeff_aa;
-    FILT_COEFF_BB_CH2:      reg_rd_data <= cfg_filt_coeff_bb;
-    FILT_COEFF_KK_CH2:      reg_rd_data <= cfg_filt_coeff_kk;
-    FILT_COEFF_PP_CH2:      reg_rd_data <= cfg_filt_coeff_pp;
-    DIAG_REG1:              reg_rd_data <= intr_cnt;
-    DIAG_REG2:              reg_rd_data <= trig_cnt;
-    DIAG_REG3:              reg_rd_data <= clk_cnt;
-    DIAG_REG4:              reg_rd_data <= trig_ip;
+    TRIG_LOW_LEVEL_ADDR:    reg_rd_data <= {{32-S_AXIS_DATA_BITS{1'b0}} , cfg_trig_low_level};
+    TRIG_HIGH_LEVEL_ADDR:   reg_rd_data <= {{32-S_AXIS_DATA_BITS{1'b0}} , cfg_trig_high_level};
+    TRIG_EDGE_ADDR:         reg_rd_data <= {{32- 1{1'b0}}               , cfg_trig_edge};
+    DEC_FACTOR_ADDR:        reg_rd_data <= {{32-DEC_CNT_BITS{1'b0}}     , cfg_dec_factor};
+    DEC_RSHIFT_ADDR:        reg_rd_data <= {{32-DEC_SHIFT_BITS{1'b0}}   , cfg_dec_rshift};
+    AVG_EN_ADDR:            reg_rd_data <= {{32- 1{1'b0}}               , cfg_avg_en};
+    LOOPBACK_ADDR:          reg_rd_data <= {{32-16{1'b0}}               , cfg_loopback};
+    SHIFT_8BIT:             reg_rd_data <= {{32- 1{1'b0}}               , cfg_8bit_dat};
+    CALIB_OFFSET_ADDR_CH1:  reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_offset};
+    CALIB_GAIN_ADDR_CH1:    reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_gain};
+    CALIB_OFFSET_ADDR_CH2:  reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_offset};
+    CALIB_GAIN_ADDR_CH2:    reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_gain};
+    FILT_BYPASS_ADDR:       reg_rd_data <= {{32- 1{1'b0}}               , cfg_filt_bypass};
+    DMA_CTRL_ADDR_CH1:      reg_rd_data <=                                cfg_dma_ctrl_reg;
+    DMA_STS_ADDR_CH1:       reg_rd_data <=                                cfg_dma_sts_reg;
+    DMA_CTRL_ADDR_CH2:      reg_rd_data <=                                cfg_dma_ctrl_reg;
+    DMA_STS_ADDR_CH2:       reg_rd_data <=                                cfg_dma_sts_reg;
+    DMA_DST_ADDR1_CH1:      reg_rd_data <=                                cfg_dma_dst_addr1;
+    DMA_DST_ADDR2_CH1:      reg_rd_data <=                                cfg_dma_dst_addr2;
+    DMA_DST_ADDR1_CH2:      reg_rd_data <=                                cfg_dma_dst_addr1;
+    DMA_DST_ADDR2_CH2:      reg_rd_data <=                                cfg_dma_dst_addr2;
+    DMA_BUF_SIZE_ADDR:      reg_rd_data <=                                cfg_dma_buf_size;
+    BUF1_LOST_SAMP_CNT_CH1: reg_rd_data <=                                buf1_ms_cnt;
+    BUF2_LOST_SAMP_CNT_CH1: reg_rd_data <=                                buf2_ms_cnt;
+    BUF1_LOST_SAMP_CNT_CH2: reg_rd_data <=                                buf1_ms_cnt;
+    BUF2_LOST_SAMP_CNT_CH2: reg_rd_data <=                                buf2_ms_cnt;
+    CURR_WP_CH1:            reg_rd_data <=                                m_axi_awaddr;
+    CURR_WP_CH2:            reg_rd_data <=                                m_axi_awaddr;
+    FILT_COEFF_AA_CH1:      reg_rd_data <= {{32-18{1'b0}}               , cfg_filt_coeff_aa};
+    FILT_COEFF_BB_CH1:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_bb};
+    FILT_COEFF_KK_CH1:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_kk};
+    FILT_COEFF_PP_CH1:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_pp};
+    FILT_COEFF_AA_CH2:      reg_rd_data <= {{32-18{1'b0}}               , cfg_filt_coeff_aa};
+    FILT_COEFF_BB_CH2:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_bb};
+    FILT_COEFF_KK_CH2:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_kk};
+    FILT_COEFF_PP_CH2:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_pp};
+    DIAG_REG1:              reg_rd_data <=                                intr_cnt;
+    DIAG_REG2:              reg_rd_data <=                                trig_cnt;
+    DIAG_REG3:              reg_rd_data <=                                clk_cnt;
+    DIAG_REG4:              reg_rd_data <=                                intr_cnt;
 
     default                 reg_rd_data <= 32'd0;                                
   endcase

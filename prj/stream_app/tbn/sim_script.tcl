@@ -77,7 +77,7 @@ delete_bd_objs [get_bd_addr_segs processing_system7_0/Data/SEG_rp_oscilloscope_r
 create_bd_port -dir O -type rst rstn_200
 connect_bd_net [get_bd_ports rstn_200] [get_bd_pins rst_gen2/peripheral_aresetn]
 create_bd_port -dir O -type clk clkout_200
-connect_bd_net [get_bd_ports clkout_200] [get_bd_pins clk_gen/clk_200]
+connect_bd_net [get_bd_ports clkout_200] [get_bd_pins clk_gen/clk_250]
 set_property -dict [list CONFIG.HAS_QOS {1} CONFIG.HAS_REGION {0} CONFIG.NUM_WRITE_OUTSTANDING {8} CONFIG.NUM_READ_OUTSTANDING {8} CONFIG.FREQ_HZ {250000000} CONFIG.PROTOCOL {AXI3} CONFIG.DATA_WIDTH {64}] [get_bd_intf_ports M_AXI_OSC]
 set_property -dict [list CONFIG.CLK_DOMAIN {system_clk_gen_0_clk_200}] [get_bd_intf_ports M_AXI_OSC]
 connect_bd_intf_net [get_bd_intf_ports M_AXI_OSC] [get_bd_intf_pins rp_dac/m_axi_dac1]

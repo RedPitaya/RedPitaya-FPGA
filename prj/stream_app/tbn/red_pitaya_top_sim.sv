@@ -119,7 +119,25 @@ module red_pitaya_top_sim
 
     rst_in,
 
+    daisy_p_o,
+    daisy_n_o,
+    daisy_p_i,
+    daisy_n_i,
+
+    gpio_p_o,
+    gpio_n_o,
+    gpio_p_i,
+    gpio_n_i,
+
+    dac_dat_o,
+    dac_wrt_o,
+    dac_sel_o,
+    dac_clk_o,
+    dac_rst_o,
+
     adc_clk,
+    adc_clk_i,
+    adc_clk_o,
     //adc_clk_p,
     adc_data_ch1,
     adc_data_ch2);
@@ -227,6 +245,16 @@ module red_pitaya_top_sim
   output clkout_625;
   output clkout_125;
   output clkout_200;
+  // SATA connector
+  output [ 2-1:0] daisy_p_o  ;  // line 1 is clock capable
+  output [ 2-1:0] daisy_n_o  ;
+  input  [ 2-1:0] daisy_p_i  ;  // line 1 is clock capable
+  input  [ 2-1:0] daisy_n_i  ;
+
+  output [ 8-1:0] gpio_p_o  ;
+  output [ 8-1:0] gpio_n_o  ;
+  input  [ 8-1:0] gpio_p_i  ;
+  input  [ 8-1:0] gpio_n_i  ;
 
   output rstn_out;
   output rstn_200;
@@ -234,9 +262,17 @@ module red_pitaya_top_sim
   input  rst_in;
 
   input adc_clk;
+  input  [ 2-1:0] adc_clk_i;
+  output [ 2-1:0] adc_clk_o;
   //input adc_clk_p;
   input [15:0]adc_data_ch1;
   input [15:0]adc_data_ch2;
+
+  output [14-1:0] dac_dat_o;
+  output          dac_wrt_o;
+  output          dac_sel_o;
+  output          dac_clk_o;
+  output          dac_rst_o;
 
   wire [14:0]DDR_addr;
   wire [2:0]DDR_ba;
@@ -338,6 +374,11 @@ module red_pitaya_top_sim
   wire [3:0]S_AXI_REG_wstrb;
   wire S_AXI_REG_wvalid;
 
+  wire [ 8-1:0] gpio_p_o  ;
+  wire [ 8-1:0] gpio_n_o  ;
+  wire  [ 8-1:0] gpio_p_i  ;
+  wire  [ 8-1:0] gpio_n_i  ;
+
   wire clkout_625;
   wire clkout_125;
   wire clkout_200;
@@ -347,9 +388,62 @@ module red_pitaya_top_sim
   wire rst_in;
 
   wire adc_clk;
+  wire  [ 2-1:0] adc_clk_i;
+  wire  [ 2-1:0] adc_clk_o;
   //wire adc_clk_p;
   wire [15:0]adc_data_ch1;
   wire [15:0]adc_data_ch2;
+logic        [16-1:0] dac_dat_a, dac_dat_b;
+wire   [14-1:0] dac_dat_a_o, dac_dat_b_o;
+
+  logic [14-1:0] dac_dat_o;
+  logic          dac_wrt_o;
+  logic          dac_sel_o;
+  logic          dac_clk_o;
+  logic          dac_rst_o;
+logic dac_rst;
+
+
+
+  assign dac_dat_a_o = {dac_dat_a[14-1], ~dac_dat_a[14-2:0]};
+  assign dac_dat_b_o = {dac_dat_b[14-1], ~dac_dat_b[14-2:0]};
+
+////////////////////////////////////////////////////////////////////////////////
+// PLL (clock and reset)
+////////////////////////////////////////////////////////////////////////////////
+
+red_pitaya_pll pll (
+  // inputs
+  .clk         (adc_clk_in),  // clock
+  .rstn        (rstn_out  ),  // reset - active low
+  // output clocks
+  .clk_dac_1x  (pll_dac_clk_1x),  // DAC clock 125MHz
+  .clk_dac_2x  (pll_dac_clk_2x),  // DAC clock 250MHz
+  .clk_dac_2p  (pll_dac_clk_2p),  // DAC clock 250MHz -45DGR
+  // status outputs
+  .pll_locked  (pll_locked)
+);
+
+BUFG bufg_dac_clk_1x (.O (dac_clk_1x), .I (pll_dac_clk_1x));
+BUFG bufg_dac_clk_2x (.O (dac_clk_2x), .I (pll_dac_clk_2x));
+BUFG bufg_dac_clk_2p (.O (dac_clk_2p), .I (pll_dac_clk_2p));
+
+// DDR outputs
+ODDR oddr_dac_clk          (.Q(dac_clk_o), .D1(1'b0     ), .D2(1'b1     ), .C(dac_clk_2p), .CE(1'b1), .R(1'b0   ), .S(1'b0));
+ODDR oddr_dac_wrt          (.Q(dac_wrt_o), .D1(1'b0     ), .D2(1'b1     ), .C(dac_clk_2x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
+ODDR oddr_dac_sel          (.Q(dac_sel_o), .D1(1'b1     ), .D2(1'b0     ), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
+ODDR oddr_dac_rst          (.Q(dac_rst_o), .D1(dac_rst  ), .D2(dac_rst  ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
+ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b_o), .D2(dac_dat_a_o), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
+
+// DAC reset (active high)
+always @(posedge dac_clk_1x)
+dac_rst  <= ~rstn_out | ~pll_locked;
+
+`ifdef SLAVE
+wire adc_clk_out = adc_clk_daisy;
+`else
+wire adc_clk_out = 1'b0;
+`endif
 
   system_wrapper system_wrapper_i
        (.DDR_addr(DDR_addr),
@@ -374,7 +468,7 @@ module red_pitaya_top_sim
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
         
-        
+/*        
         .M_AXI_OSC_araddr(M_AXI_OSC_araddr),
         .M_AXI_OSC_arburst(M_AXI_OSC_arburst),
         .M_AXI_OSC_arcache(M_AXI_OSC_arcache),
@@ -386,9 +480,9 @@ module red_pitaya_top_sim
         .M_AXI_OSC_arready(M_AXI_OSC_arready),
         .M_AXI_OSC_arsize(M_AXI_OSC_arsize),
         .M_AXI_OSC_arvalid(M_AXI_OSC_arvalid),
+  */      
         
-        
-/*
+
         .M_AXI_OSC_awaddr(M_AXI_OSC_awaddr),
         .M_AXI_OSC_awburst(M_AXI_OSC_awburst),
         .M_AXI_OSC_awcache(M_AXI_OSC_awcache),
@@ -404,23 +498,23 @@ module red_pitaya_top_sim
         .M_AXI_OSC_bready(M_AXI_OSC_bready),
         .M_AXI_OSC_bresp(M_AXI_OSC_bresp),
         .M_AXI_OSC_bvalid(M_AXI_OSC_bvalid),
-*/
-        
+
+/*
         .M_AXI_OSC_rdata(M_AXI_OSC_rdata),
         .M_AXI_OSC_rid(M_AXI_OSC_rid),
         .M_AXI_OSC_rlast(M_AXI_OSC_rlast),
         .M_AXI_OSC_rready(M_AXI_OSC_rready),
         .M_AXI_OSC_rresp(M_AXI_OSC_rresp),
         .M_AXI_OSC_rvalid(M_AXI_OSC_rvalid),
-        
-/*
+  */      
+
         .M_AXI_OSC_wdata(M_AXI_OSC_wdata),
         .M_AXI_OSC_wid(M_AXI_OSC_wid),
         .M_AXI_OSC_wlast(M_AXI_OSC_wlast),
         .M_AXI_OSC_wready(M_AXI_OSC_wready),
         .M_AXI_OSC_wstrb(M_AXI_OSC_wstrb),
         .M_AXI_OSC_wvalid(M_AXI_OSC_wvalid),
-*/
+
         .S_AXI_REG_araddr(S_AXI_REG_araddr),
         .S_AXI_REG_arburst(S_AXI_REG_arburst),
         .S_AXI_REG_arcache(S_AXI_REG_arcache),
@@ -467,9 +561,110 @@ module red_pitaya_top_sim
         .rstn_200(rstn_200),
         .rst_in(rst_in),
         .adc_clk(adc_clk),
-
+        .dac_dat_a(dac_dat_a),
+        .dac_dat_b(dac_dat_b),
+        .trig_in(trig_ext_syncd),
+        .trig_out(trig_out),
+        .gpio_p_o,(gpio_p_i),
+        .gpio_n_o,(gpio_n_i),
+        .gpio_p_i,(gpio_p_o),
+        .gpio_n_i,(gpio_n_o),
+        
         /*.adc_clk_n(adc_clk_n),
         .adc_clk_p(adc_clk_p),*/
         .adc_data_ch1(adc_data_ch1[16-1:2]),
         .adc_data_ch2(adc_data_ch2[16-1:2]));
+
+wire trig_ext_syncd;
+reg trig_ext_sync1, trig_ext_sync2;
+
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_trig
+(
+  .O  ( daisy_p_o[0]  ),
+  .OB ( daisy_n_o[0]  ),
+  .I  ( trig_out      )
+);
+
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
+(
+  .O  ( daisy_p_o[1]  ),
+  .OB ( daisy_n_o[1]  ),
+  .I  ( adc_clk_daisy )
+);
+
+IBUFDS #() i_IBUF_clkadc
+(
+  .I  ( adc_clk_i[1]  ),
+  .IB ( adc_clk_i[0]  ),
+  .O  ( adc_clk_in    )
+);
+
+
+`ifdef SLAVE
+
+IBUFDS #() i_IBUF_clkdaisy
+(
+  .I  ( daisy_p_i[1]  ),
+  .IB ( daisy_n_i[1]  ),
+  .O  ( adc_clk_daisy )
+);
+
+IBUFDS #() i_IBUFDS_trig
+(
+  .I  ( daisy_p_i[0]  ),
+  .IB ( daisy_n_i[0]  ),
+  .O  ( trig_ext      )
+);
+assign trig_ext_syncd = trig_ext;
+
+`else
+
+IBUFDS #() i_IBUFDS_trig
+(
+  .I  ( daisy_p_i[0]  ),
+  .IB ( daisy_n_i[0]  ),
+  .O  ( trig_ext)
+);
+
+
+assign adc_clk_daisy = adc_clk_in;
+
+always @(posedge clkout_125) //sync external trigger from external master to local clock
+begin
+  trig_ext_sync1 <= trig_ext;
+  trig_ext_sync2 <= trig_ext_sync1;
+end
+assign trig_ext_syncd = trig_ext_sync2;
+
+//assign trig_ext = gpio.i[8];
+
+`endif
+/*
+`else
+
+IBUFDS #() i_IBUFDS_trig
+(
+  .I  ( daisy_p_i[0]  ),
+  .IB ( daisy_n_i[0]  ),
+  .O  ( trig_ext)
+);
+
+always @(posedge clkout_125) //sync external trigger from external master to local clock
+begin
+  trig_ext_sync1 <= trig_ext;
+  trig_ext_sync2 <= trig_ext_sync1;
+end
+assign trig_ext_syncd = trig_ext_sync2;
+
+
+IBUFDS #() i_IBUF_clk
+(
+  .I  ( adc_clk_i[1]  ),
+  .IB ( adc_clk_i[0]  ),
+  .O  ( adc_clk_in    )
+);
+
+//assign trig_ext = gpio.i[8];
+
+`endif*/
 endmodule

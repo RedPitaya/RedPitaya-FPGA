@@ -206,17 +206,17 @@ task buf_ack(
     axi_read(offset+'h2C, dat);
       $display("read out %x", dat);
     ##5;
-  end while (dat[END_STATE_BUF1] != 1'b1);
+  end while (dat[READ_STATE_BUF1] != 1'b1);
   //end while (dac_sim.axi_reg.RDATA[END_STATE_BUF1] != 1'b1 && dac_sim.axi_reg.RVALID); // BUF 1 is full
-  ##1000;
+  ##5000;
   axi_write(offset+'h28, ((1 << CTRL_BUF2_RDY) + (1 << CTRL_BUF2_RDY+8)));  // BUF1 ACK
 
   do begin
     axi_read(offset+'h2C, dat);
     ##5;
-  end while (dat[END_STATE_BUF2] != 1'b1);
+  end while (dat[READ_STATE_BUF2] != 1'b1);
   //end while (dac_sim.axi_reg.RDATA[END_STATE_BUF2] != 1'b1 && dac_sim.axi_reg.RVALID); // BUF 1 is full
-  ##1000;
+  ##5000;
   axi_write(offset+'h28, ((1 << CTRL_BUF1_RDY) + (1 << CTRL_BUF1_RDY+8)));  // BUF1 ACK
   //axi_write(offset+'h28, 1 << CTRL_BUF1_RDY);  // BUF1 ACK
 
@@ -422,9 +422,9 @@ $display("Setting up DAC stream");
   ##10;
   axi_write(offset+'h14,  'h10000);  // step
   ##10;
-  axi_write(offset+'h04,   {2'h0, 14'h0, 2'h0, 14'h2000});  // scale and offset
+  axi_write(offset+'h04,   {2'h0, 14'h0, 2'h0, 14'h1000});  // scale and offset
   ##10;
-  axi_write(offset+'h10,   {2'h0, 14'h0, 2'h0, 14'h2000});  // scale and offset
+  axi_write(offset+'h10,   {2'h0, 14'h0, 2'h0, 14'h1000});  // scale and offset
   ##10;
   axi_write(offset+'h28, 'h2222);  // streaming DMA, reset buffers and flags
   ##10;
@@ -450,16 +450,12 @@ $display("Setting up DAC stream");
   ##200;
   
   buf_ack(offset);
-   ##10;
-  axi_write(offset+'h08,  'h10000);  // step
   ##10;
-  axi_write(offset+'h14,  'h10000);  // step
+  axi_write(offset+'h48,  'h2);  // set decimation for error counter
   ##200;
   buf_ack(offset);
-  ##10;
-  axi_write(offset+'h08,  'h10000);  // step
-  ##10;
-  axi_write(offset+'h14,  'h10000);  // step
+  axi_read(offset+'h54, dat);  // read number of errors 
+  axi_write(offset+'h50,  'h0);  // set decimation for error counter
   ##200;
   buf_ack(offset);
   ##200;
