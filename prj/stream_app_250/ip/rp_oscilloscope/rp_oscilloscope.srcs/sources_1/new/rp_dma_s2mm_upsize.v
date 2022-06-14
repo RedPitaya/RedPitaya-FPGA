@@ -9,27 +9,38 @@ module rp_dma_s2mm_upsize
   
   output reg  [7:0]                 req_data,
   output reg                        req_we,
+  output      [1:0]                 upsize_lvl,
+  input  wire                       use_8bit,
 
   input  wire [AXIS_DATA_BITS-1:0]  s_axis_tdata,
   input  wire                       s_axis_tvalid,
   output wire                       s_axis_tready,      
   input  wire                       s_axis_tlast,    
   
-  output reg  [AXI_DATA_BITS-1:0]   m_axis_tdata,
+  output wire [AXI_DATA_BITS-1:0]   m_axis_tdata,
   output reg                        m_axis_tvalid,
   input  wire                       m_axis_tready 
 );
 
-localparam MUX_MAX = AXI_DATA_BITS/AXIS_DATA_BITS;
-
-reg  [1:0]  mux_sel;
 reg  [6:0]  xfer_cnt;
 wire [6:0]  req_len;
 reg         tlast;
-genvar      i;
+
+reg [8-1:0] upsize_buf [8-1:0];
+reg [3-1:0] mux_sel;
 
 assign s_axis_tready = 1'b1;
 assign req_len = xfer_cnt+1;
+assign upsize_lvl = mux_sel;
+
+assign m_axis_tdata ={upsize_buf[7], 
+                      upsize_buf[6], 
+                      upsize_buf[5], 
+                      upsize_buf[4], 
+                      upsize_buf[3], 
+                      upsize_buf[2], 
+                      upsize_buf[1], 
+                      upsize_buf[0]};
 
 ////////////////////////////////////////////////////////////
 // Name : 
@@ -92,10 +103,10 @@ begin
     mux_sel <= 0;  
   end else begin
     if ((s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-      if (mux_sel == MUX_MAX-1) begin
+      if (&(mux_sel | {2'b0, ~use_8bit})) begin
         mux_sel <= 0;
       end else begin
-        mux_sel <= mux_sel + 1;
+        mux_sel <= mux_sel + {1'b0, ~use_8bit, use_8bit};
       end
     end
   end
@@ -106,16 +117,11 @@ end
 // 
 ////////////////////////////////////////////////////////////
 
-generate 
-  for (i=0; i<MUX_MAX; i=i+1) begin : gen_data
-    always @(posedge clk)
-    begin
-      if (mux_sel == i) begin
-        m_axis_tdata[i*AXIS_DATA_BITS +: AXIS_DATA_BITS] <= s_axis_tdata;
-      end
-    end
-  end  
-endgenerate
+always @(posedge clk)
+begin
+  upsize_buf[mux_sel  ] <= (s_axis_tdata[16-1:8] & {8{ use_8bit}}) | (s_axis_tdata[8-1:0]   & {8{~use_8bit}});
+  upsize_buf[mux_sel+1] <= (s_axis_tdata[16-1:8] & {8{~use_8bit}}) | (upsize_buf[mux_sel+1] & {8{ use_8bit}});
+end
 
 ////////////////////////////////////////////////////////////
 // Name : TVALID
@@ -128,7 +134,7 @@ begin
   if (rst == 1) begin
     m_axis_tvalid <= 0;
   end else begin 
-    if (((mux_sel == MUX_MAX-1) || (s_axis_tlast == 1)) && (s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
+    if (( (&(mux_sel | {2'b0, ~use_8bit})) || (s_axis_tlast == 1)) && (s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
       m_axis_tvalid <= 1;
     end else begin
       m_axis_tvalid <= 0;

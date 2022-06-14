@@ -24,6 +24,15 @@ proc validate_PARAM_VALUE.ADC_DATA_BITS { PARAM_VALUE.ADC_DATA_BITS } {
 	return true
 }
 
+proc update_PARAM_VALUE.ADC_IN_BITS { PARAM_VALUE.ADC_IN_BITS } {
+	# Procedure called to update ADC_IN_BITS when any of the dependent parameters in the arguments change
+}
+
+proc validate_PARAM_VALUE.ADC_IN_BITS { PARAM_VALUE.ADC_IN_BITS } {
+	# Procedure called to validate ADC_IN_BITS
+	return true
+}
+
 proc update_PARAM_VALUE.EVENT_SRC_NUM { PARAM_VALUE.EVENT_SRC_NUM } {
 	# Procedure called to update EVENT_SRC_NUM when any of the dependent parameters in the arguments change
 }
@@ -126,5 +135,10 @@ proc update_MODELPARAM_VALUE.EVENT_SRC_NUM { MODELPARAM_VALUE.EVENT_SRC_NUM PARA
 proc update_MODELPARAM_VALUE.TRIG_SRC_NUM { MODELPARAM_VALUE.TRIG_SRC_NUM PARAM_VALUE.TRIG_SRC_NUM } {
 	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
 	set_property value [get_property value ${PARAM_VALUE.TRIG_SRC_NUM}] ${MODELPARAM_VALUE.TRIG_SRC_NUM}
+}
+
+proc update_MODELPARAM_VALUE.ADC_IN_BITS { MODELPARAM_VALUE.ADC_IN_BITS PARAM_VALUE.ADC_IN_BITS } {
+	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
+	set_property value [get_property value ${PARAM_VALUE.ADC_IN_BITS}] ${MODELPARAM_VALUE.ADC_IN_BITS}
 }
 
