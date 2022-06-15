@@ -239,9 +239,9 @@ generate
 for(GV = 0 ; GV < 14 ; GV = GV +2)
 begin:adc_iddr
    IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) 
-     i_ddr0 (.Q1(adc_dat_in[0][GV]), .Q2(adc_dat_in[0][GV+1]), .C(adc_clk_bufd), .CE(1'b1), .D(adc_dat_idly[0][GV/2]), .R(1'b0), .S(1'b0) );
+     i_ddr0 (.Q1(adc_dat_in[0][GV]), .Q2(adc_dat_in[0][GV+1]), .C(clk_250), .CE(1'b1), .D(adc_dat_idly[0][GV/2]), .R(1'b0), .S(1'b0) );
    IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) 
-     i_ddr1 (.Q1(adc_dat_in[1][GV]), .Q2(adc_dat_in[1][GV+1]), .C(adc_clk_bufd), .CE(1'b1), .D(adc_dat_idly[1][GV/2]), .R(1'b0), .S(1'b0) );
+     i_ddr1 (.Q1(adc_dat_in[1][GV]), .Q2(adc_dat_in[1][GV+1]), .C(clk_250), .CE(1'b1), .D(adc_dat_idly[1][GV/2]), .R(1'b0), .S(1'b0) );
 end
 endgenerate
 
@@ -251,12 +251,13 @@ sys_bus_if   sys [8-1:0] (.clk (clk_125), .rstn (rstn_hk));
 
 // silence unused busses
 generate
-for (genvar i=3; i<8; i++) begin: for_sys
-  sys_bus_stub sys_bus_stub_3_7 (sys[i]);
+for (genvar i=4; i<8; i++) begin: for_sys
+  sys_bus_stub sys_bus_stub_4_7 (sys[i]);
 end: for_sys
 endgenerate
   sys_bus_stub sys_bus_stub_0 (sys[0]);
   sys_bus_stub sys_bus_stub_1 (sys[1]);
+  sys_bus_stub sys_bus_stub_2 (sys[2]);
 
 
 axi4_if #(.DW (32), .AW (32), .IW (12), .LW (4)) axi_gp (.ACLK (ps_sys.clk), .ARESETn (ps_sys.rstn));
@@ -280,7 +281,7 @@ sys_bus_interconnect #(
   .bus_s (sys)
 );
 // data loopback
-always @(posedge adc_clk_bufd)
+always @(posedge clk_250)
 begin
   adc_dat_sw_r[0] <= { adc_dat_in[1] , 2'h0 }; // switch adc_b->ch_a
   adc_dat_sw_r[1] <= { adc_dat_in[0] , 2'h0 }; // switch adc_a->ch_b
@@ -335,13 +336,13 @@ i_hk (
   .exp_n_dat_o     (           exp_n_out ),
   .exp_n_dir_o     (           exp_n_dir ),
    // System bus
-  .sys_addr        (sys[2].addr ),
-  .sys_wdata       (sys[2].wdata),
-  .sys_wen         (sys[2].wen  ),
-  .sys_ren         (sys[2].ren  ),
-  .sys_rdata       (sys[2].rdata),
-  .sys_err         (sys[2].err  ),
-  .sys_ack         (sys[2].ack  )
+  .sys_addr        (sys[3].addr ),
+  .sys_wdata       (sys[3].wdata),
+  .sys_wen         (sys[3].wen  ),
+  .sys_ren         (sys[3].ren  ),
+  .sys_rdata       (sys[3].rdata),
+  .sys_err         (sys[3].err  ),
+  .sys_ack         (sys[3].ack  )
 );
 
 ////////////////////////////////////////////////////////////////////////////////
