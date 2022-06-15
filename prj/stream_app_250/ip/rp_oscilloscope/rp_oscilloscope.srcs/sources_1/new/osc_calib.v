@@ -31,7 +31,7 @@ reg signed [15:0]                gain, gain_reg;
 
 reg  signed [    CALC1_BITS-1:0]  offset_calc;
 wire                              offs_max, offs_min;
-wire signed [AXIS_DATA_BITS-1:0]  offset_calc_limit;
+reg  signed [AXIS_DATA_BITS-1:0]  offset_calc_limit;
 
 reg  signed [    CALC3_BITS-1:0]  gain_calc;
 reg  signed [    CALC3_BITS-1:0]  gain_calc_r;
@@ -86,12 +86,13 @@ assign gain_calc_limit = gain_max ? CALC_MAX : (gain_min ? CALC_MIN : gain_calc[
 always @(posedge clk)
 begin
   offset_calc <= $signed(adc_data) + $signed(offset);  
+  offset_calc_limit <= offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc);
 end
 
 assign offs_max = (offset_calc[16:15] == 2'b01);
 assign offs_min = (offset_calc[16:15] == 2'b10);
 
-assign offset_calc_limit = offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc);
+//assign offset_calc_limit = offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc);
 
 ////////////////////////////////////////////////////////////
 // Name : Master AXI-S TDATA

@@ -19,6 +19,7 @@ set path_brd brd
 set path_rtl rtl_250
 set path_ip  ip
 set path_sdc sdc_250
+set path_sdc_prj sdc
 set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
 
 
@@ -57,6 +58,7 @@ generate_target all [get_files    system.bd]
 add_files                         ../../$path_rtl
 add_files                         $path_rtl
 add_files                         $path_bd
+add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ## search for HWID parameter to select xdc
 foreach item $argv {

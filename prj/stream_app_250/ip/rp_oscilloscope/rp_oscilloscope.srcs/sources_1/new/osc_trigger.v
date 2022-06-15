@@ -12,7 +12,7 @@ module osc_trigger
   input  wire [TRIG_LEVEL_BITS-1:0] cfg_trig_high_level,  
   input  wire                       cfg_trig_edge,
   // Trigger
-  output wire                       trig,
+  output reg                        trig,
   // Slave AXI-S 
   input  wire [AXIS_DATA_BITS-1:0]  s_axis_tdata,
   input  wire                       s_axis_tvalid,
@@ -46,7 +46,7 @@ assign s_axis_tready      = 1;
 
 assign trig_rising_edge   = trig_detect & ~trig_detect_p1 & ~cfg_trig_edge;
 assign trig_falling_edge  = ~trig_detect & trig_detect_p1 & cfg_trig_edge;
-assign trig               = trig_rising_edge | trig_falling_edge;
+//assign trig               = trig_rising_edge | trig_falling_edge;
 
 always @(posedge clk)
 begin
@@ -70,6 +70,7 @@ end
 always @(posedge clk)
 begin
   trig_detect_p1 <= trig_detect;
+  trig <= trig_rising_edge | trig_falling_edge;
 end
 
 ////////////////////////////////////////////////////////////

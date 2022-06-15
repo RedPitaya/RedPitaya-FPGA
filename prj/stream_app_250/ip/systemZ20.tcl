@@ -212,10 +212,14 @@ proc create_root_design { parentCell } {
 
 
   # Create ports
-  set adc_data_ch1 [ create_bd_port -dir I -from [expr $adc_bits - 1] -to 0 adc_data_ch1 ]
-  set adc_data_ch2 [ create_bd_port -dir I -from [expr $adc_bits - 1] -to 0 adc_data_ch2 ]
-  set clkin_125 [ create_bd_port -dir I -type clk -freq_hz 125000000 clkin_125 ]
-  set clkin_250 [ create_bd_port -dir I -type clk -freq_hz 250000000 clkin_250 ]
+  set adc_data_ch1 [ create_bd_port -dir I -from 15 -to 0 adc_data_ch1 ]
+  set adc_data_ch2 [ create_bd_port -dir I -from 15 -to 0 adc_data_ch2 ]
+  set adc_clk [ create_bd_port -dir I -type clk -freq_hz 250000000 adc_clk ]
+  set clk_out [ create_bd_port -dir O -type clk -freq_hz 125000000 clk_out ]
+  set clk_250 [ create_bd_port -dir O -type clk -freq_hz 250000000 clk_250 ]
+  set clk_10 [ create_bd_port -dir O -type clk -freq_hz 10000000 clk_10]
+  #set clkin_125 [ create_bd_port -dir I -type clk -freq_hz 125000000 clkin_125 ]
+  #set clkin_250 [ create_bd_port -dir I -type clk -freq_hz 250000000 clkin_250 ]
   set fclk_clk0 [ create_bd_port -dir O -type clk fclk_clk0 ]
   set fclk_clk1 [ create_bd_port -dir O -type clk fclk_clk1 ]
   set fclk_clk2 [ create_bd_port -dir O -type clk fclk_clk2 ]
@@ -224,6 +228,9 @@ proc create_root_design { parentCell } {
   set frstn_1 [ create_bd_port -dir O -type rst frstn_1 ]
   set frstn_2 [ create_bd_port -dir O -type rst frstn_2 ]
   set frstn_3 [ create_bd_port -dir O -type rst frstn_3 ]
+  set rstn_out [ create_bd_port -dir O -type rst rstn_out ]
+  set trig_in [ create_bd_port -dir I trig_in ]
+  set trig_out [ create_bd_port -dir O trig_out ]
 
   # Create instance: axi_interconnect_0, and set properties
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
@@ -241,10 +248,55 @@ proc create_root_design { parentCell } {
    CONFIG.S00_HAS_REGSLICE {0} \
  ] $axi_reg
 
+  # Create instance: clk_gen, and set properties
+  set clk_gen [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_gen ]
+   set_property -dict [list \
+      CONFIG.ENABLE_CLOCK_MONITOR {false} \
+      CONFIG.PRIM_IN_FREQ {250} \
+      CONFIG.CLKIN1_JITTER_PS {40.0} \
+      CONFIG.CLKOUT2_USED {true} \
+      CONFIG.CLKOUT3_USED {true} \
+      CONFIG.CLKOUT4_USED {true} \
+      CONFIG.CLKOUT5_USED {true} \
+      CONFIG.CLK_OUT1_PORT {clk_125} \
+      CONFIG.CLK_OUT2_PORT {clk_200} \
+      CONFIG.CLK_OUT3_PORT {clk_333} \
+      CONFIG.CLK_OUT4_PORT {clk_62_5} \
+      CONFIG.CLK_OUT5_PORT {clk_10} \
+      CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {125} \
+      CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {250} \
+      CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {333.33333} \
+      CONFIG.CLKOUT4_REQUESTED_OUT_FREQ {62.5} \
+      CONFIG.CLKOUT5_REQUESTED_OUT_FREQ {10.000} \
+      CONFIG.USE_LOCKED {false} \
+      CONFIG.USE_RESET {false} \
+      CONFIG.PRIMITIVE {MMCM} \
+      CONFIG.CLKIN1_JITTER_PS {80.0} \
+      CONFIG.MMCM_CLKFBOUT_MULT_F {4.000} \
+      CONFIG.MMCM_CLKIN1_PERIOD {4.000} \
+      CONFIG.MMCM_CLKIN2_PERIOD {10.0} \
+      CONFIG.MMCM_CLKOUT0_DIVIDE_F {8.000} \
+      CONFIG.MMCM_CLKOUT1_DIVIDE {4} \
+      CONFIG.MMCM_CLKOUT2_DIVIDE {3} \
+      CONFIG.MMCM_CLKOUT3_DIVIDE {16} \
+      CONFIG.MMCM_CLKOUT4_DIVIDE {100} \
+      CONFIG.NUM_OUT_CLKS {5} \
+      CONFIG.CLKOUT1_JITTER {102.531} \
+      CONFIG.CLKOUT1_PHASE_ERROR {85.928} \
+      CONFIG.CLKOUT2_JITTER {89.528} \
+      CONFIG.CLKOUT2_PHASE_ERROR {85.928} \
+      CONFIG.CLKOUT3_JITTER {84.636} \
+      CONFIG.CLKOUT3_PHASE_ERROR {85.928} \
+      CONFIG.CLKOUT4_JITTER {117.659} \
+      CONFIG.CLKOUT4_PHASE_ERROR {85.928} \
+      CONFIG.CLKOUT5_JITTER {169.738} \
+      CONFIG.CLKOUT5_PHASE_ERROR {85.928} \
+   ] $clk_gen
+
   # Create instance: intr_concat, and set properties
   set intr_concat [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 intr_concat ]
   set_property -dict [ list \
-   CONFIG.NUM_PORTS {2} \
+   CONFIG.NUM_PORTS {16} \
  ] $intr_concat
 
   # Create instance: processing_system7_0, and set properties
@@ -719,14 +771,15 @@ proc create_root_design { parentCell } {
   set rp_concat [ create_bd_cell -type ip -vlnv redpitaya.com:user:rp_concat:1.0 rp_concat ]
   set_property -dict [ list \
    CONFIG.EVENT_SRC_NUM {5} \
+   CONFIG.TRIG_SRC_NUM {6} \
  ] $rp_concat
 
   # Create instance: rp_oscilloscope, and set properties
   set rp_oscilloscope [ create_bd_cell -type ip -vlnv redpitaya.com:user:rp_oscilloscope:1.16 rp_oscilloscope ]
   set_property -dict [ list \
-   CONFIG.ADC_DATA_BITS $adc_bits \
+   CONFIG.ADC_DATA_BITS {16} \
    CONFIG.EVENT_SRC_NUM {5} \
-   CONFIG.TRIG_SRC_NUM {5} \
+   CONFIG.TRIG_SRC_NUM {6} \
  ] $rp_oscilloscope
 
   # Create instance: rst_gen, and set properties
@@ -774,8 +827,9 @@ proc create_root_design { parentCell } {
   # Create port connections
   connect_bd_net -net adc_data_ch1_0_1 [get_bd_ports adc_data_ch1] [get_bd_pins rp_oscilloscope/adc_data_ch1]
   connect_bd_net -net adc_data_ch2_0_1 [get_bd_ports adc_data_ch2] [get_bd_pins rp_oscilloscope/adc_data_ch2]
-  connect_bd_net -net clkin_125_1 [get_bd_ports clkin_125] [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] [get_bd_pins axi_reg/ACLK] [get_bd_pins axi_reg/M00_ACLK] [get_bd_pins axi_reg/M01_ACLK] [get_bd_pins axi_reg/S00_ACLK] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins rp_oscilloscope/m_axi_osc1_aclk] [get_bd_pins rp_oscilloscope/m_axi_osc2_aclk] [get_bd_pins rp_oscilloscope/s_axi_reg_aclk] [get_bd_pins rst_gen/slowest_sync_clk] [get_bd_pins xadc/s_axi_aclk]
-  connect_bd_net -net clkin_250_1 [get_bd_ports clkin_250] [get_bd_pins rp_oscilloscope/clk]
+  connect_bd_net -net adc_clk_1 [get_bd_ports adc_clk] [get_bd_pins clk_gen/clk_in1]
+  connect_bd_net -net clkin_125_1  [get_bd_ports clk_out] [get_bd_pins clk_gen/clk_125] [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] [get_bd_pins axi_reg/ACLK] [get_bd_pins axi_reg/M00_ACLK] [get_bd_pins axi_reg/M01_ACLK] [get_bd_pins axi_reg/S00_ACLK] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins rp_oscilloscope/m_axi_osc1_aclk] [get_bd_pins rp_oscilloscope/m_axi_osc2_aclk] [get_bd_pins rp_oscilloscope/s_axi_reg_aclk] [get_bd_pins rst_gen/slowest_sync_clk] [get_bd_pins xadc/s_axi_aclk]
+  connect_bd_net -net clkin_250_1 [get_bd_pins clk_gen/clk_200] [get_bd_pins rp_oscilloscope/clk] [get_bd_ports clk_250]
   connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_ports fclk_clk0] [get_bd_pins processing_system7_0/FCLK_CLK0]
   connect_bd_net -net processing_system7_0_FCLK_CLK1 [get_bd_ports fclk_clk1] [get_bd_pins processing_system7_0/FCLK_CLK1]
   connect_bd_net -net processing_system7_0_FCLK_CLK2 [get_bd_ports fclk_clk2] [get_bd_pins processing_system7_0/FCLK_CLK2]
@@ -789,13 +843,15 @@ proc create_root_design { parentCell } {
   connect_bd_net -net rp_concat_0_event_stop [get_bd_pins rp_concat/event_stop] [get_bd_pins rp_oscilloscope/event_ip_stop]
   connect_bd_net -net rp_concat_0_event_trig [get_bd_pins rp_concat/event_trig] [get_bd_pins rp_oscilloscope/event_ip_trig]
   connect_bd_net -net rp_concat_0_trig [get_bd_pins rp_concat/trig] [get_bd_pins rp_oscilloscope/trig_ip]
-  connect_bd_net -net rp_oscilloscope_0_intr [get_bd_pins intr_concat/In1] [get_bd_pins rp_oscilloscope/intr]
+  connect_bd_net -net rp_oscilloscope_0_intr [get_bd_pins intr_concat/In15] [get_bd_pins rp_oscilloscope/intr]
   connect_bd_net -net rp_oscilloscope_0_osc1_event_op [get_bd_pins rp_concat/osc1_event_ip] [get_bd_pins rp_oscilloscope/osc1_event_op]
   connect_bd_net -net rp_oscilloscope_0_osc1_trig_op [get_bd_pins rp_concat/osc1_trig_ip] [get_bd_pins rp_oscilloscope/osc1_trig_op]
   connect_bd_net -net rp_oscilloscope_0_osc2_event_op [get_bd_pins rp_concat/osc2_event_ip] [get_bd_pins rp_oscilloscope/osc2_event_op]
   connect_bd_net -net rp_oscilloscope_0_osc2_trig_op [get_bd_pins rp_concat/osc2_trig_ip] [get_bd_pins rp_oscilloscope/osc2_trig_op]
   connect_bd_net -net rst_gen_peripheral_aresetn [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] [get_bd_pins axi_interconnect_0/S01_ARESETN] [get_bd_pins axi_reg/M00_ARESETN] [get_bd_pins axi_reg/M01_ARESETN] [get_bd_pins axi_reg/S00_ARESETN] [get_bd_pins rp_oscilloscope/m_axi_osc1_aresetn] [get_bd_pins rp_oscilloscope/m_axi_osc2_aresetn] [get_bd_pins rp_oscilloscope/rst_n] [get_bd_pins rp_oscilloscope/s_axi_reg_aresetn] [get_bd_pins rst_gen/peripheral_aresetn] [get_bd_pins xadc/s_axi_aresetn]
   connect_bd_net -net rst_ps7_0_50M_interconnect_aresetn [get_bd_pins axi_interconnect_0/ARESETN] [get_bd_pins axi_reg/ARESETN] [get_bd_pins rst_gen/interconnect_aresetn]
+  connect_bd_net [get_bd_ports rstn_out] [get_bd_pins rst_gen/interconnect_aresetn]
+  connect_bd_net [get_bd_ports clk_10] [get_bd_pins clk_gen/clk_10]
   connect_bd_net -net xadc_ip2intc_irpt [get_bd_pins intr_concat/In0] [get_bd_pins xadc/ip2intc_irpt]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins intr_concat/dout] [get_bd_pins processing_system7_0/IRQ_F2P]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins rp_concat/gen1_trig_ip] [get_bd_pins rp_concat/gen2_trig_ip] [get_bd_pins rp_concat/la_trig_ip] [get_bd_pins xlconstant_0/dout]
