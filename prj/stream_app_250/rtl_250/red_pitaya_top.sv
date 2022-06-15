@@ -111,7 +111,7 @@ module red_pitaya_top #(
 
 // PLL signals
 logic         adc_clk_in;
-logic         adc_clk_bufd;
+logic         pll_ref_bufd;
 logic         clk_10;
 logic         clk_125;
 logic         clk_250;
@@ -143,7 +143,7 @@ assign dac_spi_sdio = hk_spi_t[1] ? 1'bz : hk_spi_o[1] ;
 
 // diferential clock input
 IBUFDS i_clk (.I (adc_clk_i[1]), .IB (adc_clk_i[0]), .O (adc_clk_in));  // differential clock input
-BUFG i_clkbuf (.I (adc_clk_in), .O (adc_clk_bufd));
+BUFG i_pllrefbuf (.I (pll_ref_i), .O (pll_ref_bufd));
 
 ////////////////////////////////////////////////////////////////////////////////
 // ADC IO
@@ -319,7 +319,7 @@ i_hk (
   // global configuration
   .digital_loop    (),
   .pll_sys_i       (clk_10      ),    // system clock
-  .pll_ref_i       (pll_ref_i   ),    // reference clock
+  .pll_ref_i       (pll_ref_bufd),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
   // SPI
