@@ -3,7 +3,7 @@
 <!--                                                         -->
 <!-- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.   -->
 
-<Project Version="7" Minor="49" Path="/home/juretrnovec/RPdev/RP30/redpitaya-public/fpga/prj/stream_app_250/ip/rp_oscilloscope/rp_oscilloscope.xpr">
+<Project Version="7" Minor="49" Path="/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app_250/ip/rp_oscilloscope/rp_oscilloscope.xpr">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="8425b4259e254a4c874600d534396b66"/>
@@ -34,8 +34,8 @@
     <Option Name="IPCachePermission" Val="write"/>
     <Option Name="EnableCoreContainer" Val="FALSE"/>
     <Option Name="CreateRefXciForCoreContainers" Val="FALSE"/>
-    <Option Name="IPUserFilesDir" Val="$PPRDIR/../../../../../Work/P0095_red_pitaya/Vivado/rp_oscilloscope/rp_oscilloscope.ip_user_files"/>
-    <Option Name="IPStaticSourceDir" Val="$PPRDIR/../../../../../Work/P0095_red_pitaya/Vivado/rp_oscilloscope/rp_oscilloscope.ip_user_files/ipstatic"/>
+    <Option Name="IPUserFilesDir" Val="$PPRDIR/../../../../../../redpitaya-public/Work/P0095_red_pitaya/Vivado/rp_oscilloscope/rp_oscilloscope.ip_user_files"/>
+    <Option Name="IPStaticSourceDir" Val="$PPRDIR/../../../../../../redpitaya-public/Work/P0095_red_pitaya/Vivado/rp_oscilloscope/rp_oscilloscope.ip_user_files/ipstatic"/>
     <Option Name="EnableBDX" Val="FALSE"/>
     <Option Name="WTXSimLaunchSim" Val="120"/>
     <Option Name="WTModelSimLaunchSim" Val="19"/>
@@ -66,6 +66,13 @@
   <FileSets Version="1" Minor="31">
     <FileSet Name="sources_1" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1">
       <Filter Type="Srcs"/>
+      <File Path="$PPRDIR/../../../../rtl_250/divide.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
       <File Path="$PSRCDIR/sources_1/new/osc_aquire.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -81,6 +88,13 @@
         </FileInfo>
       </File>
       <File Path="$PSRCDIR/sources_1/new/osc_decimator.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/new/osc_filter.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>

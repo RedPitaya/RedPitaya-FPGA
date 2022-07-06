@@ -110,24 +110,14 @@ module red_pitaya_top #(
 ////////////////////////////////////////////////////////////////////////////////
 
 // PLL signals
-logic                 adc_clk_in;
-logic                 pll_adc_clk;
-logic                 pll_adc_clk2d;
-logic                 pll_adc_10mhz;
-logic                 pll_ser_clk;
-logic                 pll_pwm_clk;
-logic                 pll_locked;
-// fast serial signals
-logic                 ser_clk ;
-// PWM clock and reset
-logic                 pwm_clk ;
-logic                 pwm_rstn;
+logic         adc_clk_in;
+logic         pll_ref_bufd;
+logic         clk_10;
+logic         clk_125;
+logic         clk_250;
 
-// ADC clock/reset
-logic                 adc_clk;
-logic                 adc_clk2d;
-logic                 adc_10mhz;
-logic                 adc_rstn;
+logic         rstn_hk;
+
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -146,39 +136,14 @@ assign adc_spi_clk  = hk_spi_clk[0];
 assign hk_spi_i[0]  = adc_spi_sdio;
 assign adc_spi_sdio = hk_spi_t[0] ? 1'bz : hk_spi_o[0] ;
 
+assign dac_spi_csb  = hk_spi_cs[1];
+assign dac_spi_clk  = hk_spi_clk[1];
 assign hk_spi_i[1]  = dac_spi_sdio;
 assign dac_spi_sdio = hk_spi_t[1] ? 1'bz : hk_spi_o[1] ;
 
-////////////////////////////////////////////////////////////////////////////////
-// PLL
-////////////////////////////////////////////////////////////////////////////////
-
 // diferential clock input
 IBUFDS i_clk (.I (adc_clk_i[1]), .IB (adc_clk_i[0]), .O (adc_clk_in));  // differential clock input
-
-red_pitaya_pll pll (
-  // inputs
-  .clk         (adc_clk_in),  // clock
-  .rstn        (frstn[0]  ),  // reset - active low
-  // output clocks
-  .clk_adc     (pll_adc_clk   ),  // ADC clock
-  .clk_adc2d   (pll_adc_clk2d ),  // ADC clock divided by 2
-  .clk_10mhz   (pll_adc_10mhz ),  // ADC divided to 10MHz
-  .clk_ser     (pll_ser_clk   ),  // fast serial clock
-  .clk_pdm     (pll_pwm_clk   ),  // PWM clock
-  // status outputs
-  .pll_locked  (pll_locked)
-);
-
-BUFG bufg_adc_clk    (.O (adc_clk   ), .I (pll_adc_clk   ));
-BUFG bufg_adc_clk2d  (.O (adc_clk2d ), .I (pll_adc_clk2d ));
-BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
-BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
-BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
-
-// ADC reset (active low)
-always @(posedge adc_clk2d)
-adc_rstn <=  frstn[0] &  pll_locked & idly_rdy;
+BUFG i_pllrefbuf (.I (pll_ref_i), .O (pll_ref_bufd));
 
 ////////////////////////////////////////////////////////////////////////////////
 // ADC IO
@@ -190,8 +155,7 @@ assign adc_sync_o = 1'bz ;
 logic [2-1:0] [ 7-1:0] adc_dat_ibuf;
 logic [2-1:0] [ 7-1:0] adc_dat_idly;
 logic [2-1:0] [14-1:0] adc_dat_in;
-logic [2-1:0] [14-1:0] adc_dat_sw;
-
+logic [2-1:0] [16-1:0] adc_dat_sw_r, adc_dat_sw;
 
 genvar GV;
 generate
@@ -231,7 +195,7 @@ begin:adc_idly
    i_dlya (
       .CNTVALUEOUT  ( idly_cnt[GV]          ),  // 5-bit output: Counter value output
       .DATAOUT      ( adc_dat_idly[0][GV]   ),  // 1-bit output: Delayed data output
-      .C            ( adc_clk2d             ),  // 1-bit input: Clock input
+      .C            ( clk_125               ),  // 1-bit input: Clock input
       .CE           ( idly_ce[GV]           ),  // 1-bit input: Active high enable increment/decrement input
       .CINVCTRL     ( 1'b0                  ),  // 1-bit input: Dynamic clock inversion input
       .CNTVALUEIN   ( 5'h0                  ),  // 5-bit input: Counter value input
@@ -256,7 +220,7 @@ begin:adc_idly
    i_dlyb (
       .CNTVALUEOUT  ( idly_cnt[GV+7]        ),  // 5-bit output: Counter value output
       .DATAOUT      ( adc_dat_idly[1][GV]   ),  // 1-bit output: Delayed data output
-      .C            ( adc_clk2d             ),  // 1-bit input: Clock input
+      .C            ( clk_125               ),  // 1-bit input: Clock input
       .CE           ( idly_ce[GV+7]         ),  // 1-bit input: Active high enable increment/decrement input
       .CINVCTRL     ( 1'b0                  ),  // 1-bit input: Dynamic clock inversion input
       .CNTVALUEIN   ( 5'h0                  ),  // 5-bit input: Counter value input
@@ -275,24 +239,25 @@ generate
 for(GV = 0 ; GV < 14 ; GV = GV +2)
 begin:adc_iddr
    IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) 
-     i_ddr0 (.Q1(adc_dat_in[0][GV]), .Q2(adc_dat_in[0][GV+1]), .C(adc_clk), .CE(1'b1), .D(adc_dat_idly[0][GV/2]), .R(1'b0), .S(1'b0) );
+     i_ddr0 (.Q1(adc_dat_in[0][GV]), .Q2(adc_dat_in[0][GV+1]), .C(clk_250), .CE(1'b1), .D(adc_dat_idly[0][GV/2]), .R(1'b0), .S(1'b0) );
    IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) 
-     i_ddr1 (.Q1(adc_dat_in[1][GV]), .Q2(adc_dat_in[1][GV+1]), .C(adc_clk), .CE(1'b1), .D(adc_dat_idly[1][GV/2]), .R(1'b0), .S(1'b0) );
+     i_ddr1 (.Q1(adc_dat_in[1][GV]), .Q2(adc_dat_in[1][GV+1]), .C(clk_250), .CE(1'b1), .D(adc_dat_idly[1][GV/2]), .R(1'b0), .S(1'b0) );
 end
 endgenerate
 
 // system bus
-sys_bus_if   ps_sys      (.clk (adc_clk2d), .rstn (adc_rstn));
-sys_bus_if   sys [8-1:0] (.clk (adc_clk2d), .rstn (adc_rstn));
+sys_bus_if   ps_sys      (.clk (clk_125), .rstn (rstn_hk));
+sys_bus_if   sys [8-1:0] (.clk (clk_125), .rstn (rstn_hk));
 
 // silence unused busses
 generate
-for (genvar i=3; i<8; i++) begin: for_sys
-  sys_bus_stub sys_bus_stub_3_7 (sys[i]);
+for (genvar i=4; i<8; i++) begin: for_sys
+  sys_bus_stub sys_bus_stub_4_7 (sys[i]);
 end: for_sys
 endgenerate
   sys_bus_stub sys_bus_stub_0 (sys[0]);
   sys_bus_stub sys_bus_stub_1 (sys[1]);
+  sys_bus_stub sys_bus_stub_2 (sys[2]);
 
 
 axi4_if #(.DW (32), .AW (32), .IW (12), .LW (4)) axi_gp (.ACLK (ps_sys.clk), .ARESETn (ps_sys.rstn));
@@ -316,10 +281,16 @@ sys_bus_interconnect #(
   .bus_s (sys)
 );
 // data loopback
-always @(posedge adc_clk)
+always @(posedge clk_250)
 begin
-  adc_dat_sw[0] <= { adc_dat_in[1][14-1:2] , 2'h0 }; // switch adc_b->ch_a
-  adc_dat_sw[1] <= { adc_dat_in[0][14-1:2] , 2'h0 }; // switch adc_a->ch_b
+  adc_dat_sw_r[0] <= { adc_dat_in[1] , 2'h0 }; // switch adc_b->ch_a
+  adc_dat_sw_r[1] <= { adc_dat_in[0] , 2'h0 }; // switch adc_a->ch_b
+end
+
+always @(posedge clk_250)
+begin
+  adc_dat_sw[0] <= adc_dat_sw_r[0];
+  adc_dat_sw[1] <= adc_dat_sw_r[1];
 end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -336,8 +307,8 @@ red_pitaya_hk #(.DWE(10))
 
 i_hk (
   // system signals
-  .clk_i           (adc_clk2d),  // clock
-  .rstn_i          (adc_rstn),  // reset - active low
+  .clk_i           (clk_125),  // clock
+  .rstn_i          (rstn_hk),  // reset - active low
   // LED
   .led_o           (led_hk),  // LED output
   // idelay control
@@ -347,8 +318,8 @@ i_hk (
   .idly_cnt_i      ({idly_cnt[7],idly_cnt[0]}),
   // global configuration
   .digital_loop    (),
-  .pll_sys_i       (adc_10mhz   ),    // system clock
-  .pll_ref_i       (pll_ref_i   ),    // reference clock
+  .pll_sys_i       (clk_10      ),    // system clock
+  .pll_ref_i       (pll_ref_bufd),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
   // SPI
@@ -365,13 +336,13 @@ i_hk (
   .exp_n_dat_o     (           exp_n_out ),
   .exp_n_dir_o     (           exp_n_dir ),
    // System bus
-  .sys_addr        (sys[2].addr ),
-  .sys_wdata       (sys[2].wdata),
-  .sys_wen         (sys[2].wen  ),
-  .sys_ren         (sys[2].ren  ),
-  .sys_rdata       (sys[2].rdata),
-  .sys_err         (sys[2].err  ),
-  .sys_ack         (sys[2].ack  )
+  .sys_addr        (sys[3].addr ),
+  .sys_wdata       (sys[3].wdata),
+  .sys_wen         (sys[3].wen  ),
+  .sys_ren         (sys[3].ren  ),
+  .sys_rdata       (sys[3].rdata),
+  .sys_err         (sys[3].err  ),
+  .sys_ack         (sys[3].ack  )
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -414,6 +385,8 @@ assign gpio.i[23:16] = exp_n_in[7:0];
         .FIXED_IO_ps_clk(FIXED_IO_ps_clk),
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
+        //.m_axi_hk_ACLK    (axi_gp.ACLK   ),
+        //.m_axi_hk_ARESETn (axi_gp.ARESETn),
         .m_axi_hk_arvalid (axi_gp.ARVALID),
         .m_axi_hk_awvalid (axi_gp.AWVALID),
         .m_axi_hk_bready  (axi_gp.BREADY ),
@@ -452,8 +425,11 @@ assign gpio.i[23:16] = exp_n_in[7:0];
         .m_axi_hk_bresp   (axi_gp.BRESP  ),
         .m_axi_hk_rresp   (axi_gp.RRESP  ),
         .m_axi_hk_rdata   (axi_gp.RDATA  ),
-        .clkin_125(adc_clk2d),
-        .clkin_250(adc_clk),
+        .clk_out(clk_125),
+        .clk_250(clk_250),
+
+        .clk_10(clk_10),
+        .rstn_out(rstn_hk),
         .fclk_clk0(fclk[0]),
         .fclk_clk1(fclk[1]),
         .fclk_clk2(fclk[2]),
@@ -462,8 +438,9 @@ assign gpio.i[23:16] = exp_n_in[7:0];
         .frstn_1(frstn[1]),
         .frstn_2(frstn[2]),
         .frstn_3(frstn[3]),
-        .adc_data_ch1(adc_dat_sw[0][13:(14-ADC_DATA_BITS)]),
-        .adc_data_ch2(adc_dat_sw[1][13:(14-ADC_DATA_BITS)]));
+        .adc_clk(adc_clk_in),
+        .adc_data_ch1(adc_dat_sw[0]),
+        .adc_data_ch2(adc_dat_sw[1]));
 
 assign axi_gp.AWREGION = '0;
 assign axi_gp.ARREGION = '0;

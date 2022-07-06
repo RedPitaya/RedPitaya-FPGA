@@ -33,6 +33,7 @@ module osc_top
   input  wire [TRIG_SRC_NUM-1:0]          trig_ip,
   output wire                             trig_op,
   output wire                             ctl_rst,
+  output wire                             trig_o,
   //
   input  wire [REG_ADDR_BITS-1:0]         reg_addr,
   input  wire [31:0]                      reg_wr_data,
@@ -43,6 +44,8 @@ module osc_top
   output wire                             buf_sel_out,
   //   
   output wire                             dma_intr,
+  //
+  output wire [7:0]                       loopback_sel,
   //
   output wire [(M_AXI_ADDR_BITS-1):0]     m_axi_awaddr,    
   output wire [7:0]                       m_axi_awlen,     
@@ -81,10 +84,8 @@ localparam DEC_FACTOR_ADDR      = 8'h30;  //48 Decimation factor address
 localparam DEC_RSHIFT_ADDR      = 8'h34;  //52 Decimation right shift address
 localparam AVG_EN_ADDR          = 8'h38;  //56 Average enable address
 localparam FILT_BYPASS_ADDR     = 8'h3C;  //60 Filter bypass address
-localparam FILT_COEFF_AA_ADDR   = 8'h40;  //64 Filter coeff AA address
-localparam FILT_COEFF_BB_ADDR   = 8'h44;  //68 Filter coeff BB address
-localparam FILT_COEFF_KK_ADDR   = 8'h48;  //72 Filter coeff KK address
-localparam FILT_COEFF_PP_ADDR   = 8'h4C;  //76 Filter coeff PP address
+localparam LOOPBACK_ADDR        = 8'h40;  //64 Digital loopback
+localparam SHIFT_8BIT           = 8'h44;  //
 
 localparam DMA_CTRL_ADDR_CH1    = 8'h50;  //80 DMA control register
 localparam DMA_STS_ADDR_CH1     = 8'h54;  //84 DMA status register
@@ -105,8 +106,21 @@ localparam BUF1_LOST_SAMP_CNT_CH2   = 8'h9C;  //108 Number of lost samples in bu
 localparam BUF2_LOST_SAMP_CNT_CH2   = 8'hA0;  //112 Number of lost samples in buffer 2
 localparam CURR_WP_CH1 = 8'hA4;  //current write pointer CH1
 localparam CURR_WP_CH2 = 8'hA8;  //current write pointer CH2
-localparam CURR_DAT_CH1 = 8'hAC;  //current write pointer CH1
-localparam CURR_DAT_CH2 = 8'hB0;  //current write pointer CH2
+
+localparam FILT_COEFF_AA_CH1   = 8'hC0;  //64 Filter coeff AA address CH1
+localparam FILT_COEFF_BB_CH1   = 8'hC4;  //68 Filter coeff BB address CH1
+localparam FILT_COEFF_KK_CH1   = 8'hC8;  //72 Filter coeff KK address CH1
+localparam FILT_COEFF_PP_CH1   = 8'hCC;  //76 Filter coeff PP address CH1
+
+localparam FILT_COEFF_AA_CH2   = 8'hD0;  //64 Filter coeff AA address CH2
+localparam FILT_COEFF_BB_CH2   = 8'hD4;  //68 Filter coeff BB address CH2
+localparam FILT_COEFF_KK_CH2   = 8'hD8;  //72 Filter coeff KK address CH2
+localparam FILT_COEFF_PP_CH2   = 8'hDC;  //76 Filter coeff PP address CH2
+
+localparam DIAG_REG1           = 8'hE0; // interrupt counter
+localparam DIAG_REG2           = 8'hE4; // external trigger counter
+localparam DIAG_REG3           = 8'hE8; // clock counter
+localparam DIAG_REG4           = 8'hEC; // status of state machine
 
 ////////////////////////////////////////////////////////////
 // Signals
@@ -137,11 +151,13 @@ wire                        sts_trig_post_overflow;
 
 reg  [S_AXIS_DATA_BITS-1:0] cfg_trig_low_level;
 reg  [S_AXIS_DATA_BITS-1:0] cfg_trig_high_level;
-reg                         cfg_trig_edge;  
+reg                         cfg_trig_edge; 
+wire                        trig_mod_op;
 
 reg                         cfg_avg_en; 
 reg  [DEC_CNT_BITS-1:0]     cfg_dec_factor;  
 reg  [DEC_SHIFT_BITS-1:0]   cfg_dec_rshift;  
+reg  [            16-1:0]   cfg_loopback;
 
 reg                         cfg_filt_bypass;  
 reg signed [17:0]           cfg_filt_coeff_aa; 
@@ -154,17 +170,25 @@ wire [31:0]                 cfg_dma_sts_reg;
 reg  [31:0]                 cfg_dma_dst_addr1;
 reg  [31:0]                 cfg_dma_dst_addr2;
 reg  [31:0]                 cfg_dma_buf_size;
+wire [31:0]                 cfg_dma_diags_reg;
+
+reg                         cfg_8bit_dat;
 
 reg  [15:0]                 cfg_calib_offset;
 reg  [15:0]                 cfg_calib_gain;
 
-wire [S_AXIS_DATA_BITS-1:0] calib_tdata;    
+wire [S_AXIS_DATA_BITS-1:0] calib_tdata;   
+wire [S_AXIS_DATA_BITS-1:0] calib_datain;    
+
 wire                        calib_tvalid;   
 wire                        calib_tready;   
 
+wire [S_AXIS_DATA_BITS-1:0] dec_indata;    
 wire [S_AXIS_DATA_BITS-1:0] dec_tdata;    
 wire                        dec_tvalid;   
 wire                        dec_tready;   
+wire                        ramp_en;
+wire                        loopback_en;
 
 wire [S_AXIS_DATA_BITS-1:0] trig_tdata;    
 wire                        trig_tvalid;   
@@ -178,6 +202,81 @@ wire                        acq_tlast;
 wire  [31:0]                buf1_ms_cnt;
 wire  [31:0]                buf2_ms_cnt;
  
+ wire [S_AXIS_DATA_BITS-1:0] filt_tdata;   
+wire                        filt_tvalid;   
+
+wire                        external_trig_val;
+
+reg intr_reg;
+reg [32-1:0] intr_cnt;
+
+always @(posedge clk_adc)
+begin
+  intr_reg <= dma_intr;
+  if (~rst_n)
+    intr_cnt <= 'h0;
+  else if (~intr_reg && dma_intr) begin
+    intr_cnt <= intr_cnt+1;
+  end  
+end
+
+reg [32-1:0] trig_cnt, clk_cnt;
+always @(posedge clk_adc)
+begin
+  if (~rst_n) begin
+    trig_cnt <= 'h0;
+    clk_cnt  <= 'h0;
+  end else begin
+    clk_cnt  <= clk_cnt + 'h1;
+
+    if (external_trig_val) begin
+      trig_cnt <= trig_cnt + 'h1;
+    end  
+  end
+end
+
+reg [S_AXIS_DATA_BITS-1:0] ramp_sig;    
+always @(posedge clk_adc)
+begin
+  if (~rst_n)
+    ramp_sig <= 'h0;
+  else begin
+      ramp_sig <= ramp_sig + 'h1;
+  end
+end
+
+reg [S_AXIS_DATA_BITS-1:0] dec_test;    
+always @(posedge clk_adc)
+begin
+  if (dec_tvalid)
+    dec_test <= dec_tdata;
+end
+
+assign external_trig_val = trig_ip[5] & (cfg_trig_mask == 'h20);
+assign loopback_sel = cfg_loopback[8-1:0];
+assign ramp_en      = (CHAN_NUM == 1) ? cfg_loopback[8] : cfg_loopback[12];
+assign loopback_en  = (CHAN_NUM == 1) ? cfg_loopback[0] : cfg_loopback[ 4];
+
+osc_filter i_dfilt (
+   // ADC
+  .clk              ( clk_adc     ),  // ADC clock
+  .rst_n            ( rst_n       ),  // ADC reset - active low
+  // Slave AXI-S
+  .s_axis_tdata     (s_axis_tdata),
+  .s_axis_tvalid    (s_axis_tvalid),
+  .s_axis_tready    (),
+  // Master AXI-S
+  .m_axis_tdata     (filt_tdata),
+  .m_axis_tvalid    (filt_tvalid),
+  .m_axis_tready    (),
+   // configuration
+  .cfg_bypass      ( cfg_filt_bypass     ),
+  .cfg_coeff_aa    ( cfg_filt_coeff_aa   ),  // config AA coefficient
+  .cfg_coeff_bb    ( cfg_filt_coeff_bb   ),  // config BB coefficient
+  .cfg_coeff_kk    ( cfg_filt_coeff_kk   ),  // config KK coefficient
+  .cfg_coeff_pp    ( cfg_filt_coeff_pp   )   // config PP coefficient
+);
+ 
 ////////////////////////////////////////////////////////////
 // Name : Calibration
 // 
@@ -188,8 +287,8 @@ osc_calib #(
   U_osc_calib(
   .clk              (clk_adc),
   // Slave AXI-S
-  .s_axis_tdata     (s_axis_tdata),
-  .s_axis_tvalid    (s_axis_tvalid),
+  .s_axis_tdata     (filt_tdata),
+  .s_axis_tvalid    (filt_tvalid),
   .s_axis_tready    (),
   // Master AXI-S
   .m_axis_tdata     (calib_tdata),
@@ -203,6 +302,8 @@ osc_calib #(
 // Name : Decimation
 // 
 ////////////////////////////////////////////////////////////
+assign dec_indata = ramp_en     ? ramp_sig     : 
+                   (loopback_en ? s_axis_tdata : calib_tdata);    
 
 osc_decimator #(
   .AXIS_DATA_BITS (S_AXIS_DATA_BITS), 
@@ -211,7 +312,7 @@ osc_decimator #(
   U_osc_decimator(
   .clk            (clk_adc),                   
   .rst_n          (rst_n),        
-  .s_axis_tdata   (calib_tdata),          
+  .s_axis_tdata   (dec_indata),          
   .s_axis_tvalid  (calib_tvalid),     
   .s_axis_tready  (calib_tready),                                                                 
   .m_axis_tdata   (dec_tdata),          
@@ -302,9 +403,13 @@ rp_dma_s2mm #(
   .reg_wr_we      (reg_wr_we),   
   .reg_ctrl       (cfg_dma_ctrl_reg),
   .reg_sts        (cfg_dma_sts_reg),
+  .reg_diags      (cfg_dma_diags_reg),  
   .reg_dst_addr1  (cfg_dma_dst_addr1),
   .reg_dst_addr2  (cfg_dma_dst_addr2),
   .reg_buf_size   (cfg_dma_buf_size),
+  .ctl_start_o    (ctl_start_o),
+  .ctl_start_ext  (external_trig_val),
+  .use_8bit       (cfg_8bit_dat),
   .buf1_ms_cnt    (buf1_ms_cnt),
   .buf2_ms_cnt    (buf2_ms_cnt),
   .buf_sel_in     (buf_sel_in),
@@ -349,6 +454,7 @@ assign ctl_rst = event_num_reset;
 assign event_sts_reset = 0;
 
 assign ctl_trg = event_num_trig | |(trig_ip & cfg_trig_mask);
+assign trig_o  = ctl_start_o;
 
 ////////////////////////////////////////////////////////////
 // Name : 
@@ -538,6 +644,23 @@ begin
 end
 
 ////////////////////////////////////////////////////////////
+// Name : Digital loopback
+// 
+////////////////////////////////////////////////////////////
+
+always @(posedge clk)
+begin
+  if (rst_n == 0) begin
+    cfg_loopback <= 0;
+  end else begin
+    if (((reg_addr[8-1:0] == LOOPBACK_ADDR)) && (reg_wr_we == 1)) begin
+      cfg_loopback <= reg_wr_data[16-1:0];
+    end
+  end
+end
+
+
+////////////////////////////////////////////////////////////
 // Name : Filter Bypass
 // 
 ////////////////////////////////////////////////////////////
@@ -545,10 +668,10 @@ end
 always @(posedge clk)
 begin
   if (rst_n == 0) begin
-    cfg_filt_bypass <= 0;
+    cfg_filt_bypass <= 1'b1;
   end else begin
     if ((reg_addr[8-1:0] == FILT_BYPASS_ADDR) && (reg_wr_we == 1)) begin
-      cfg_filt_bypass <= reg_wr_data;
+      cfg_filt_bypass <= reg_wr_data[0];
     end 
   end
 end
@@ -563,7 +686,7 @@ begin
   if (rst_n == 0) begin
     cfg_filt_coeff_aa <= 0;
   end else begin
-    if ((reg_addr[8-1:0] == FILT_COEFF_AA_ADDR) && (reg_wr_we == 1)) begin
+    if (((reg_addr[8-1:0] == FILT_COEFF_AA_CH2 && CHAN_NUM == 'd2) || (reg_addr[8-1:0] == FILT_COEFF_AA_CH1 && CHAN_NUM == 'd1)) && (reg_wr_we == 1)) begin
       cfg_filt_coeff_aa <= reg_wr_data;
     end 
   end
@@ -579,7 +702,7 @@ begin
   if (rst_n == 0) begin
     cfg_filt_coeff_bb <= 0;
   end else begin
-    if ((reg_addr[8-1:0] == FILT_COEFF_BB_ADDR) && (reg_wr_we == 1)) begin
+    if (((reg_addr[8-1:0] == FILT_COEFF_BB_CH2 && CHAN_NUM == 'd2) || (reg_addr[8-1:0] == FILT_COEFF_BB_CH1 && CHAN_NUM == 'd1)) && (reg_wr_we == 1)) begin
       cfg_filt_coeff_bb <= reg_wr_data;
     end 
   end
@@ -593,9 +716,9 @@ end
 always @(posedge clk)
 begin
   if (rst_n == 0) begin
-    cfg_filt_coeff_kk <= 0;
+    cfg_filt_coeff_kk <= 25'hffffff;
   end else begin
-    if ((reg_addr[8-1:0] == FILT_COEFF_KK_ADDR) && (reg_wr_we == 1)) begin
+    if (((reg_addr[8-1:0] == FILT_COEFF_KK_CH2 && CHAN_NUM == 'd2) || (reg_addr[8-1:0] == FILT_COEFF_KK_CH1 && CHAN_NUM == 'd1)) && (reg_wr_we == 1)) begin
       cfg_filt_coeff_kk <= reg_wr_data;
     end 
   end
@@ -611,7 +734,7 @@ begin
   if (rst_n == 0) begin
     cfg_filt_coeff_pp <= 0;
   end else begin
-    if ((reg_addr[8-1:0] == FILT_COEFF_PP_ADDR) && (reg_wr_we == 1)) begin
+    if (((reg_addr[8-1:0] == FILT_COEFF_PP_CH2 && CHAN_NUM == 'd2) || (reg_addr[8-1:0] == FILT_COEFF_PP_CH1 && CHAN_NUM == 'd1)) && (reg_wr_we == 1)) begin
       cfg_filt_coeff_pp <= reg_wr_data;
     end 
   end
@@ -698,6 +821,21 @@ begin
 end
 
 ////////////////////////////////////////////////////////////
+// Name : Use 8 bit ADC data
+// 
+////////////////////////////////////////////////////////////
+always @(posedge clk)
+begin
+  if (rst_n == 0) begin
+    cfg_8bit_dat <= 1'b0; //Use full ADC range by default
+  end else begin
+    if ((reg_addr[8-1:0] == SHIFT_8BIT ) && (reg_wr_we == 1)) begin
+      cfg_8bit_dat <= reg_wr_data[0];
+    end
+    
+  end
+end
+////////////////////////////////////////////////////////////
 // Name : Register Read Data
 // 
 ////////////////////////////////////////////////////////////
@@ -706,61 +844,55 @@ always @(posedge clk)
 begin
   case (reg_addr[8-1:0])
     EVENT_STS_ADDR:         reg_rd_data <= {28'd0, event_sts_trig, event_sts_stop, event_sts_start, event_sts_reset};
-    EVENT_SEL_ADDR:         reg_rd_data <= cfg_event_sel;
-    TRIG_MASK_ADDR:         reg_rd_data <= cfg_trig_mask;
-    TRIG_PRE_SAMP_ADDR:     reg_rd_data <= cfg_trig_pre_samp;
-    TRIG_POST_SAMP_ADDR:    reg_rd_data <= cfg_trig_post_samp;
+    EVENT_SEL_ADDR:         reg_rd_data <= {{32-EVENT_NUM_LOG2{1'b0}}   , cfg_event_sel};
+    TRIG_MASK_ADDR:         reg_rd_data <= {{32-TRIG_SRC_NUM{1'b0}}     , cfg_trig_mask};
+    TRIG_PRE_SAMP_ADDR:     reg_rd_data <= {{32-TRIG_CNT_BITS{1'b0}}    , cfg_trig_pre_samp};
+    TRIG_POST_SAMP_ADDR:    reg_rd_data <= {{32-TRIG_CNT_BITS{1'b0}}    , cfg_trig_post_samp};
     TRIG_PRE_CNT_ADDR:      reg_rd_data <= {sts_trig_pre_overflow, sts_trig_pre_cnt[30:0]};
     TRIG_POST_CNT_ADDR:     reg_rd_data <= {sts_trig_post_overflow, sts_trig_post_cnt[30:0]};
-    TRIG_LOW_LEVEL_ADDR:    reg_rd_data <= cfg_trig_low_level;     
-    TRIG_HIGH_LEVEL_ADDR:   reg_rd_data <= cfg_trig_high_level;  
-    TRIG_EDGE_ADDR:         reg_rd_data <= cfg_trig_edge;  
-    DEC_FACTOR_ADDR:        reg_rd_data <= cfg_dec_factor;  
-    DEC_RSHIFT_ADDR:        reg_rd_data <= cfg_dec_rshift;  
-    AVG_EN_ADDR:            reg_rd_data <= cfg_avg_en;  
-    CALIB_OFFSET_ADDR_CH1:  reg_rd_data <= cfg_calib_offset;
-    CALIB_GAIN_ADDR_CH1:    reg_rd_data <= cfg_calib_gain;
-    CALIB_OFFSET_ADDR_CH2:  reg_rd_data <= cfg_calib_offset;
-    CALIB_GAIN_ADDR_CH2:    reg_rd_data <= cfg_calib_gain;
-    FILT_BYPASS_ADDR:       reg_rd_data <= cfg_filt_bypass;                          
-    FILT_COEFF_AA_ADDR:     reg_rd_data <= cfg_filt_coeff_aa;  
-    FILT_COEFF_BB_ADDR:     reg_rd_data <= cfg_filt_coeff_bb;  
-    FILT_COEFF_KK_ADDR:     reg_rd_data <= cfg_filt_coeff_kk;  
-    FILT_COEFF_PP_ADDR:     reg_rd_data <= cfg_filt_coeff_pp;     
-    DMA_CTRL_ADDR_CH1:      reg_rd_data <= cfg_dma_ctrl_reg;    
-    DMA_STS_ADDR_CH1:       reg_rd_data <= cfg_dma_sts_reg;    
-    DMA_CTRL_ADDR_CH2:      reg_rd_data <= cfg_dma_ctrl_reg;    
-    DMA_STS_ADDR_CH2:       reg_rd_data <= cfg_dma_sts_reg;   
-    DMA_DST_ADDR1_CH1:      reg_rd_data <= cfg_dma_dst_addr1; 
-    DMA_DST_ADDR2_CH1:      reg_rd_data <= cfg_dma_dst_addr2; 
-    DMA_DST_ADDR1_CH2:      reg_rd_data <= cfg_dma_dst_addr1; 
-    DMA_DST_ADDR2_CH2:      reg_rd_data <= cfg_dma_dst_addr2; 
-    DMA_BUF_SIZE_ADDR:      reg_rd_data <= cfg_dma_buf_size; 
-    BUF1_LOST_SAMP_CNT_CH1: reg_rd_data <= buf1_ms_cnt; 
-    BUF2_LOST_SAMP_CNT_CH1: reg_rd_data <= buf2_ms_cnt; 
-    BUF1_LOST_SAMP_CNT_CH2: reg_rd_data <= buf1_ms_cnt; 
-    BUF2_LOST_SAMP_CNT_CH2: reg_rd_data <= buf2_ms_cnt; 
-    CURR_WP_CH1:            reg_rd_data <= m_axi_awaddr;
-    CURR_WP_CH2:            reg_rd_data <= m_axi_awaddr;
+    TRIG_LOW_LEVEL_ADDR:    reg_rd_data <= {{32-S_AXIS_DATA_BITS{1'b0}} , cfg_trig_low_level};
+    TRIG_HIGH_LEVEL_ADDR:   reg_rd_data <= {{32-S_AXIS_DATA_BITS{1'b0}} , cfg_trig_high_level};
+    TRIG_EDGE_ADDR:         reg_rd_data <= {{32- 1{1'b0}}               , cfg_trig_edge};
+    DEC_FACTOR_ADDR:        reg_rd_data <= {{32-DEC_CNT_BITS{1'b0}}     , cfg_dec_factor};
+    DEC_RSHIFT_ADDR:        reg_rd_data <= {{32-DEC_SHIFT_BITS{1'b0}}   , cfg_dec_rshift};
+    AVG_EN_ADDR:            reg_rd_data <= {{32- 1{1'b0}}               , cfg_avg_en};
+    LOOPBACK_ADDR:          reg_rd_data <= {{32-16{1'b0}}               , cfg_loopback};
+    SHIFT_8BIT:             reg_rd_data <= {{32- 1{1'b0}}               , cfg_8bit_dat};
+    CALIB_OFFSET_ADDR_CH1:  reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_offset};
+    CALIB_GAIN_ADDR_CH1:    reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_gain};
+    CALIB_OFFSET_ADDR_CH2:  reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_offset};
+    CALIB_GAIN_ADDR_CH2:    reg_rd_data <= {{32-16{1'b0}}               , cfg_calib_gain};
+    FILT_BYPASS_ADDR:       reg_rd_data <= {{32- 1{1'b0}}               , cfg_filt_bypass};
+    DMA_CTRL_ADDR_CH1:      reg_rd_data <=                                cfg_dma_ctrl_reg;
+    DMA_STS_ADDR_CH1:       reg_rd_data <=                                cfg_dma_sts_reg;
+    DMA_CTRL_ADDR_CH2:      reg_rd_data <=                                cfg_dma_ctrl_reg;
+    DMA_STS_ADDR_CH2:       reg_rd_data <=                                cfg_dma_sts_reg;
+    DMA_DST_ADDR1_CH1:      reg_rd_data <=                                cfg_dma_dst_addr1;
+    DMA_DST_ADDR2_CH1:      reg_rd_data <=                                cfg_dma_dst_addr2;
+    DMA_DST_ADDR1_CH2:      reg_rd_data <=                                cfg_dma_dst_addr1;
+    DMA_DST_ADDR2_CH2:      reg_rd_data <=                                cfg_dma_dst_addr2;
+    DMA_BUF_SIZE_ADDR:      reg_rd_data <=                                cfg_dma_buf_size;
+    BUF1_LOST_SAMP_CNT_CH1: reg_rd_data <=                                buf1_ms_cnt;
+    BUF2_LOST_SAMP_CNT_CH1: reg_rd_data <=                                buf2_ms_cnt;
+    BUF1_LOST_SAMP_CNT_CH2: reg_rd_data <=                                buf1_ms_cnt;
+    BUF2_LOST_SAMP_CNT_CH2: reg_rd_data <=                                buf2_ms_cnt;
+    CURR_WP_CH1:            reg_rd_data <=                                m_axi_awaddr;
+    CURR_WP_CH2:            reg_rd_data <=                                m_axi_awaddr;
+    FILT_COEFF_AA_CH1:      reg_rd_data <= {{32-18{1'b0}}               , cfg_filt_coeff_aa};
+    FILT_COEFF_BB_CH1:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_bb};
+    FILT_COEFF_KK_CH1:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_kk};
+    FILT_COEFF_PP_CH1:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_pp};
+    FILT_COEFF_AA_CH2:      reg_rd_data <= {{32-18{1'b0}}               , cfg_filt_coeff_aa};
+    FILT_COEFF_BB_CH2:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_bb};
+    FILT_COEFF_KK_CH2:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_kk};
+    FILT_COEFF_PP_CH2:      reg_rd_data <= {{32-25{1'b0}}               , cfg_filt_coeff_pp};
+    DIAG_REG1:              reg_rd_data <=                                intr_cnt;
+    DIAG_REG2:              reg_rd_data <=                                trig_cnt;
+    DIAG_REG3:              reg_rd_data <=                                clk_cnt;
+    DIAG_REG4:              reg_rd_data <=                                intr_cnt;
+
     default                 reg_rd_data <= 32'd0;                                
   endcase
 end
-
-////////////////////////////////////////////////////////////
-// Name : DMA Mode
-// 0 = Normal
-// 1 = Streaming
-////////////////////////////////////////////////////////////
-
-//always @(posedge clk)
-//begin
-//  if (rst_n == 0) begin
-//    dma_mode <= 0;
-//  end else begin
-//    if (cfg_dma_ctrl_reg[DMA_CTRL_STRT] == 1) begin
-//      dma_mode <= cfg_dma_ctrl_reg[DMA_CTRL_MODE];
-//    end
-//  end
-//end
 
 endmodule

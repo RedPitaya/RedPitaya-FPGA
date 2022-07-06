@@ -12,7 +12,7 @@ module osc_trigger
   input  wire [TRIG_LEVEL_BITS-1:0] cfg_trig_high_level,  
   input  wire                       cfg_trig_edge,
   // Trigger
-  output wire                       trig,
+  output reg                        trig,
   // Slave AXI-S 
   input  wire [AXIS_DATA_BITS-1:0]  s_axis_tdata,
   input  wire                       s_axis_tvalid,
@@ -46,20 +46,22 @@ assign s_axis_tready      = 1;
 
 assign trig_rising_edge   = trig_detect & ~trig_detect_p1 & ~cfg_trig_edge;
 assign trig_falling_edge  = ~trig_detect & trig_detect_p1 & cfg_trig_edge;
-assign trig               = trig_rising_edge | trig_falling_edge;
+//assign trig               = trig_rising_edge | trig_falling_edge;
 
 always @(posedge clk)
 begin
   if (cfg_trig_edge == 0) begin
     if ((adc_data >= trig_high_level) && ((s_axis_tvalid == 1) && (s_axis_tready == 1))) begin
       trig_detect <= 1; 
-    end else begin
+    //end else begin    
+    end else if ((adc_data < trig_low_level) && ((s_axis_tvalid == 1) && (s_axis_tready == 1))) begin
       trig_detect <= 0; 
     end
   end else begin
     if ((adc_data <= trig_low_level) && ((s_axis_tvalid == 1) && (s_axis_tready == 1))) begin
       trig_detect <= 1; 
-    end else begin
+    //end else begin  
+    end else if ((adc_data > trig_high_level) && ((s_axis_tvalid == 1) && (s_axis_tready == 1))) begin
       trig_detect <= 0; 
     end  
   end
@@ -68,6 +70,7 @@ end
 always @(posedge clk)
 begin
   trig_detect_p1 <= trig_detect;
+  trig <= trig_rising_edge | trig_falling_edge;
 end
 
 ////////////////////////////////////////////////////////////
