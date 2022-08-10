@@ -26,8 +26,8 @@ set_property PACKAGE_PIN Y17     [get_ports {adc_dat_i[0][0]}]
 set_property PACKAGE_PIN Y16     [get_ports {adc_dat_i[0][1]}]
 set_property PACKAGE_PIN W14     [get_ports {adc_dat_i[0][2]}]
 set_property PACKAGE_PIN Y14     [get_ports {adc_dat_i[0][3]}]
-set_property PACKAGE_PIN W13     [get_ports {adc_dat_i[0][4]}]
-set_property PACKAGE_PIN V12     [get_ports {adc_dat_i[0][5]}]
+set_property PACKAGE_PIN V12     [get_ports {adc_dat_i[0][4]}]
+set_property PACKAGE_PIN W13     [get_ports {adc_dat_i[0][5]}]
 set_property PACKAGE_PIN V13     [get_ports {adc_dat_i[0][6]}]
 
 # ADC 1 data

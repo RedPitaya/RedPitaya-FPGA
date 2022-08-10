@@ -153,6 +153,7 @@ logic                 pll_ser_clk;
 logic                 pll_pwm_clk;
 logic [  2-1: 0]      pll_locked;
 logic                 adc_10mhz;
+logic                 spi_done; // ADC setup finished
 
 // fast serial signals
 logic                 ser_clk ;
@@ -192,13 +193,10 @@ gpio_if #(.DW (24)) gpio ();
 IBUFDS i_clk_01 (.I (adc_clk_i[0][1]), .IB (adc_clk_i[0][0]), .O (adc_clk_in[0]));  // differential clock input
 IBUFDS i_clk_23 (.I (adc_clk_i[1][1]), .IB (adc_clk_i[1][0]), .O (adc_clk_in[1]));  // differential clock input
 
-//IBUFG i_clk_01 (.I (adc_clk_i[0][1]), .O (adc_clk_in[0]));  // differential clock input
-//IBUFG i_clk_23 (.I (adc_clk_i[0][0]), .O (adc_clk_in[1]));  // differential clock input
-
 red_pitaya_pll_4adc pll_01 (
   // inputs
   .clk         (adc_clk_in[0]),  // clock
-  .rstn        (frstn[0]  ),  // reset - active low
+  .rstn        (spi_done  ),  // reset - active low
   // output clocks
   .clk_adc     (pll_adc_clk[0]),  // ADC clock
   .clk_10mhz   (pll_adc_10mhz ),  // ADC divided to 10MHz
@@ -211,7 +209,7 @@ red_pitaya_pll_4adc pll_01 (
 red_pitaya_pll_4adc pll_23 (
   // inputs
   .clk         (adc_clk_in[1]),  // clock
-  .rstn        (frstn[0]  ),  // reset - active low
+  .rstn        (spi_done  ),  // reset - active low
   // output clocks
   .clk_adc     (pll_adc_clk[1]),  // ADC clock
   // status outputs
@@ -230,14 +228,14 @@ assign adc_clks={adc_clk_23, adc_clk_01};
 
 // ADC reset (active low)
 always @(posedge adc_clk_01)
-adc_rstn_01 <=  frstn[0] &  pll_locked[0] & idly_rdy;
+adc_rstn_01 <=  frstn[0] & spi_done & pll_locked[0];
 
 always @(posedge adc_clk_23)
-adc_rstn_23 <=  frstn[0] &  pll_locked[1] & idly_rdy;
+adc_rstn_23 <=  frstn[0] & spi_done & pll_locked[1];
 
 // PWM reset (active low)
 always @(posedge pwm_clk)
-pwm_rstn <=  frstn[0] &  pll_locked[0] & idly_rdy;
+pwm_rstn <=  frstn[0] & spi_done & pll_locked[0];
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
@@ -308,15 +306,18 @@ sys_bus_interconnect #(
   .SW (20),
   .SYNC_IN_BUS   (1),
   .SYNC_OUT_BUS1 (2),
+  .SYNC_OUT_BUS2 (2),
+  .SYNC_OUT_BUS3 (2),
+  .SYNC_OUT_BUS4 (2),
   .SYNC_REG_OFS1 (0),
-  .SYNC_REG_OFS2 (4)
+  .SYNC_REG_OFS2 (4),
+  .SYNC_REG_OFS3 (16),
+  .SYNC_REG_OFS4 (20)
 ) sys_bus_interconnect (
   .bus_m (ps_sys),
   .bus_s (sys)
 );
 
-// silence unused busses
-sys_bus_stub sys_bus_stub_3 (sys[3]);
 generate
 for (genvar i=6; i<8; i++) begin: for_sys
   sys_bus_stub sys_bus_stub_5_7 (sys[i]);
@@ -399,7 +400,8 @@ always @(posedge adc_clk_01) begin
   adc_dat  [1] <= adc_dat_r[1];
 end
 
-always @(posedge adc_clk_23) begin
+always @(posedge adc_clk_01) begin
+
   adc_dat_r[2] <= {adc_dat_raw[2][14-1], ~adc_dat_raw[2][14-2:0]};
   adc_dat_r[3] <= {adc_dat_raw[3][14-1], ~adc_dat_raw[3][14-2:0]};
 
@@ -419,6 +421,9 @@ red_pitaya_hk_4adc i_hk (
   // system signals
   .clk_i           (adc_clk_01 ),  // clock
   .rstn_i          (adc_rstn_01),  // reset - active low
+  .fclk_i          (fclk[0] ),  // clock
+  .frstn_i         (frstn[0]),  // reset - active low
+  .spi_done_o      (spi_done),  // PLL reset
   // LED
   .led_o           (led_o       ),  // LED output
   // idelay control
@@ -508,7 +513,7 @@ wire [4-1:0] trig_ch_0_1;
 wire [4-1:0] trig_ch_2_3;
 logic        trig_asg_out;
 
-red_pitaya_scope i_scope_0_1 (
+red_pitaya_scope #(.CHN(0)) i_scope_0_1 (
   // ADC
   .adc_a_i       (adc_dat[0]  ),  // CH 1
   .adc_b_i       (adc_dat[1]  ),  // CH 2
@@ -542,19 +547,19 @@ red_pitaya_scope i_scope_0_1 (
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH2 and CH3
 ////////////////////////////////////////////////////////////////////////////////
-
+/*
 sys_bus_sync i_sync (
   // system signals
   .bus_m (sys[2]    ),
   .bus_s (sys_adc_23)
 );
-
-red_pitaya_scope i_scope_2_3 (
+*/
+red_pitaya_scope #(.CHN(1)) i_scope_2_3 (
   // ADC
   .adc_a_i       (adc_dat[2]  ),  // CH 1
   .adc_b_i       (adc_dat[3]  ),  // CH 2
-  .adc_clk_i     (adc_clk_23  ),  // clock
-  .adc_rstn_i    (adc_rstn_23 ),  // reset - active low
+  .adc_clk_i     (adc_clk_01  ),  // clock
+  .adc_rstn_i    (adc_rstn_01 ),  // reset - active low
   .trig_ext_i    (gpio.i[8]   ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_2_3 ),  // output trigger to ADC for other 2 channels
@@ -571,13 +576,13 @@ red_pitaya_scope i_scope_2_3 (
   .axi0_werr_i   (axi2_werr  ),  .axi1_werr_i   (axi3_werr  ),
   .axi0_wrdy_i   (axi2_wrdy  ),  .axi1_wrdy_i   (axi3_wrdy  ),
   // System bus
-  .sys_addr      (sys_adc_23.addr ),
-  .sys_wdata     (sys_adc_23.wdata),
-  .sys_wen       (sys_adc_23.wen  ),
-  .sys_ren       (sys_adc_23.ren  ),
-  .sys_rdata     (sys_adc_23.rdata),
-  .sys_err       (sys_adc_23.err  ),
-  .sys_ack       (sys_adc_23.ack  )
+  .sys_addr      (sys[2].addr ),
+  .sys_wdata     (sys[2].wdata),
+  .sys_wen       (sys[2].wen  ),
+  .sys_ren       (sys[2].ren  ),
+  .sys_rdata     (sys[2].rdata),
+  .sys_err       (sys[2].err  ),
+  .sys_ack       (sys[2].ack  )
 );
 
 ////////////////////////////////////////////////////////////////////////////////
