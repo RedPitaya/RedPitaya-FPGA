@@ -34,6 +34,10 @@ module red_pitaya_hk_4adc #(
   // system signals
   input                clk_i      ,  // clock
   input                rstn_i     ,  // reset - active low
+
+  input                fclk_i      ,  // clock
+  input                frstn_i     ,  // reset - active low
+  output reg           spi_done_o  ,
   // LED
   output reg [DWL-1:0] led_o      ,  // LED output
   // global configuration
@@ -229,6 +233,7 @@ if (rstn_i == 1'b0) begin
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
   pll_cfg_en   <= 1'b1 ;
+  digital_loop <= 1'b0;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
 
@@ -325,15 +330,14 @@ localparam MODE_ADR = 16'h3;
 localparam FORM_ADR = 16'h4;
 
 localparam PDWN_DAT = 16'h0; // write mode, normal operation
-//localparam TIM_DAT  = 16'h1; // write mode, normal clock polarity, no CLKOUT delay, clock duty cycle stabilizer ON
-localparam TIM_DAT  = 16'd1; // write mode, normal clock polarity, CLKOUT delayed by 135 degrees, clock duty cycle stabilizer ON
+localparam TIM_DAT  = 16'h1; // write mode, normal clock polarity, CLKOUT delayed by 135 degrees, clock duty cycle stabilizer ON
 localparam MODE_DAT = 16'h2; // write mode, default LVDS config, no LVDS termination, digital out enabled, DDR CMOS output mode
 localparam FORM_DAT = 16'h0; // write mode, default values
 
 `ifdef SIMULATION
 localparam ONE_SECOND = 12500; // 100 us
 `else 
-localparam ONE_SECOND = 125000000; 
+localparam ONE_SECOND = 12500000; //100 ms 
 `endif
 parameter  RESET = 3'h0, INIT_PDWN = 3'h1, INIT_TIM=3'h2, INIT_MODE=3'h3, INIT_FORM=3'h4, SPI_END=3'h5;
 
@@ -342,19 +346,21 @@ parameter  RESET = 3'h0, INIT_PDWN = 3'h1, INIT_TIM=3'h2, INIT_MODE=3'h3, INIT_F
 
 reg [32-1:0] spi_wait_cnt;
 reg [ 3-1:0] spi_state;
-always @(posedge clk_i) begin
-  if (~rstn_i)
+
+always @(posedge fclk_i) begin
+  if (~frstn_i)
     spi_wait_cnt <= 'h0;
   else if (spi_wait_cnt < ONE_SECOND)
     spi_wait_cnt <= spi_wait_cnt + 'h1;
 end 
 
-always @(posedge clk_i) begin
-  if (~rstn_i)
+always @(posedge fclk_i) begin
+  if (~frstn_i)
     spi_state <= RESET;
 
   case (spi_state)
     RESET: begin
+      spi_done_o <= 'h0;
       spi_start <= (spi_wait_cnt >= ONE_SECOND) & ~spi_busy;
       if (spi_wait_cnt >= ONE_SECOND & ~spi_busy & ~spi_start) begin
         spi_state <= INIT_PDWN;
@@ -401,6 +407,7 @@ always @(posedge clk_i) begin
       spi_start <= 'h0;
       spi_adr   <= 'h0;
       spi_dat   <= 'h0;
+      spi_done_o <= 'h1;
     end
   endcase
 end 
@@ -411,8 +418,8 @@ spi_master #(
   .NUM_OF_CS (1)
 ) spi_master (
   // settings & status
-  .clk_i           (clk_i       ) ,
-  .rst_i           (rstn_i      ) ,
+  .clk_i           (fclk_i       ) ,
+  .rst_i           (frstn_i      ) ,
 
   .spi_cs_o        (spi_cs_o    ) ,
   .spi_clk_o       (spi_clk_o   ) ,

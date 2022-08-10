@@ -48,6 +48,7 @@
  */
 
 module red_pitaya_scope #(
+  parameter CHN = 0 ,
   parameter RSZ = 14  // RAM size 2^RSZ
 )(
    // ADC
@@ -100,7 +101,6 @@ reg             adc_rst_do   ;
 
 //---------------------------------------------------------------------------------
 //  Input filtering
-
 wire [ 14-1: 0] adc_a_filt_in  ;
 wire [ 14-1: 0] adc_a_filt_out ;
 wire [ 14-1: 0] adc_b_filt_in  ;
@@ -373,7 +373,7 @@ always @(posedge adc_clk_i) begin
    else begin
       if (adc_arm_do)
          adc_we <= 1'b1 ;
-      else if (((adc_dly_do || adc_trig) && (adc_dly_cnt == dec1) && ~adc_we_keep) || adc_rst_do) //delayed reached or reset
+      else if (((adc_dly_do || adc_trig) && (adc_dly_cnt == {31'h0,dec1}) && ~adc_we_keep) || adc_rst_do) //delayed reached or reset
          adc_we <= 1'b0 ;
 
       // count how much data was written into the buffer before trigger
@@ -400,7 +400,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_trig)
          adc_dly_do  <= 1'b1;
-      else if ((adc_dly_do && (adc_dly_cnt == dec1)) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
+      else if ((adc_dly_do && (adc_dly_cnt == {31'h0,dec1})) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
          adc_dly_do  <= 1'b0;
       
       adc_dly_end_reg <= adc_dly_do; 
@@ -483,12 +483,12 @@ always @(posedge axi0_clk_o) begin
    else begin
       if (adc_arm_do && set_a_axi_en)
          axi_a_we <= 1'b1 ;
-      else if (((axi_a_dly_do || adc_trig) && (axi_a_dly_cnt == dec1)) || adc_rst_do) //delayed reached or reset
+      else if (((axi_a_dly_do || adc_trig) && (axi_a_dly_cnt == {31'h0,dec1})) || adc_rst_do) //delayed reached or reset
          axi_a_we <= 1'b0 ;
 
       if (adc_trig && axi_a_we)
          axi_a_dly_do  <= 1'b1 ;
-      else if ((axi_a_dly_do && (axi_a_dly_cnt == dec1)) || axi_a_clr || adc_arm_do) //delayed reached or reset
+      else if ((axi_a_dly_do && (axi_a_dly_cnt == {31'h0,dec1})) || axi_a_clr || adc_arm_do) //delayed reached or reset
          axi_a_dly_do  <= 1'b0 ;
 
       if ((axi_a_dly_do || adc_trig) && axi_a_we && adc_dv)
@@ -589,12 +589,12 @@ always @(posedge axi1_clk_o) begin
    else begin
       if (adc_arm_do && set_b_axi_en)
          axi_b_we <= 1'b1 ;
-      else if (((axi_b_dly_do || adc_trig) && (axi_b_dly_cnt == dec1)) || adc_rst_do) //delayed reached or reset
+      else if (((axi_b_dly_do || adc_trig) && (axi_b_dly_cnt == {31'h0,dec1})) || adc_rst_do) //delayed reached or reset
          axi_b_we <= 1'b0 ;
 
       if (adc_trig && axi_b_we)
          axi_b_dly_do  <= 1'b1 ;
-      else if ((axi_b_dly_do && (axi_b_dly_cnt == dec1)) || axi_b_clr || adc_arm_do) //delayed reached or reset
+      else if ((axi_b_dly_do && (axi_b_dly_cnt == {31'h0,dec1})) || axi_b_clr || adc_arm_do) //delayed reached or reset
          axi_b_dly_do  <= 1'b0 ;
 
       if ((axi_b_dly_do || adc_trig) && axi_b_we && adc_dv)
@@ -696,18 +696,18 @@ end else begin
 
    case (set_trig_src)
        4'd1 : adc_trig <= adc_trig_sw   ; // manual
-       4'd2 : adc_trig <= adc_trig_ap   ; // A ch rising edge
-       4'd3 : adc_trig <= adc_trig_an   ; // A ch falling edge
-       4'd4 : adc_trig <= adc_trig_bp   ; // B ch rising edge
-       4'd5 : adc_trig <= adc_trig_bn   ; // B ch falling edge
+       4'd2 : adc_trig <= CHN == 0 ? adc_trig_ap : trig_ch_i[0] ; // A ch rising edge
+       4'd3 : adc_trig <= CHN == 0 ? adc_trig_an : trig_ch_i[1] ; // A ch falling edge
+       4'd4 : adc_trig <= CHN == 0 ? adc_trig_bp : trig_ch_i[2] ; // B ch rising edge
+       4'd5 : adc_trig <= CHN == 0 ? adc_trig_bn : trig_ch_i[3] ; // B ch falling edge
        4'd6 : adc_trig <= ext_trig_p    ; // external - rising edge
        4'd7 : adc_trig <= ext_trig_n    ; // external - falling edge
        4'd8 : adc_trig <= asg_trig_p    ; // ASG - rising edge
        4'd9 : adc_trig <= asg_trig_n    ; // ASG - falling edge
-       4'd10: adc_trig <= trig_ch_i[0]  ; // from the other two ADC channels: C ch rising edge
-       4'd11: adc_trig <= trig_ch_i[1]  ; // from the other two ADC channels: C ch falling edge
-       4'd12: adc_trig <= trig_ch_i[2]  ; // from the other two ADC channels: D ch rising edge
-       4'd13: adc_trig <= trig_ch_i[3]  ; // from the other two ADC channels: D ch falling edge
+       4'd10: adc_trig <= CHN == 1 ? adc_trig_ap : trig_ch_i[0] ; // from the other two ADC channels: C ch rising edge
+       4'd11: adc_trig <= CHN == 1 ? adc_trig_an : trig_ch_i[1] ; // from the other two ADC channels: C ch falling edge
+       4'd12: adc_trig <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
+       4'd13: adc_trig <= CHN == 1 ? adc_trig_bn : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
     default : adc_trig <= 1'b0          ; 
    endcase
 end
