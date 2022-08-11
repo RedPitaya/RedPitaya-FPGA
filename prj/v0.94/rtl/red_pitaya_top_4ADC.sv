@@ -365,7 +365,7 @@ for (GVC = 0; GVC < 4; GVC = GVC + 1) begin : channels
       .DELAY_SRC("IDATAIN"),           // Delay input (IDATAIN, DATAIN)
       .HIGH_PERFORMANCE_MODE("TRUE"),  // Reduced jitter ("TRUE"), Reduced power ("FALSE")
       .IDELAY_TYPE("VARIABLE"),        // FIXED, VARIABLE, VAR_LOAD, VAR_LOAD_PIPE
-      .IDELAY_VALUE(0),                // Input delay tap setting (0-31)
+      .IDELAY_VALUE(4),                // Input delay tap setting (0-31)
       .PIPE_SEL("FALSE"),              // Select pipelined mode, FALSE, TRUE
       .REFCLK_FREQUENCY(200.0),        // IDELAYCTRL clock input frequency in MHz (190.0-210.0, 290.0-310.0).
       .SIGNAL_PATTERN("DATA")          // DATA, CLOCK input signal
