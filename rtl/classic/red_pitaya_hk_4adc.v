@@ -221,6 +221,19 @@ end
 
 assign pll_cfg_rd = {{32-14{1'h0}}, pll_lck_sts[3:2], 3'h0,pll_lck_sts[1], 3'h0,pll_sys_val, 3'h0,pll_cfg_en};
 
+
+//---------------------------------------------------------------------------------
+//
+// FPGA ready signal - device is out of reset
+reg fpga_rdy;
+always @(posedge clk_i) begin
+if (rstn_i == 1'b0)
+  fpga_rdy <= 1'b0;
+else
+  fpga_rdy <= 1'b1;
+end
+
+
 //---------------------------------------------------------------------------------
 //
 //  System bus connection
@@ -295,6 +308,8 @@ end else begin
     20'h0004C: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[ 9: 5]}   ; end
     20'h00050: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[14:10]}   ; end
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[19:15]}   ; end
+
+    20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}            ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase
