@@ -108,6 +108,19 @@ wire [32-1: 0] id_value;
 assign id_value[31: 4] = 28'h0; // reserved
 assign id_value[ 3: 0] =  4'h1; // board type   1 - release 1
 
+
+//---------------------------------------------------------------------------------
+//
+// FPGA ready signal - device is out of reset
+reg fpga_rdy;
+always @(posedge clk_i) begin
+if (rstn_i == 1'b0)
+  fpga_rdy <= 1'b0;
+else
+  fpga_rdy <= 1'b1;
+end
+
+
 //---------------------------------------------------------------------------------
 //
 //  System bus connection
@@ -154,6 +167,8 @@ end else begin
     20'h00024: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWE{1'b0}}, exp_n_dat_i}       ; end
 
     20'h00030: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWL{1'b0}}, led_o}             ; end
+
+    20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase

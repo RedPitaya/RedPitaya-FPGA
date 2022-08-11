@@ -293,6 +293,16 @@ spi_master i_spi_dac
 );
 
 
+//---------------------------------------------------------------------------------
+//
+// FPGA ready signal - device is out of reset
+reg fpga_rdy;
+always @(posedge clk_i) begin
+if (rstn_i == 1'b0)
+  fpga_rdy <= 1'b0;
+else
+  fpga_rdy <= 1'b1;
+end
 
 
 //---------------------------------------------------------------------------------
@@ -381,6 +391,8 @@ end else begin
     20'h00060: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_h[1]}                 ; end
     20'h00064: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_l[1]}                 ; end
     20'h00068: begin sys_ack <= sys_en;  sys_rdata <= {15'h0,spi_bsy[1],  spi_rd_l[1]}    ; end
+
+    20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase
