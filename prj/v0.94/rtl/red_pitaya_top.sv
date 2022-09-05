@@ -432,7 +432,7 @@ red_pitaya_hk i_hk (
   .exp_n_dat_i     (exp_n_in ),
   .exp_n_dat_o     (exp_n_out),
   .exp_n_dir_o     (exp_n_dir),
-  .diag_i(locked_pll_cnt_r2),
+  .diag_i          (locked_pll_cnt_r2),
    // System bus
   .sys_addr        (sys[0].addr ),
   .sys_wdata       (sys[0].wdata),
@@ -470,7 +470,7 @@ red_pitaya_scope i_scope (
   .adc_clk_i     (adc_clk     ),  // clock
   .adc_rstn_i    (adc_rstn    ),  // reset - active low
   .trig_ext_i    (gpio.i[8]   ),  // external trigger
-  //.trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_asg_i    (trig_asg_out),  // ASG trigger
   // AXI0 master                 // AXI1 master
   .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
   .axi0_rstn_o   (axi0_rstn  ),  .axi1_rstn_o   (axi1_rstn  ),
