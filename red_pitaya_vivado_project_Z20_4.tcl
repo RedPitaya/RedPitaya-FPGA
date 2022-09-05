@@ -58,8 +58,7 @@ add_files                         ../../$path_rtl
 add_files                         $path_rtl
 add_files                         $path_bd
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
-add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
+add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_4ADC.xdc
 
 ################################################################################
 # start gui
@@ -69,4 +68,4 @@ import_files -force
 
 update_compile_order -fileset sources_1
 
-set_property top red_pitaya_top [current_fileset]
+set_property top red_pitaya_top_4ADC [current_fileset]
