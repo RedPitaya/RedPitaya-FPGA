@@ -224,6 +224,19 @@ BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
+logic [32-1:0] locked_pll_cnt, locked_pll_cnt_r, locked_pll_cnt_r2 ;
+always @(posedge fclk[0]) begin
+  if (~frstn[0])
+    locked_pll_cnt <= 'h0;
+  else if (~pll_locked)
+    locked_pll_cnt <= locked_pll_cnt + 'h1;
+end
+
+always @(posedge adc_clk_01) begin
+  locked_pll_cnt_r  <= locked_pll_cnt;
+  locked_pll_cnt_r2 <= locked_pll_cnt_r;
+end
+
 wire [2-1:0] adc_clks;
 assign adc_clks={adc_clk_23, adc_clk_01};
 
@@ -443,6 +456,8 @@ red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
   .pll_ref_i       (adc_10mhz   ),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
+  .diag_i          (locked_pll_cnt_r2),
+
   // Expansion connector
   .exp_p_dat_i     (exp_p_in ),  // input data
   .exp_p_dat_o     (exp_p_out),  // output data
