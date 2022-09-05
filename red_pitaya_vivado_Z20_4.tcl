@@ -91,7 +91,6 @@ set_property generic "GITH=160'h$gith" [current_fileset]
 # write checkpoint design
 ################################################################################
 
-#synth_design -top red_pitaya_top_Z20
 synth_design -top red_pitaya_top_4ADC -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
 
 write_checkpoint         -force   $path_out/post_synth

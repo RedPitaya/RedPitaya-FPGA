@@ -47,6 +47,8 @@ module red_pitaya_hk #(
   input                pll_ref_i,    // reference clock
   output               pll_hi_o,     // PLL high
   output               pll_lo_o,     // PLL low
+  input      [ 32-1:0] diag_i     ,
+
   //SPI
   output     [  2-1:0] spi_cs_o,
   output     [  2-1:0] spi_clk_o,

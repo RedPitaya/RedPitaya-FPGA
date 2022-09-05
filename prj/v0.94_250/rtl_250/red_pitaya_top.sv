@@ -218,6 +218,19 @@ BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
+logic [32-1:0] locked_pll_cnt, locked_pll_cnt_r, locked_pll_cnt_r2 ;
+always @(posedge fclk[0]) begin
+  if (~frstn[0])
+    locked_pll_cnt <= 'h0;
+  else if (~pll_locked)
+    locked_pll_cnt <= locked_pll_cnt + 'h1;
+end
+
+always @(posedge adc_clk) begin
+  locked_pll_cnt_r  <= locked_pll_cnt;
+  locked_pll_cnt_r2 <= locked_pll_cnt_r;
+end
+
 // ADC reset (active low)
 always @(posedge adc_clk2d)
 adc_rstn <=  frstn[0] &  pll_locked & idly_rdy;
@@ -560,6 +573,8 @@ i_hk (
   .pll_ref_i       (pll_ref_i   ),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
+  .diag_i          (locked_pll_cnt_r2),
+
   // SPI
   .spi_cs_o        (hk_spi_cs   ),
   .spi_clk_o       (hk_spi_clk  ),

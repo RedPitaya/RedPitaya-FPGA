@@ -213,6 +213,19 @@ BUFG bufg_dac_clk_2p (.O (dac_clk_2p), .I (pll_dac_clk_2p));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
+logic [32-1:0] locked_pll_cnt, locked_pll_cnt_r, locked_pll_cnt_r2 ;
+always @(posedge fclk[0]) begin
+  if (~frstn[0])
+    locked_pll_cnt <= 'h0;
+  else if (~pll_locked)
+    locked_pll_cnt <= locked_pll_cnt + 'h1;
+end
+
+always @(posedge adc_clk) begin
+  locked_pll_cnt_r  <= locked_pll_cnt;
+  locked_pll_cnt_r2 <= locked_pll_cnt_r;
+end
+
 // ADC reset (active low)
 always @(posedge adc_clk)
 adc_rstn <=  frstn[0] &  pll_locked;
@@ -350,13 +363,20 @@ ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_out), .CE(
 assign adc_cdcs_o = 1'b1 ;
 
 logic [2-1:0] [14-1:0] adc_dat_raw;
+logic [2-1:0] [14-1:0] adc_dat_raw_r;
 
 // IO block registers should be used here
 // lowest 2 bits reserved for 16bit ADC
+always @(posedge adc_clk_in)
+begin
+  adc_dat_raw_r[0] <= adc_dat_i[0][16-1:2];
+  adc_dat_raw_r[1] <= adc_dat_i[1][16-1:2];
+end
+
 always @(posedge adc_clk)
 begin
-  adc_dat_raw[0] <= adc_dat_i[0][16-1:2];
-  adc_dat_raw[1] <= adc_dat_i[1][16-1:2];
+  adc_dat_raw[0] <= adc_dat_raw_r[0];
+  adc_dat_raw[1] <= adc_dat_raw_r[1];
 end
     
 // transform into 2's complement (negative slope)
@@ -412,6 +432,7 @@ red_pitaya_hk i_hk (
   .exp_n_dat_i     (exp_n_in ),
   .exp_n_dat_o     (exp_n_out),
   .exp_n_dir_o     (exp_n_dir),
+  .diag_i(locked_pll_cnt_r2),
    // System bus
   .sys_addr        (sys[0].addr ),
   .sys_wdata       (sys[0].wdata),
@@ -449,7 +470,7 @@ red_pitaya_scope i_scope (
   .adc_clk_i     (adc_clk     ),  // clock
   .adc_rstn_i    (adc_rstn    ),  // reset - active low
   .trig_ext_i    (gpio.i[8]   ),  // external trigger
-  .trig_asg_i    (trig_asg_out),  // ASG trigger
+  //.trig_asg_i    (trig_asg_out),  // ASG trigger
   // AXI0 master                 // AXI1 master
   .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
   .axi0_rstn_o   (axi0_rstn  ),  .axi1_rstn_o   (axi1_rstn  ),
