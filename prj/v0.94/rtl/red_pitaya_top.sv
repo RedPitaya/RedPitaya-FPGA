@@ -363,20 +363,13 @@ ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_out), .CE(
 assign adc_cdcs_o = 1'b1 ;
 
 logic [2-1:0] [14-1:0] adc_dat_raw;
-logic [2-1:0] [14-1:0] adc_dat_raw_r;
 
 // IO block registers should be used here
 // lowest 2 bits reserved for 16bit ADC
 always @(posedge adc_clk_in)
 begin
-  adc_dat_raw_r[0] <= adc_dat_i[0][16-1:2];
-  adc_dat_raw_r[1] <= adc_dat_i[1][16-1:2];
-end
-
-always @(posedge adc_clk)
-begin
-  adc_dat_raw[0] <= adc_dat_raw_r[0];
-  adc_dat_raw[1] <= adc_dat_raw_r[1];
+  adc_dat_raw[0] <= adc_dat_i[0][16-1:2];
+  adc_dat_raw[1] <= adc_dat_i[1][16-1:2];
 end
     
 // transform into 2's complement (negative slope)
