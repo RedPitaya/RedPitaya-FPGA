@@ -57,6 +57,7 @@ set_property verilog_define $prj_defs [current_fileset]
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::gpio_width 33
 source                            $path_ip/systemZ20_14.tcl
 
 # generate SDK files
@@ -91,7 +92,6 @@ set_property generic "GITH=160'h$gith" [current_fileset]
 # write checkpoint design
 ################################################################################
 
-#synth_design -top red_pitaya_top_Z20
 synth_design -top red_pitaya_top_4ADC -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
 
 write_checkpoint         -force   $path_out/post_synth

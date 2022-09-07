@@ -6,7 +6,6 @@
 # the main purpose of this utility is to make learning
 # IP Integrator Tcl commands easier.
 ################################################################
-
 namespace eval _tcl {
 proc get_script_folder {} {
    set script_path [file normalize [info script]]
@@ -464,8 +463,8 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_FPGA_FCLK2_ENABLE {1} \
    CONFIG.PCW_FPGA_FCLK3_ENABLE {1} \
    CONFIG.PCW_GPIO_EMIO_GPIO_ENABLE {1} \
-   CONFIG.PCW_GPIO_EMIO_GPIO_IO {24} \
-   CONFIG.PCW_GPIO_EMIO_GPIO_WIDTH {24} \
+   CONFIG.PCW_GPIO_EMIO_GPIO_IO $::gpio_width \
+   CONFIG.PCW_GPIO_EMIO_GPIO_WIDTH $::gpio_width \
    CONFIG.PCW_GPIO_MIO_GPIO_ENABLE {1} \
    CONFIG.PCW_GPIO_MIO_GPIO_IO {MIO} \
    CONFIG.PCW_I2C0_GRP_INT_ENABLE {0} \

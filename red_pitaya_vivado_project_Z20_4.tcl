@@ -41,7 +41,7 @@ create_project -part $part -force redpitaya ./project
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
-set ::gpio_width 24
+set ::gpio_width 33
 source                            $path_ip/systemZ20_14.tcl
 
 # generate SDK files
@@ -58,8 +58,7 @@ add_files                         ../../$path_rtl
 add_files                         $path_rtl
 add_files                         $path_bd
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
-add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
+add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_4ADC.xdc
 
 ################################################################################
 # start gui
@@ -69,4 +68,4 @@ import_files -force
 
 update_compile_order -fileset sources_1
 
-set_property top red_pitaya_top [current_fileset]
+set_property top red_pitaya_top_4ADC [current_fileset]

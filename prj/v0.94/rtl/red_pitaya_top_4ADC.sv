@@ -53,7 +53,8 @@ module red_pitaya_top_4ADC #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
-  int unsigned MNA = 4  // number of acquisition modules
+  int unsigned MNA =  4, // number of acquisition modules
+  int unsigned DWE = 11
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -101,8 +102,8 @@ module red_pitaya_top_4ADC #(
   input  logic [ 5-1:0] vinp_i     ,  // voltages p
   input  logic [ 5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
-  inout  logic [ 8-1:0] exp_p_io   ,
-  inout  logic [ 8-1:0] exp_n_io   ,
+  inout  logic [DWE-1:0] exp_p_io  ,
+  inout  logic [DWE-1:0] exp_n_io  ,
   // SATA connector
   output logic [ 2-1:0] daisy_p_o  ,  // line 1 is clock capable
   output logic [ 2-1:0] daisy_n_o  ,
@@ -183,7 +184,7 @@ sys_bus_if   sys [8-1:0] (.clk (adc_clk_01), .rstn (adc_rstn_01));
 sys_bus_if   sys_adc_23  (.clk (adc_clk_23), .rstn (adc_rstn_23));
 
 // GPIO interface
-gpio_if #(.DW (24)) gpio ();
+gpio_if #(.DW (3*DWE)) gpio ();
 
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
@@ -222,6 +223,19 @@ BUFG bufg_adc_clk_23 (.O (adc_clk_23), .I (pll_adc_clk[1]));
 BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
+
+logic [32-1:0] locked_pll_cnt, locked_pll_cnt_r, locked_pll_cnt_r2 ;
+always @(posedge fclk[0]) begin
+  if (~frstn[0])
+    locked_pll_cnt <= 'h0;
+  else if (~pll_locked)
+    locked_pll_cnt <= locked_pll_cnt + 'h1;
+end
+
+always @(posedge adc_clk_01) begin
+  locked_pll_cnt_r  <= locked_pll_cnt;
+  locked_pll_cnt_r2 <= locked_pll_cnt_r;
+end
 
 wire [2-1:0] adc_clks;
 assign adc_clks={adc_clk_23, adc_clk_01};
@@ -413,11 +427,11 @@ end
 //  House Keeping
 ////////////////////////////////////////////////////////////////////////////////
 
-logic [  8-1: 0] exp_p_in , exp_n_in ;
-logic [  8-1: 0] exp_p_out, exp_n_out;
-logic [  8-1: 0] exp_p_dir, exp_n_dir;
+logic [DWE-1: 0] exp_p_in , exp_n_in ;
+logic [DWE-1: 0] exp_p_out, exp_n_out;
+logic [DWE-1: 0] exp_p_dir, exp_n_dir;
 
-red_pitaya_hk_4adc i_hk (
+red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
   // system signals
   .clk_i           (adc_clk_01 ),  // clock
   .rstn_i          (adc_rstn_01),  // reset - active low
@@ -442,6 +456,8 @@ red_pitaya_hk_4adc i_hk (
   .pll_ref_i       (adc_10mhz   ),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
+  .diag_i          (locked_pll_cnt_r2),
+
   // Expansion connector
   .exp_p_dat_i     (exp_p_in ),  // input data
   .exp_p_dat_o     (exp_p_out),  // output data
@@ -500,11 +516,11 @@ red_pitaya_pdm pdm (
 // GPIO
 ////////////////////////////////////////////////////////////////////////////////
 
-IOBUF i_iobufp [8-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_out), .T(~exp_p_dir) );
-IOBUF i_iobufn [8-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_out), .T(~exp_n_dir) );
+IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_out), .T(~exp_p_dir) );
+IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_out), .T(~exp_n_dir) );
 
-assign gpio.i[15: 8] = exp_p_in;
-assign gpio.i[23:16] = exp_n_in;
+assign gpio.i[2*DWE-1:  DWE] = exp_p_in;
+assign gpio.i[3*DWE-1:2*DWE] = exp_n_in;
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH0 and CH1
@@ -547,13 +563,6 @@ red_pitaya_scope #(.CHN(0)) i_scope_0_1 (
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH2 and CH3
 ////////////////////////////////////////////////////////////////////////////////
-/*
-sys_bus_sync i_sync (
-  // system signals
-  .bus_m (sys[2]    ),
-  .bus_s (sys_adc_23)
-);
-*/
 red_pitaya_scope #(.CHN(1)) i_scope_2_3 (
   // ADC
   .adc_a_i       (adc_dat[2]  ),  // CH 1
