@@ -2,7 +2,7 @@
 # Authors: Matej Oblak, Iztok Jeras
 # (C) Red Pitaya 2013-2015
 #
-# Red Pitaya FPGA/SoC Makefile 
+# Red Pitaya FPGA/SoC Makefile
 #
 # Produces:
 #   3. FPGA bit file.
@@ -14,6 +14,7 @@ PRJ   ?= logic
 MODEL ?= Z10
 HWID  ?= ""
 DEFINES ?= ""
+DTS_VER ?= 2017.2
 
 # build artefacts
 FPGA_BIT    = prj/$(PRJ)/out/red_pitaya.bit
@@ -39,14 +40,14 @@ clean:
 
 project:
 ifneq ($(HWID),"")
-	vivado -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID) 
+	vivado -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID)
 else
 	vivado -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
 endif
 
 $(FPGA_BIT):
 ifneq ($(HWID),"")
-	$(VIVADO) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID) 
+	$(VIVADO) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID)
 else
 	$(VIVADO) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
 endif
@@ -56,5 +57,5 @@ $(FSBL_ELF): $(FPGA_BIT)
 	$(HSI) -source red_pitaya_hsi_fsbl.tcl -tclargs $(PRJ)
 
 $(DEVICE_TREE): $(FPGA_BIT)
-	$(HSI) -source red_pitaya_hsi_dts.tcl -tclargs $(PRJ)
+	$(HSI) -source red_pitaya_hsi_dts.tcl -tclargs $(PRJ) DTS_VER=$(DTS_VER)
 
