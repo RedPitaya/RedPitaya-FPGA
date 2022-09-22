@@ -32,6 +32,7 @@ set_repo_path ../../../tmp/device-tree-xlnx-xilinx-v$ver/
 create_sw_design device-tree -os device_tree -proc ps7_cortexa9_0
 
 set_property CONFIG.kernel_version $ver [get_os]
+set_property CONFIG.dt_overlay true [get_os]
 
 generate_target -dir $path_sdk/dts
 
