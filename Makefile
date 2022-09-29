@@ -56,10 +56,10 @@ endif
 	./synCheck.sh
 
 $(FSBL_ELF): $(FPGA_BIT)
-	$(HSI) -source red_pitaya_hsi_fsbl.tcl -tclargs $(PRJ)
+	xsct red_pitaya_hsi_fsbl.tcl $(PRJ)
 
 $(DEVICE_TREE): $(FPGA_BIT)
-	$(HSI) -source red_pitaya_hsi_dts.tcl -tclargs $(PRJ) DTS_VER=$(DTS_VER)
+	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER)
 
 $(FPGA_BIN): $(FPGA_BIT)
 	@echo all:{$(FPGA_BIT)} > prj/$(PRJ)/out/red_pitaya.bif
