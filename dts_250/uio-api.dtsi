@@ -2,7 +2,7 @@
  * Add UIO peripherals for API access (old API)
  */
 
-&amba_pl {
+&amba {
 	api: api@40000000 {
 		compatible = "generic-uio";
 		reg = <0x40000000 0x100000>,  // housekeeping (ID)
