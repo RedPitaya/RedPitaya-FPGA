@@ -1,0 +1,13 @@
+&rp_dac {
+	compatible = "generic-uio";
+};
+
+&rp_oscilloscope {
+        compatible = "generic-uio";
+};
+
+&rp_gpio {
+        compatible = "generic-uio";
+};
+
+
