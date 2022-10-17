@@ -26,7 +26,7 @@
         };
 };
 
-&amba {
+&overlay2 {
         id: id@40000000 {
             compatible = "generic-uio";
             reg = <0x40000000 0x10000>;
