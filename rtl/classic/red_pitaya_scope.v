@@ -467,11 +467,14 @@ reg  [  2-1: 0] axi_a_dat_sel      ;
 reg  [  1-1: 0] axi_a_dat_dv       ;
 reg  [ 32-1: 0] axi_a_dly_cnt      ;
 reg             axi_a_dly_do       ;
+reg             axi_a_dly_end      ;
+reg             axi_a_dly_end_reg  ;
 wire            axi_a_clr          ;
 wire [ 32-1: 0] axi_a_cur_addr     ;
+wire [  5-1: 0] axi_a_state        ;
 
 assign axi_a_clr = adc_rst_do ;
-
+assign axi_a_state = {axi_a_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_a_we};
 
 always @(posedge axi0_clk_o) begin
    if (axi0_rstn_o == 1'b0) begin
@@ -479,6 +482,8 @@ always @(posedge axi0_clk_o) begin
       axi_a_dat_dv  <=  1'b0 ;
       axi_a_dly_cnt <= 32'h0 ;
       axi_a_dly_do  <=  1'b0 ;
+      axi_a_dly_end <=  1'b0      ;
+      axi_a_dly_end_reg <= 1'b0   ;
    end
    else begin
       if (adc_arm_do && set_a_axi_en)
@@ -495,6 +500,13 @@ always @(posedge axi0_clk_o) begin
          axi_a_dly_cnt <= axi_a_dly_cnt - 1;
       else if (!axi_a_dly_do)
          axi_a_dly_cnt <= set_a_axi_dly ;
+
+      axi_a_dly_end_reg <= axi_a_dly_do; 
+      
+      if (adc_rst_do || adc_arm_do)
+         axi_a_dly_end<=1'b0;
+      else if (axi_a_dly_end_reg && ~axi_a_dly_do) //check if delay is over
+         axi_a_dly_end<=1'b1; //register remains 1 until next arm or reset
 
       if (axi_a_clr)
          axi_a_dat_sel <= 2'h0 ;
@@ -573,11 +585,14 @@ reg  [  2-1: 0] axi_b_dat_sel      ;
 reg  [  1-1: 0] axi_b_dat_dv       ;
 reg  [ 32-1: 0] axi_b_dly_cnt      ;
 reg             axi_b_dly_do       ;
+reg             axi_b_dly_end      ;
+reg             axi_b_dly_end_reg  ;
 wire            axi_b_clr          ;
 wire [ 32-1: 0] axi_b_cur_addr     ;
+wire [  5-1: 0] axi_b_state        ;
 
 assign axi_b_clr = adc_rst_do ;
-
+assign axi_b_state = {axi_b_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_b_we};
 
 always @(posedge axi1_clk_o) begin
    if (axi1_rstn_o == 1'b0) begin
@@ -585,6 +600,8 @@ always @(posedge axi1_clk_o) begin
       axi_b_dat_dv  <=  1'b0 ;
       axi_b_dly_cnt <= 32'h0 ;
       axi_b_dly_do  <=  1'b0 ;
+      axi_b_dly_end <=  1'b0      ;
+      axi_b_dly_end_reg <= 1'b0   ;
    end
    else begin
       if (adc_arm_do && set_b_axi_en)
@@ -601,6 +618,13 @@ always @(posedge axi1_clk_o) begin
          axi_b_dly_cnt <= axi_b_dly_cnt - 1;
       else if (!axi_b_dly_do)
          axi_b_dly_cnt <= set_b_axi_dly ;
+
+      axi_b_dly_end_reg <= axi_b_dly_do; 
+      
+      if (adc_rst_do || adc_arm_do)
+         axi_b_dly_end<=1'b0;
+      else if (axi_b_dly_end_reg && ~axi_b_dly_do) //check if delay is over
+         axi_b_dly_end<=1'b1; //register remains 1 until next arm or reset
 
       if (axi_b_clr)
          axi_b_dat_sel <= 2'h0 ;
@@ -964,6 +988,9 @@ end else begin
      20'h0007C : begin sys_ack <= sys_en;          sys_rdata <= {{32- 1{1'b0}}, set_b_axi_en}       ; end
      20'h00080 : begin sys_ack <= sys_en;          sys_rdata <=                 set_b_axi_trig      ; end
      20'h00084 : begin sys_ack <= sys_en;          sys_rdata <=                 set_b_axi_cur       ; end
+
+     20'h00088 : begin sys_ack <= sys_en;          sys_rdata <= {{16- 5{1'b0}}, axi_b_state,
+                                                                 {16- 5{1'b0}}, axi_a_state }       ; end
 
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
 
