@@ -26,7 +26,7 @@ module axi_master #(
    // axi write address channel
    output     [   IW-1: 0] axi_awid_o     , // write address ID
    output reg [   AW-1: 0] axi_awaddr_o   , // write address
-   output reg [    4-1: 0] axi_awlen_o    , // write burst length
+   output reg [   LW-1: 0] axi_awlen_o    , // write burst length
    output     [    3-1: 0] axi_awsize_o   , // write burst size
    output reg [    2-1: 0] axi_awburst_o  , // write burst type
    output     [    2-1: 0] axi_awlock_o   , // write lock type
@@ -52,7 +52,7 @@ module axi_master #(
    // axi read address channel
    output     [   IW-1: 0] axi_arid_o     , // read address ID
    output reg [   AW-1: 0] axi_araddr_o   , // read address
-   output reg [    4-1: 0] axi_arlen_o    , // read burst length
+   output reg [   LW-1: 0] axi_arlen_o    , // read burst length
    output     [    3-1: 0] axi_arsize_o   , // read burst size
    output reg [    2-1: 0] axi_arburst_o  , // read burst type
    output     [    2-1: 0] axi_arlock_o   , // read lock type
@@ -74,7 +74,7 @@ module axi_master #(
    input      [   DW-1: 0] sys_wdata_i    , // system write data
    input      [   SW-1: 0] sys_wsel_i     , // system write byte select
    input                   sys_wvalid_i   , // system write data valid
-   input      [    4-1: 0] sys_wlen_i     , // system write burst length
+   input      [   LW-1: 0] sys_wlen_i     , // system write burst length
    input                   sys_wfixed_i   , // system write burst type (fixed / incremental)
    output reg              sys_werr_o     , // system write error
    output reg              sys_wrdy_o     , // system write ready
@@ -82,10 +82,12 @@ module axi_master #(
    // system read channel
    input      [   AW-1: 0] sys_raddr_i    , // system read address
    input                   sys_rvalid_i   , // system read address valid
-   input      [   SW-1: 0] sys_rsel_i     , // system read byte select
-   input      [    4-1: 0] sys_rlen_i     , // system read burst length
+   input      [   SW-1: 0] sys_rsel_i     , // system write byte select
+   output                  sys_rardy_o    , // system read address ready
+   input      [   LW-1: 0] sys_rlen_i     , // system read burst length
    input                   sys_rfixed_i   , // system read burst type (fixed / incremental)
    output reg [   DW-1: 0] sys_rdata_o    , // system read data
+   input                   sys_rrdy_i     , // system read ready to receive data 
    output reg              sys_rrdy_o     , // system read data is ready
    output reg              sys_rerr_o       // system read error
 );
@@ -99,16 +101,16 @@ module axi_master #(
 // Write address channel
 
 assign axi_awid_o    = ID ;
-assign axi_awsize_o  = {2'b01,(DW==64)} ; // 4 or 8 byte transfer      ; // write burst size
+assign axi_awsize_o  = {(DW==512),1'b1,(DW==64)} ; // 4 or 8 byte or 64 byte transfer - burst size
 assign axi_awlock_o  = 2'h0   ; // normal
-assign axi_awcache_o = 4'h0   ; // non-cacheable
-assign axi_awprot_o  = 3'b010 ; // data, non-secured, unprivileged
+assign axi_awcache_o = 4'b0011; // non-cacheable
+assign axi_awprot_o  = 3'b000 ; // data, secured, unprivileged
 
-reg [    4-1: 0] wr_cnt           ;
+reg [   LW-1: 0] wr_cnt           ;
 reg [    4-1: 0] axi_awwr_pt      ;
 reg [    4-1: 0] axi_awrd_pt      ;
 reg [    4-1: 0] axi_awfill_lvl   ;
-reg [ 5+AW-1: 0] axi_awfifo[15:0] ;  //synthesis attribute ram_style of axi_awfifo is "distributed";
+reg [LW+AW  : 0] axi_awfifo[15:0] ;  //synthesis attribute ram_style of axi_awfifo is "distributed";
 reg              awdata_in_reg    ;
 
 wire axi_wlast ;
@@ -191,13 +193,15 @@ reg              wdata_in_reg    ;
 wire axi_wpop = (!wdata_in_reg || axi_wready_i) && |axi_wfill_lvl  ;
 
 assign axi_wpush = sys_wvalid_i && sys_wrdy_o                          ;
-assign axi_wlast = ((!sys_wlen_i && sys_wvalid_i) || (wr_cnt == 4'h1)) ;
+assign axi_wlast = ((!sys_wlen_i && sys_wvalid_i) || (wr_cnt == 'h1)) ;
 
 always @ (posedge axi_clk_i)
 begin
    if (!axi_rstn_i) begin
-      axi_wwr_pt <= 4'h0 ;
-      axi_wrd_pt <= 4'h0 ;
+      axi_wwr_pt  <= 4'h0 ;
+      axi_wrd_pt  <= 4'h0 ;
+      axi_wlast_o <= 1'b0 ;
+      axi_wstrb_o <=  'h0 ;
    end
    else begin
       if (axi_wpush) begin
@@ -255,7 +259,7 @@ begin
       if (sys_wvalid_i && sys_wrdy_o && !wr_cnt)
          wr_cnt <= sys_wlen_i ;
       else if (axi_wpush && wr_cnt)
-         wr_cnt <= wr_cnt - 4'h1 ;
+         wr_cnt <= wr_cnt - 'h1 ;
 
    end
 end
@@ -289,13 +293,13 @@ end
 // Read address channel
 
 assign axi_arid_o    = ID ;
-assign axi_arsize_o  = {2'b01,(DW==64)} ; // 4 or 8 byte transfer 
+assign axi_arsize_o  = {(DW==512),1'b1,(DW==64)} ; // 4 or 8 byte or 64 byte transfer
 assign axi_arlock_o  = 2'h0   ; // normal
-assign axi_arcache_o = 4'h0   ; // non-cacheable
+assign axi_arcache_o = 4'b0011; // non-cacheable
 assign axi_arprot_o  = 3'b010 ; // data, non-secured, unprivileged
 
-reg [4-1: 0] rd_cnt  ; // counts data received by system port
-reg          nxt_burst_rdy;
+reg [LW-1: 0] rd_cnt  ; // counts data received by system port
+reg           nxt_burst_rdy;
 
 // system bus provides next address only
 // after the current read burst has finished
@@ -303,18 +307,19 @@ always @(posedge axi_clk_i)
 begin
    if (!axi_rstn_i) begin
       nxt_burst_rdy <= 1'b1 ;
-      rd_cnt        <= 4'h0 ;
+      rd_cnt        <=  'h0 ;
    end
    else begin
-      if (sys_rvalid_i)
-         nxt_burst_rdy <= 1'b0 ;
-      else if (!rd_cnt && sys_rrdy_o && sys_rvalid_i)
+      if (!rd_cnt && sys_rrdy_o && sys_rrdy_i)
          nxt_burst_rdy <= 1'b1 ;
+      else if (sys_rvalid_i)
+         nxt_burst_rdy <= 1'b0 ;
+
 
       if (sys_rvalid_i && nxt_burst_rdy)
          rd_cnt <= sys_rlen_i ;
-      else if (sys_rvalid_i && sys_rrdy_o && rd_cnt)
-         rd_cnt <= rd_cnt - 4'h1 ;
+      else if (sys_rrdy_i && sys_rrdy_o && rd_cnt)
+         rd_cnt <= rd_cnt - 'h1 ;
    end
 end
 
@@ -353,7 +358,7 @@ reg [DW-1: 0] axi_rfifo[15:0] ;  //synthesis attribute ram_style of axi_rfifo is
 reg           rdata_in_reg    ;
 
 wire axi_rpush = axi_rvalid_i && axi_rready_o ;
-wire axi_rpop  = (!rdata_in_reg || sys_rvalid_i) && |axi_rfill_lvl ;
+wire axi_rpop  = (!rdata_in_reg || sys_rrdy_i) && |axi_rfill_lvl ;
 
 always @(posedge axi_clk_i)
 begin
@@ -383,7 +388,7 @@ begin
    else begin
       if (axi_rpop)
          sys_rrdy_o <= 1'b1 ;
-      else if (sys_rrdy_o && sys_rvalid_i)
+      else if (sys_rrdy_o && sys_rrdy_i)
          sys_rrdy_o <= 1'b0 ;
 
       sys_rerr_o <= axi_rvalid_i && (axi_rresp_i == 2'h2) ;
@@ -417,7 +422,7 @@ begin
       if (axi_rpop) begin
          rdata_in_reg <= 1'b1 ;
       end
-      else if (sys_rrdy_o && sys_rvalid_i) begin
+      else if (sys_rrdy_o && sys_rrdy_i) begin
          rdata_in_reg <= 1'b0 ;
       end
    end
@@ -426,7 +431,7 @@ end
 
 
 
-
+assign sys_rardy_o = axi_arready_i ;
 
 
 

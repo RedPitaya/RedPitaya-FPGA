@@ -196,6 +196,7 @@ axi_master #(
   .sys_rfixed_i   (  1'b0           ), // system read burst type (fixed / incremental)
   .sys_rdata_o    (                 ), // system read data
   .sys_rrdy_o     (                 ), // system read data is ready
+  .sys_rardy_o    (                 ), // system read address is ready
   .sys_rerr_o     (                 )  // system read error
 );
 
@@ -267,6 +268,7 @@ axi_master #(
   .sys_rfixed_i   (  1'b0           ), // system read burst type (fixed / incremental)
   .sys_rdata_o    (                 ), // system read data
   .sys_rrdy_o     (                 ), // system read data is ready
+  .sys_rardy_o    (                 ), // system read address is ready
   .sys_rerr_o     (                 )  // system read error
 );
 
@@ -338,6 +340,7 @@ axi_master #(
   .sys_rfixed_i   (  1'b0           ), // system read burst type (fixed / incremental)
   .sys_rdata_o    (                 ), // system read data
   .sys_rrdy_o     (                 ), // system read data is ready
+  .sys_rardy_o    (                 ), // system read address is ready
   .sys_rerr_o     (                 )  // system read error
 );
 
@@ -409,6 +412,7 @@ axi_master #(
   .sys_rfixed_i   (  1'b0           ), // system read burst type (fixed / incremental)
   .sys_rdata_o    (                 ), // system read data
   .sys_rrdy_o     (                 ), // system read data is ready
+  .sys_rardy_o    (                 ), // system read address is ready
   .sys_rerr_o     (                 )  // system read error
 );
 
