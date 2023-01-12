@@ -112,6 +112,10 @@ module red_pitaya_top #(
   output logic [ 2-1:0] daisy_n_o  ,
   input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
   input  logic [ 2-1:0] daisy_n_i  ,
+  // PLL
+  output logic          clk_sel_o  ,  // 1-internal 0-external
+  output logic          pll_hi_o   ,
+  output logic          pll_lo_o   ,
   // LED
   output logic [ 8-1:0] led_o
 );
@@ -235,6 +239,17 @@ adc_rstn <=  frstn[0] && pll_locked;
 always @(posedge pwm_clk)
 pwm_rstn <=  frstn[0] &  pll_locked;
 
+
+
+
+// External PLL
+
+assign clk_sel_o = 1'bz;  // High-Z, controlled from Expansion IO
+assign pll_hi_o  = 1'b0;
+assign pll_lo_o  = 1'b1;
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
@@ -344,8 +359,8 @@ red_pitaya_pwm pwm [4-1:0] (
 // Daisy dummy code
 ////////////////////////////////////////////////////////////////////////////////
 
-assign daisy_p_o = 2'b00;
-assign daisy_n_o = 2'b11;
+assign daisy_p_o = 2'bzz;
+assign daisy_n_o = 2'bzz;
 
 ////////////////////////////////////////////////////////////////////////////////
 // ADC IO

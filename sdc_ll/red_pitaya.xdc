@@ -37,7 +37,7 @@ set_property PACKAGE_PIN W10 [get_ports {adc_datb_i[1][1]}] ; # ADB1_p
 
 
 # ADC CTRL
-set_property -dict {IOSTANDARD LVCMOS33  SLEW SLOW  DRIVE 8  PACKAGE_PIN V16}  [get_ports adc_rst_o] ; # ADC_RESET
+set_property -dict {IOSTANDARD LVCMOS33  SLEW SLOW  DRIVE 8  PACKAGE_PIN T17}  [get_ports adc_rst_o] ; # ADC_RESET
 set_property -dict {IOSTANDARD LVCMOS33  SLEW SLOW  DRIVE 8  PACKAGE_PIN Y14}  [get_ports adc_pdn_o] ; # ADC_PDN
 
 # ADC SPI
@@ -77,24 +77,24 @@ set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN D19 }  [get_ports dac_data
 
 set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN P18 }  [get_ports dac_datb_o[ 0]] ; # DDB0
 set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN R18 }  [get_ports dac_datb_o[ 1]] ; # DDB1
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN T17 }  [get_ports dac_datb_o[ 2]] ; # DDB2
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y16 }  [get_ports dac_datb_o[ 3]] ; # DDB3
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W16 }  [get_ports dac_datb_o[ 4]] ; # DDB4
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y17 }  [get_ports dac_datb_o[ 5]] ; # DDB5
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y18 }  [get_ports dac_datb_o[ 6]] ; # DDB6
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W20 }  [get_ports dac_datb_o[ 7]] ; # DDB7
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W19 }  [get_ports dac_datb_o[ 8]] ; # DDB8
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN V18 }  [get_ports dac_datb_o[ 9]] ; # DDB9
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W18 }  [get_ports dac_datb_o[10]] ; # DDB10
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y19 }  [get_ports dac_datb_o[11]] ; # DDB11
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN V20 }  [get_ports dac_datb_o[12]] ; # DDB12
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN U20 }  [get_ports dac_datb_o[13]] ; # DDB13
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN R17 }  [get_ports dac_datb_o[ 2]] ; # DDB2
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y17 }  [get_ports dac_datb_o[ 3]] ; # DDB3
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y18 }  [get_ports dac_datb_o[ 4]] ; # DDB4
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W18 }  [get_ports dac_datb_o[ 5]] ; # DDB5
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y19 }  [get_ports dac_datb_o[ 6]] ; # DDB6
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN U19 }  [get_ports dac_datb_o[ 7]] ; # DDB7
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN V20 }  [get_ports dac_datb_o[ 8]] ; # DDB8
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W20 }  [get_ports dac_datb_o[ 9]] ; # DDB9
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN V18 }  [get_ports dac_datb_o[10]] ; # DDB10
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN W19 }  [get_ports dac_datb_o[11]] ; # DDB11
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN U20 }  [get_ports dac_datb_o[12]] ; # DDB12
+set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN T19 }  [get_ports dac_datb_o[13]] ; # DDB13
 
 
 ### PWM DAC
 set_property -dict {IOSTANDARD LVCMOS33 SLEW FAST DRIVE 12 IOB TRUE}  [get_ports {dac_pwm_o[*]}]
 set_property PACKAGE_PIN T11  [get_ports {dac_pwm_o[0]}] ; # AOF0
-set_property PACKAGE_PIN U12  [get_ports {dac_pwm_o[1]}] ; # AOF1
+set_property PACKAGE_PIN V12  [get_ports {dac_pwm_o[1]}] ; # AOF1
 set_property PACKAGE_PIN V13  [get_ports {dac_pwm_o[2]}] ; # AOF2
 set_property PACKAGE_PIN W14  [get_ports {dac_pwm_o[3]}] ; # AOF3
 
@@ -123,10 +123,11 @@ set_property PACKAGE_PIN A20 [get_ports {vinn_i[0]}]
 #set_property PACKAGE_PIN N20 [get_ports trig_i]
 
 ### PLL
-#set_property IOSTANDARD LVCMOS33 [get_ports pll_*]
-#set_property PACKAGE_PIN U7 [get_ports pll_ref_i]
-#set_property PACKAGE_PIN V6 [get_ports pll_hi_o]
-#set_property PACKAGE_PIN V5 [get_ports pll_lo_o]
+set_property IOSTANDARD LVCMOS33 [get_ports pll_*]
+set_property IOSTANDARD LVCMOS33 [get_ports clk_sel_o]
+set_property PACKAGE_PIN V17 [get_ports clk_sel_o]
+set_property PACKAGE_PIN U17 [get_ports pll_hi_o]
+set_property PACKAGE_PIN V15 [get_ports pll_lo_o]
 
 ### Temperature protection
 #set_property IOSTANDARD LVCMOS33 [get_ports {temp_prot_i[*]}]
