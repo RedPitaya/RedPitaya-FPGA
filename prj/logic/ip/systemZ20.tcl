@@ -439,7 +439,7 @@ CONFIG.STRATEGY {1} \
   set axis_clock_converter_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_clock_converter:1.1 axis_clock_converter_6 ]
 
   # Create instance: axis_data_fifo_2, and set properties
-  set axis_data_fifo_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:1.1 axis_data_fifo_2 ]
+  set axis_data_fifo_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:2.0 axis_data_fifo_2 ]
   set_property -dict [ list \
 CONFIG.FIFO_DEPTH {2048} \
 CONFIG.FIFO_MODE {2} \
@@ -447,7 +447,7 @@ CONFIG.IS_ACLK_ASYNC {0} \
  ] $axis_data_fifo_2
 
   # Create instance: axis_data_fifo_6, and set properties
-  set axis_data_fifo_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:1.1 axis_data_fifo_6 ]
+  set axis_data_fifo_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:2.0 axis_data_fifo_6 ]
   set_property -dict [ list \
 CONFIG.FIFO_DEPTH {2048} \
 CONFIG.FIFO_MODE {2} \
@@ -733,7 +733,7 @@ CONFIG.PCW_SPI_PERIPHERAL_DIVISOR0 {5} \
 CONFIG.PCW_SPI_PERIPHERAL_FREQMHZ {200} \
 CONFIG.PCW_SPI_PERIPHERAL_VALID {1} \
 CONFIG.PCW_S_AXI_HP0_DATA_WIDTH {64} \
-CONFIG.PCW_S_AXI_HP1_DATA_WIDTH {32} \
+CONFIG.PCW_S_AXI_HP1_DATA_WIDTH {64} \
 CONFIG.PCW_S_AXI_HP2_DATA_WIDTH {64} \
 CONFIG.PCW_S_AXI_HP3_DATA_WIDTH {64} \
 CONFIG.PCW_TTC0_PERIPHERAL_ENABLE {1} \
