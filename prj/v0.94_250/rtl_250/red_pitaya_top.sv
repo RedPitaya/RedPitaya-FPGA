@@ -402,7 +402,7 @@ assign adc_sync_o = 1'bz ;
 logic [2-1:0] [ 7-1:0] adc_dat_ibuf;
 logic [2-1:0] [ 7-1:0] adc_dat_idly;
 logic [2-1:0] [14-1:0] adc_dat_in;
-logic [2-1:0] [14-1:0] adc_dat_sw;
+logic [2-1:0] [12-1:0] adc_dat_sw;
 
 genvar GV;
 generate
@@ -412,7 +412,6 @@ begin:adc_ipad
   IBUFDS i_dat1 (.I (adc_dat_p_i[1][GV]), .IB (adc_dat_n_i[1][GV]), .O (adc_dat_ibuf[1][GV]));  // differential data input
 end
 endgenerate
-
 
 logic [2*7-1:0] idly_rst ;
 logic [2*7-1:0] idly_ce  ;
@@ -510,8 +509,8 @@ endgenerate
 // data loopback
 always @(posedge adc_clk)
 begin
-  adc_dat_sw[0] <= digital_loop ? dac_a : { adc_dat_in[1][14-1:2] , 2'h0 }; // switch adc_b->ch_a
-  adc_dat_sw[1] <= digital_loop ? dac_b : { adc_dat_in[0][14-1:2] , 2'h0 }; // switch adc_a->ch_b
+  adc_dat_sw[0] <= digital_loop ? dac_a[14-1:2] : adc_dat_in[1][14-1:2]; // switch adc_b->ch_a
+  adc_dat_sw[1] <= digital_loop ? dac_b[14-1:2] : adc_dat_in[0][14-1:2]; // switch adc_a->ch_b
 end
 
 ////////////////////////////////////////////////////////////////////////////////
