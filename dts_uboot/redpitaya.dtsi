@@ -4,5 +4,4 @@
 
 /include/ "ethernet.dtsi"
 /include/ "i2c0.dtsi"
-///include/ "usb0.dtsi"
 /include/ "clkc.dtsi"
