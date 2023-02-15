@@ -57,7 +57,7 @@ add_files                         ../../$path_rtl
 add_files                         $path_rtl
 add_files                         $path_bd
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+add_files -fileset constrs_1      $path_sdc/red_pitaya_Z20.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ################################################################################
