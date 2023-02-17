@@ -67,7 +67,7 @@
   <FileSets Version="1" Minor="31">
     <FileSet Name="sources_1" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1">
       <Filter Type="Srcs"/>
-      <File Path="$PPRDIR/src/dac_calib.v">
+      <File Path="$PPRDIR/dac_calib.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -75,7 +75,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/src/dac_top.v">
+      <File Path="$PPRDIR/dac_top.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -83,7 +83,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/src/rp_dma_mm2s.v">
+      <File Path="$PPRDIR/rp_dma_mm2s.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -91,7 +91,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/src/rp_dma_mm2s_ctrl.v">
+      <File Path="$PPRDIR/rp_dma_mm2s_ctrl.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -99,7 +99,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/src/rp_dma_mm2s_data_ctrl.v">
+      <File Path="$PPRDIR/rp_dma_mm2s_data_ctrl.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -107,7 +107,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/src/rp_dma_mm2s_downsize.v">
+      <File Path="$PPRDIR/rp_dma_mm2s_downsize.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -115,7 +115,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/src/rp_dac.v">
+      <File Path="$PPRDIR/rp_dac.v">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -129,25 +129,12 @@
       <Config>
         <Option Name="DesignMode" Val="RTL"/>
         <Option Name="TopModule" Val="rp_dac"/>
-        <Option Name="TopRTLFile" Val="$PPRDIR/src/rp_dac.v"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1">
-      <Filter Type="Constrs"/>
-      <File Path="$PPRDIR/src/const.xdc">
-        <FileInfo>
-          <Attr Name="Library" Val=""/>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="ConstrsType" Val="XDC"/>
+        <Option Name="TopRTLFile" Val="$PPRDIR/rp_dac.v"/>
       </Config>
     </FileSet>
     <FileSet Name="sim_1" Type="SimulationSrcs" RelSrcDir="$PSRCDIR/sim_1">
       <Filter Type="Srcs"/>
-      <File Path="$PPRDIR/src/fifo_axi_data/simulation/fifo_generator_vlog_beh.v">
+      <File Path="$PPRDIR/fifo_axi_data/simulation/fifo_generator_vlog_beh.v">
         <FileInfo>
           <Attr Name="AutoDisabled" Val="1"/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -175,7 +162,7 @@
       </Config>
     </FileSet>
     <FileSet Name="reg_ctrl" Type="BlockSrcs" RelSrcDir="$PSRCDIR/reg_ctrl">
-      <File Path="$PPRDIR/src/reg_ctrl/reg_ctrl.xci">
+      <File Path="$PPRDIR/reg_ctrl/reg_ctrl.xci">
         <FileInfo>
           <Attr Name="Library" Val=""/>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -189,7 +176,7 @@
       </Config>
     </FileSet>
     <FileSet Name="fifo_axi_data_dac" Type="BlockSrcs" RelSrcDir="$PSRCDIR/fifo_axi_data_dac">
-      <File Path="$PPRDIR/src/fifo_axi_data_dac/fifo_axi_data_dac.xci">
+      <File Path="$PPRDIR/fifo_axi_data_dac/fifo_axi_data_dac.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>

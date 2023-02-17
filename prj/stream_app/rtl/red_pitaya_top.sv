@@ -85,29 +85,25 @@ logic                    dac_clk_2x;
 logic                    dac_clk_2p;
 logic                    dac_rst;
 
-logic        [16-1:0] dac_dat_a, dac_dat_b;
-`ifdef SLAVE
-wire adc_clk_out = adc_clk_daisy;
-`else
-wire adc_clk_out = 1'b0;
-`endif
+logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
+logic [4-1:0] frstn;
+
+logic          clksel;
+logic [16-1:0] dac_dat_a, dac_dat_b;
 
 wire trig_out;
+wire gpio_trig;
 wire clk_125;
 wire trig_ext_syncd;
-wire rstn_0;
-
-reg trig_ext_sync1, trig_ext_sync2;
-
-ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_out), .CE(1'b1), .R(1'b0), .S(1'b0));
-ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_out), .CE(1'b1), .R(1'b0), .S(1'b0));
+reg  trig_ext_sync1, trig_ext_sync2;
 
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
+assign dac_pwm_o = 4'h0;
 
-logic [32-1:0] led_cnt;
-logic          clk_rec_blnk;
+reg [32-1:0] led_cnt;
+reg          clk_rec_blnk='h0;
 
 always @(posedge clk_125) //shows FPGA is loaded and has a clock
 begin
@@ -123,7 +119,7 @@ begin
     end
   end
 end
-assign led_o = {7'h0, clk_rec_blnk};
+assign led_o = {6'h0,~rstn_0,clk_rec_blnk};
 
 red_pitaya_pll pll (
   // inputs
@@ -152,10 +148,10 @@ ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b_o), .D2(dac_dat_a_o), .
 always @(posedge dac_clk_1x)
 dac_rst  <= ~rstn_0 | ~pll_locked;
 
-wire [ 4-1:0] loopback_sel_ch2,loopback_sel_ch1;
-reg  [14-1:0] adc_dat_ch1, adc_dat_ch2;
-reg  [14-1:0] adc_dat_ch1_r, adc_dat_ch2_r;
-wire [14-1:0] dac_dat_a_o, dac_dat_b_o;
+wire [ 4-1:0] loopback_sel_ch1, loopback_sel_ch2;
+reg  [14-1:0] adc_dat_ch1,      adc_dat_ch2;
+reg  [14-1:0] adc_dat_ch1_r,    adc_dat_ch2_r;
+wire [14-1:0] dac_dat_a_o,      dac_dat_b_o;
 
 assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:2]};
 assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
@@ -163,17 +159,21 @@ assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
 always @(posedge clk_125) begin
   adc_dat_ch1_r <= adc_dat_i[0][16-1:2];
   adc_dat_ch2_r <= adc_dat_i[1][16-1:2];
-
-  if (loopback_sel_ch1)
+  if (loopback_sel_ch1[1])
     adc_dat_ch1 <= dac_dat_a[16-1:2];
   else
     adc_dat_ch1 <= adc_dat_ch1_r;
 
-  if (loopback_sel_ch2)
+  if (loopback_sel_ch2[1])
     adc_dat_ch2 <= dac_dat_b[16-1:2];
   else
     adc_dat_ch2 <= adc_dat_ch2_r;
 end
+
+
+ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
+ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
+
 
 assign adc_cdcs_o = 1'b1 ;
 ////////////////////////////////////////////////////////////////////////////////
@@ -203,8 +203,18 @@ assign adc_cdcs_o = 1'b1 ;
         .FIXED_IO_ps_clk(FIXED_IO_ps_clk),
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
-        .trig_in(trig_ext_syncd),
+        .FCLK_CLK0         (fclk[0]      ),
+        .FCLK_CLK1         (fclk[1]      ),
+        .FCLK_CLK2         (fclk[2]      ),
+        .FCLK_CLK3         (fclk[3]      ),
+        .FCLK_RESET0_N     (frstn[0]     ),
+        .FCLK_RESET1_N     (frstn[1]     ),
+        .FCLK_RESET2_N     (frstn[2]     ),
+        .FCLK_RESET3_N     (frstn[3]     ),
+        .trig_in(external_trig),
+        .gpio_trig(gpio_trig),
         .trig_out(trig_out),
+        .clksel(clksel),
         .adc_clk(adc_clk_in),
         .clk_out(clk_125),
         .rstn_out(rstn_0),
@@ -227,7 +237,7 @@ OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
-  .I  ( adc_clk_daisy )
+  .I  ( adc_clk_in    )
 );
 
 IBUFDS #() i_IBUF_clkadc
@@ -236,9 +246,6 @@ IBUFDS #() i_IBUF_clkadc
   .IB ( adc_clk_i[0]  ),
   .O  ( adc_clk_in    )
 );
-
-
-`ifdef SLAVE
 
 IBUFDS #() i_IBUF_clkdaisy
 (
@@ -253,29 +260,14 @@ IBUFDS #() i_IBUFDS_trig
   .IB ( daisy_n_i[0]  ),
   .O  ( trig_ext      )
 );
-assign trig_ext_syncd = trig_ext;
 
-`else
-
-IBUFDS #() i_IBUFDS_trig
-(
-  .I  ( daisy_p_i[0]  ),
-  .IB ( daisy_n_i[0]  ),
-  .O  ( trig_ext)
-);
-
-
-assign adc_clk_daisy = adc_clk_in;
 
 always @(posedge clk_125) //sync external trigger from external master to local clock
 begin
   trig_ext_sync1 <= trig_ext;
   trig_ext_sync2 <= trig_ext_sync1;
 end
-assign trig_ext_syncd = trig_ext_sync2;
 
-//assign trig_ext = gpio.i[8];
-
-`endif
+assign external_trig = trig_ext_syncd | gpio_trig;
 
 endmodule
