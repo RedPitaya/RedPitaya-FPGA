@@ -94,8 +94,7 @@ logic [16-1:0] dac_dat_a, dac_dat_b;
 wire trig_out;
 wire gpio_trig;
 wire clk_125;
-wire trig_ext_syncd;
-reg  trig_ext_sync1, trig_ext_sync2;
+wire trig_ext;
 
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
@@ -261,13 +260,6 @@ IBUFDS #() i_IBUFDS_trig
   .O  ( trig_ext      )
 );
 
-
-always @(posedge clk_125) //sync external trigger from external master to local clock
-begin
-  trig_ext_sync1 <= trig_ext;
-  trig_ext_sync2 <= trig_ext_sync1;
-end
-
-assign external_trig = trig_ext_syncd | gpio_trig;
+assign external_trig = trig_ext | gpio_trig;
 
 endmodule
