@@ -131,17 +131,17 @@ wire                            adc_sign_ch2 = ~adc_data_ch2[ADC_DATA_BITS-1];
 
 always @(posedge clk)
 begin
-  adc_data_ch1_signed <= {adc_data_ch1[ADC_DATA_BITS-1], ~{adc_data_ch1[ADC_DATA_BITS-2:0],{(16-ADC_DATA_BITS){adc_sign_ch1}}}};  
+  adc_data_ch1_signed <= {{adc_data_ch1},{(16-ADC_DATA_BITS){1'b0}}};  
 end
 
-assign s_axis_osc1_tdata = adc_data_ch1_signed;
+assign s_axis_osc1_tdata = $signed(adc_data_ch1_signed);
 
 always @(posedge clk)
 begin
-  adc_data_ch2_signed <= {adc_data_ch2[ADC_DATA_BITS-1], ~{adc_data_ch2[ADC_DATA_BITS-2:0],{(16-ADC_DATA_BITS){adc_sign_ch2}}}}; 
+  adc_data_ch2_signed <= {{adc_data_ch2},{(16-ADC_DATA_BITS){1'b0}}};  
 end
 
-assign s_axis_osc2_tdata = adc_data_ch2_signed;
+assign s_axis_osc2_tdata = $signed(adc_data_ch2_signed);
 
 assign intr = osc1_dma_intr | osc2_dma_intr;
 assign trig_out = trig_out1 | trig_out2;
@@ -283,7 +283,7 @@ scope_cfg #(
   .s_axi_reg_rid            (s_axi_reg_rid),
   .s_axi_reg_bid            (s_axi_reg_bid),
 
-  .clk_i                    (m_axi_osc1_aclk),   
+  .clk_i                    (clk),   
   .rstn_i                   (m_axi_osc1_aresetn), 
 
   .cfg_event_op_trig_o      (cfg_event_op[0]),
@@ -463,7 +463,7 @@ osc_top #(
   .DEC_SHIFT_BITS   (DEC_SHIFT_BITS),
   .CHAN_NUM         (2))
   U_osc2(
-  .clk_axi          (m_axi_osc1_aclk),   
+  .clk_axi          (m_axi_osc2_aclk),   
   .clk_adc          (clk),   
   .rst_n            (m_axi_osc2_aresetn), 
   .s_axis_tdata     (s_axis_osc2_tdata), 

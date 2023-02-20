@@ -231,6 +231,8 @@ proc create_root_design { parentCell } {
   set rstn_out [ create_bd_port -dir O -type rst rstn_out ]
   set trig_in [ create_bd_port -dir I trig_in ]
   set trig_out [ create_bd_port -dir O trig_out ]
+  set clksel [ create_bd_port -dir O clksel ]
+  set daisy_slave [ create_bd_port -dir I daisy_slave ]
 
   # Create instance: axi_interconnect_0, and set properties
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
@@ -268,7 +270,7 @@ proc create_root_design { parentCell } {
       CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {333.33333} \
       CONFIG.CLKOUT4_REQUESTED_OUT_FREQ {62.5} \
       CONFIG.CLKOUT5_REQUESTED_OUT_FREQ {10.000} \
-      CONFIG.USE_LOCKED {false} \
+      CONFIG.USE_LOCKED {true} \
       CONFIG.USE_RESET {false} \
       CONFIG.PRIMITIVE {MMCM} \
       CONFIG.CLKIN1_JITTER_PS {80.0} \
@@ -856,6 +858,11 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xlconcat_0_dout [get_bd_pins intr_concat/dout] [get_bd_pins processing_system7_0/IRQ_F2P]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins rp_concat/gen1_trig_ip] [get_bd_pins rp_concat/gen2_trig_ip] [get_bd_pins rp_concat/la_trig_ip] [get_bd_pins xlconstant_0/dout]
   connect_bd_net -net xlconstant_1_dout [get_bd_pins rp_concat/gen1_event_ip] [get_bd_pins rp_concat/gen2_event_ip] [get_bd_pins rp_concat/la_event_ip] [get_bd_pins xlconstant_1/dout]
+  connect_bd_net [get_bd_ports trig_in] [get_bd_pins rp_concat/ext_trig_ip]
+  connect_bd_net -net rp_oscilloscope_trig_out [get_bd_ports trig_out] [get_bd_pins rp_oscilloscope/trig_out]
+  connect_bd_net -net slave_mode_in [get_bd_ports daisy_slave] [get_bd_pins rp_oscilloscope/daisy_slave_i]
+  connect_bd_net -net rp_oscilloscope_0_clksel [get_bd_ports clksel] [get_bd_pins rp_oscilloscope/clksel_o]
+  connect_bd_net [get_bd_pins rst_gen/dcm_locked] [get_bd_pins clk_gen/locked]
 
   # Create address segments
   assign_bd_address -offset 0x40300000 -range 0x00100000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs m_axi_hk/Reg] -force
