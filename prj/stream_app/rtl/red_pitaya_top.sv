@@ -169,14 +169,14 @@ always @(posedge clk_125) begin
     adc_dat_ch2 <= adc_dat_ch2_r;
 end
 
-reg          daisy_cnt;
-reg [10-1:0] daisy_slave;
-reg [10-1:0] daisy_slave_r ;
-reg [10-1:0] daisy_slave_r2;
+reg [10-1:0] daisy_cnt;
+reg          daisy_slave;
+reg          daisy_slave_r ;
+reg          daisy_slave_r2;
 
 always @(posedge adc_clk_daisy) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
   if (~rstn_0) begin
-    daisy_cnt     <= 16'h0;
+    daisy_cnt     <= 'h0;
     daisy_slave_r <= 1'b0;
   end else begin 
     daisy_cnt <= daisy_cnt + 'h1;

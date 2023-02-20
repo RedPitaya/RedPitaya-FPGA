@@ -433,7 +433,7 @@ begin
       DIAG_REG2              : begin  reg_ack = 1'b1;       reg_rdat =                                diag2_i;                  end
       DIAG_REG3              : begin  reg_ack = 1'b1;       reg_rdat =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack = 1'b1;       reg_rdat =                                diag4_i;                  end
-      READY_REG              : begin  reg_ack = 1'b1;       reg_rdat = {{32- 2{1'b0}}               , daisy_slave_i, rstn_i};   end
+      STATUS_REG             : begin  reg_ack = 1'b1;       reg_rdat = {{32- 2{1'b0}}               , daisy_slave_i, rstn_i};   end
       default : begin  reg_ack = 1'b1;       reg_rdat = {32{1'b0}} ; end
    endcase
 end
