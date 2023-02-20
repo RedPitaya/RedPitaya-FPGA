@@ -169,6 +169,27 @@ always @(posedge clk_125) begin
     adc_dat_ch2 <= adc_dat_ch2_r;
 end
 
+reg          daisy_cnt;
+reg [10-1:0] daisy_slave;
+reg [10-1:0] daisy_slave_r ;
+reg [10-1:0] daisy_slave_r2;
+
+always @(posedge adc_clk_daisy) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
+  if (~rstn_0) begin
+    daisy_cnt     <= 16'h0;
+    daisy_slave_r <= 1'b0;
+  end else begin 
+    daisy_cnt <= daisy_cnt + 'h1;
+    if (&daisy_cnt)
+      daisy_slave_r <= 1'b1;
+  end
+end
+
+always @(posedge clk_125) begin
+  daisy_slave_r2 <= daisy_slave_r;
+  daisy_slave    <= daisy_slave_r2;
+end
+
 
 ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
 ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
@@ -214,6 +235,7 @@ assign adc_cdcs_o = 1'b1 ;
         .gpio_trig(gpio_trig),
         .trig_out(trig_out),
         .clksel(clksel),
+        .daisy_slave(daisy_slave),
         .adc_clk(adc_clk_in),
         .clk_out(clk_125),
         .rstn_out(rstn_0),

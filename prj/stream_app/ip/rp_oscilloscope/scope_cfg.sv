@@ -80,7 +80,8 @@ module scope_cfg
    output wire [              16-1:0]  cfg_calib_offset_ch2_o  ,
    output wire [              16-1:0]  cfg_calib_gain_ch1_o    ,
    output wire [              16-1:0]  cfg_calib_gain_ch2_o    ,
-   output reg                          clksel_o            ,
+   output reg                          clksel_o                ,
+   input  wire                         daisy_slave_i           ,
 
    output wire                         cfg_filt_bypass_o       ,
    output wire [              18-1:0]  cfg_filt_coeff_aa_ch1_o ,
@@ -182,7 +183,7 @@ localparam DIAG_REG2                = 12'hE4; // external trigger counter
 localparam DIAG_REG3                = 12'hE8; // clock counter
 localparam DIAG_REG4                = 12'hEC; // status of state machine
 
-localparam READY_REG                = 12'h100;   // status of FPGA clock
+localparam STATUS_REG               = 12'h100;   // status of FPGA clock
 localparam CLKSEL_REG               = 16'h1000;  // FPGA mode
 
 
@@ -432,7 +433,7 @@ begin
       DIAG_REG2              : begin  reg_ack = 1'b1;       reg_rdat =                                diag2_i;                  end
       DIAG_REG3              : begin  reg_ack = 1'b1;       reg_rdat =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack = 1'b1;       reg_rdat =                                diag4_i;                  end
-      READY_REG              : begin  reg_ack = 1'b1;       reg_rdat =                                rstn_i;                   end
+      READY_REG              : begin  reg_ack = 1'b1;       reg_rdat = {{32- 2{1'b0}}               , daisy_slave_i, rstn_i};   end
       default : begin  reg_ack = 1'b1;       reg_rdat = {32{1'b0}} ; end
    endcase
 end

@@ -24,6 +24,7 @@ module rp_oscilloscope
   input  wire [TRIG_SRC_NUM-1:0]                trig_ip,
   output wire                                   trig_out,
   output wire                                   clksel_o,
+  input  wire                                   daisy_slave_i,
   //
   output wire [3:0]                             osc1_event_op,    
   output wire                                   osc1_trig_op,    
@@ -313,7 +314,8 @@ scope_cfg #(
   .cfg_calib_gain_ch1_o     (cfg_calib_gain_ch1),
   .cfg_calib_gain_ch2_o     (cfg_calib_gain_ch2),
   .clksel_o                 (clksel_o),
-
+  .daisy_slave_i            (daisy_slave_i),
+  
   .cfg_filt_bypass_o        (cfg_filt_bypass),
   .cfg_filt_coeff_aa_ch1_o  (cfg_filt_coeff_aa_ch1),
   .cfg_filt_coeff_bb_ch1_o  (cfg_filt_coeff_bb_ch1),

@@ -236,6 +236,7 @@ proc create_root_design { parentCell } {
   set trig_out [ create_bd_port -dir O trig_out ]
   set gpio_trig [ create_bd_port -dir O gpio_trig ]
   set clksel [ create_bd_port -dir O clksel ]
+  set daisy_slave [ create_bd_port -dir I daisy_slave ]
 
   set FCLK_CLK0 [ create_bd_port -dir O -type clk FCLK_CLK0 ]
   set FCLK_CLK1 [ create_bd_port -dir O -type clk FCLK_CLK1 ]
@@ -1256,6 +1257,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net rp_gpio_trig_o_trig [get_bd_ports gpio_trig] [get_bd_pins rp_gpio/gpio_trig_o]
   connect_bd_net -net rp_oscilloscope_0_clksel [get_bd_ports clksel] [get_bd_pins rp_oscilloscope/clksel_o]
   connect_bd_net [get_bd_pins rst_gen/dcm_locked] [get_bd_pins rst_gen2/dcm_locked] [get_bd_pins clk_gen/locked]
+  connect_bd_net -net slave_mode_in [get_bd_ports daisy_slave] [get_bd_pins rp_oscilloscope/daisy_slave_i]
 
   connect_bd_net -net rp_oscilloscope_0_intr [get_bd_pins intr_concat/In15] [get_bd_pins rp_oscilloscope/intr]
   connect_bd_net -net rp_oscilloscope_0_osc1_event_op [get_bd_pins rp_concat/osc1_event_ip] [get_bd_pins rp_oscilloscope/osc1_event_op]
