@@ -12,7 +12,8 @@ module osc_top
     parameter CHAN_NUM          = 1)( // which channel
   input wire                              clk_axi,
   input wire                              clk_adc,
-  input wire                              rst_n,
+  input wire                              axi_rstn,
+  input wire                              adc_rstn,
   // Slave AXI-S
   input  wire [S_AXIS_DATA_BITS-1:0]      s_axis_tdata,
   input  wire                             s_axis_tvalid,
@@ -39,7 +40,7 @@ module osc_top
   input  wire [    DEC_CNT_BITS-1:0]      cfg_dec_factor_i        ,
   input  wire [  DEC_SHIFT_BITS-1:0]      cfg_dec_rshift_i        ,
   input  wire                             cfg_avg_en_i            ,
-  input  wire [               2-1:0]      cfg_loopback_i          ,
+  input  wire [               3-1:0]      cfg_loopback_i          ,
   input  wire                             cfg_8bit_dat_i          ,
   input  wire [              16-1:0]      cfg_calib_offset_i      ,
   input  wire [              16-1:0]      cfg_calib_gain_i        ,
@@ -123,7 +124,8 @@ wire [S_AXIS_DATA_BITS-1:0] dec_tdata;
 wire                        dec_tvalid;   
 wire                        dec_tready;   
 wire                        ramp_en;
-wire                        loopback_en;
+wire                        loopback_gpio;
+wire                        loopback_dac;
 
 wire [S_AXIS_DATA_BITS-1:0] trig_tdata;    
 wire                        trig_tvalid;   
@@ -157,7 +159,7 @@ assign curr_wp_o = curr_wp_r2;
 always @(posedge clk_adc)
 begin
   intr_reg <= dma_intr;
-  if (~rst_n)
+  if (~adc_rstn)
     intr_cnt <= 'h0;
   else if (~intr_reg && dma_intr) begin
     intr_cnt <= intr_cnt+1;
@@ -167,7 +169,7 @@ end
 reg [32-1:0] trig_cnt, clk_cnt;
 always @(posedge clk_adc)
 begin
-  if (~rst_n) begin
+  if (~adc_rstn) begin
     trig_cnt <= 'h0;
     clk_cnt  <= 'h0;
   end else begin
@@ -183,7 +185,7 @@ end
 reg [S_AXIS_DATA_BITS-1:0] ramp_sig;    
 always @(posedge clk_adc)
 begin
-  if (~rst_n)
+  if (~adc_rstn)
     ramp_sig <= 'h0;
   else begin
       ramp_sig <= ramp_sig + 'h1;
@@ -199,9 +201,10 @@ end
 
 assign external_trig_val = trig_ip[5] & (trig_mask_i == 'h20);
 
-assign ramp_en      = cfg_loopback_i[1];
-assign loopback_en  = cfg_loopback_i[0];
-assign event_sts_o  = {event_sts_trig, event_sts_stop, event_sts_start, event_sts_reset};
+assign ramp_en       = cfg_loopback_i[2];
+assign loopback_gpio = cfg_loopback_i[1];
+assign loopback_dac  = cfg_loopback_i[0];
+assign event_sts_o   = {event_sts_trig, event_sts_stop, event_sts_start, event_sts_reset};
 
 
 assign diag1_o = intr_cnt;
@@ -209,10 +212,21 @@ assign diag2_o = trig_cnt;
 assign diag3_o = clk_cnt;
 assign diag4_o = cfg_dma_diags;
 
+reg rstn_fil, rstn_cal, rstn_dec, rstn_trg, rstn_acq, rstn_smm;
+always @(posedge clk_adc) // resolve high fanout timing issues
+begin
+  rstn_fil <= adc_rstn;
+  rstn_cal <= adc_rstn;
+  rstn_dec <= adc_rstn;
+  rstn_trg <= adc_rstn;
+  rstn_acq <= adc_rstn;
+  rstn_smm <= adc_rstn;
+end
+
 osc_filter i_dfilt (
    // ADC
   .clk              ( clk_adc     ),  // ADC clock
-  .rst_n            ( rst_n       ),  // ADC reset - active low
+  .rst_n            ( rstn_fil    ),  // ADC reset - active low
   // Slave AXI-S
   .s_axis_tdata     (s_axis_tdata),
   .s_axis_tvalid    (s_axis_tvalid),
@@ -238,7 +252,7 @@ osc_calib #(
   .AXIS_DATA_BITS   (S_AXIS_DATA_BITS))
   U_osc_calib(
   .clk              (clk_adc),
-  .rst_n            (rst_n),        
+  .rst_n            (rstn_cal),        
   // Slave AXI-S
   .s_axis_tdata     (filt_tdata),
   .s_axis_tvalid    (filt_tvalid),
@@ -255,8 +269,8 @@ osc_calib #(
 // Name : Decimation
 // 
 ////////////////////////////////////////////////////////////
-assign dec_indata = ramp_en     ? ramp_sig     : 
-                   (loopback_en ? s_axis_tdata : calib_tdata);    
+assign dec_indata = ramp_en      ? ramp_sig     : 
+                   (loopback_dac ? s_axis_tdata : calib_tdata);    
 
 osc_decimator #(
   .AXIS_DATA_BITS (S_AXIS_DATA_BITS), 
@@ -264,7 +278,7 @@ osc_decimator #(
   .SHIFT_BITS     (4))
   U_osc_decimator(
   .clk            (clk_adc),                   
-  .rst_n          (rst_n),        
+  .rst_n          (rstn_dec),        
   .s_axis_tdata   (dec_indata),          
   .s_axis_tvalid  (calib_tvalid),     
   .s_axis_tready  (calib_tready),                                                                 
@@ -286,7 +300,7 @@ osc_trigger #(
   .TRIG_LEVEL_BITS      (S_AXIS_DATA_BITS))
   U_osc_trigger(
   .clk                  (clk_adc),                         
-  .rst_n                (rst_n),                                                    
+  .rst_n                (rstn_trg),                                                    
   .ctl_rst              (event_num_reset),                                                    
   .cfg_trig_low_level   (cfg_trig_low_level_i),          
   .cfg_trig_high_level  (cfg_trig_high_level_i),         
@@ -309,7 +323,7 @@ osc_acquire #(
   .CNT_BITS               (TRIG_CNT_BITS))
   U_osc_acq(
   .clk                    (clk_adc),
-  .rst_n                  (rst_n),
+  .rst_n                  (rstn_acq),
   .s_axis_tdata           (trig_tdata),     
   .s_axis_tvalid          (trig_tvalid), 
   .s_axis_tready          (trig_tready),                                
@@ -345,7 +359,7 @@ rp_dma_s2mm #(
   U_dma_s2mm(
   .m_axi_aclk     (clk_axi),        
   .s_axis_aclk    (clk_adc),      
-  .aresetn        (rst_n),  
+  .aresetn        (rstn_smm),  
   .busy           (),
   .intr           (dma_intr),     
   .mode           (dma_mode),  
@@ -386,7 +400,7 @@ rp_dma_s2mm #(
 
 always @(posedge clk_adc)
 begin
-  if (rst_n == 0) begin
+  if (adc_rstn == 0) begin
     event_num_trig  <= 0;    
     event_num_start <= 0;   
     event_num_stop  <= 0;    

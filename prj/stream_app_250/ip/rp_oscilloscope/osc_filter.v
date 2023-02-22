@@ -31,26 +31,26 @@ wire signed [24:0]  coeff_bb;
 wire signed [24:0]  coeff_kk;
 wire signed [24:0]  coeff_pp;
 
-wire signed [42:0]  bb_mult; // DIN + coeff_bb = 39->41
-wire signed [38:0]  r2_sum; // r1reg = 33->35
-reg  signed [36:0]  r1_reg; // r02reg+1 = 33->35
-reg  signed [26:0]  r2_reg; // r2sum-10 = 23->25
-reg  signed [35:0]  r01_reg; // DIN + 18 = 32->34
-reg  signed [31:0]  r02_reg; // BB mult - 10 = 28->30
+wire signed [39-1:0]  bb_mult; // DIN + coeff_bb = 39->41
+wire signed [33-1:0]  r2_sum; // r1reg = 33->35
+reg  signed [33-1:0]  r1_reg; // r02reg+1 = 33->35
+reg  signed [23-1:0]  r2_reg; // r2sum-10 = 23->25
+reg  signed [32-1:0]  r01_reg; // DIN + 18 = 32->34
+reg  signed [28-1:0]  r02_reg; // BB mult - 10 = 28->30
 
-wire signed [42:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
-wire signed [50:0]  r3_sum; // r2reg+25+1 = 49->51
-reg  signed [24:0]  r3_reg_dsp1; // r3_sum-25 = 23->25
-reg  signed [24:0]  r3_reg_dsp2; // r3_sum-25 = 23->25
-reg  signed [24:0]  r3_reg_dsp3; // r3_sum-25 = 23->25
+wire signed [41-1:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
+wire signed [48-1:0]  r3_sum; // r2reg+25+1 = 49->51
+reg  signed [23-1:0]  r3_reg_dsp1; // r3_sum-25 = 23->25
+reg  signed [23-1:0]  r3_reg_dsp2; // r3_sum-25 = 23->25
+reg  signed [23-1:0]  r3_reg_dsp3; // r3_sum-25 = 23->25
 
-wire signed [41:0]  pp_mult; // r4_reg + coeff_pp = 40->42
-wire signed [17:0]  r4_sum; // r3shr+1
-reg  signed [16:0]  r4_reg; // r3sum-33-1
-reg  signed [16:0]  r3_shr; // r3sum-33-1
+wire signed [40-1:0]  pp_mult; // r4_reg + coeff_pp = 40->42
+wire signed [16-1:0]  r4_sum; // r3shr+1
+reg  signed [15-1:0]  r4_reg; // r3sum-33-1
+reg  signed [15-1:0]  r3_shr; // r3sum-33-1
 
-wire signed [41:0]  kk_mult;
-reg  signed [15:0]  r5_reg;
+wire signed [40-1:0]  kk_mult;
+reg  signed [14-1:0]  r5_reg;
 */
 
 wire signed [15:0]  din; 
@@ -68,7 +68,7 @@ reg  signed [25-1:0]  r2_reg; // r2sum-10 = 23->25
 reg  signed [34-1:0]  r01_reg; // DIN + 18 = 32->34
 reg  signed [30-1:0]  r02_reg; // BB mult - 10 = 28->30
 
-wire signed [43-1:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
+wire signed [41-1:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
 wire signed [48-1:0]  r3_sum; // r2reg+25+1 = 49->51
 reg  signed [23-1:0]  r3_reg_dsp1; // r3_sum-25 = 23->25
 reg  signed [23-1:0]  r3_reg_dsp2; // r3_sum-25 = 23->25
@@ -136,7 +136,7 @@ begin
  end else begin
    r3_reg_dsp1 <= r3_sum >>> 25;
    r3_reg_dsp2 <= r3_sum >>> 25;
-   r3_reg_dsp3 <= r3_sum >>> 33;
+   r3_reg_dsp3 <= r3_sum >>> 31;
  end
 end
 
@@ -189,10 +189,14 @@ end
 
 always @(posedge clk)
 begin
- tvalid_pipe[0] <= s_axis_tvalid;
- tvalid_pipe[1] <= tvalid_pipe[0];
- tvalid_pipe[2] <= tvalid_pipe[1];
- tvalid_pipe[3] <= tvalid_pipe[2];    
+  if (rst_n == 0)
+    tvalid_pipe <= 'h0;
+  else begin
+    tvalid_pipe[0] <= s_axis_tvalid;
+    tvalid_pipe[1] <= tvalid_pipe[0];
+    tvalid_pipe[2] <= tvalid_pipe[1];
+    tvalid_pipe[3] <= tvalid_pipe[2];    
+  end
 end
 
 endmodule
