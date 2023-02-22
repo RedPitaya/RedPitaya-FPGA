@@ -194,6 +194,8 @@ logic                 pwm_rstn;
 // ADC clock/reset
 logic                 adc_clk;
 logic                 adc_rstn;
+logic                 adc_clk_daisy;
+
 
 reg [14-1:0] dac_ch0;
 reg [14-1:0] dac_ch1;
@@ -413,15 +415,17 @@ red_pitaya_ams i_ams (
   .sys_ack         (sys[4].ack  )
 );
 
-red_pitaya_pwm pwm [4-1:0] (
+
+red_pitaya_pdm pdm (
   // system signals
-  .clk   (pwm_clk ),
-  .rstn  (pwm_rstn),
+  .clk   (adc_clk ),
+  .rstn  (adc_rstn),
   // configuration
-  .cfg   (pwm_cfg),
+  .cfg   (pdm_cfg),
+  .ena      (1'b1),
+  .rng      (8'd255),
   // PWM outputs
-  .pwm_o (dac_pwm_o),
-  .pwm_s ()
+  .pdm (dac_pwm_o)
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -429,9 +433,8 @@ red_pitaya_pwm pwm [4-1:0] (
 ////////////////////////////////////////////////////////////////////////////////
 
 // generating ADC clock is disabled
-assign adc_clk_o = 2'b10;
-//ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(fclk[0]), .CE(1'b1), .R(1'b0), .S(1'b0));
-//ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(fclk[0]), .CE(1'b1), .R(1'b0), .S(1'b0));
+ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(fclk[0]), .CE(1'b1), .R(1'b0), .S(1'b0));
+ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(fclk[0]), .CE(1'b1), .R(1'b0), .S(1'b0));
 
 // ADC clock duty cycle stabilizer is enabled
 assign adc_cdcs_o = 1'b1 ;
@@ -440,15 +443,15 @@ logic [2-1:0] [14-1:0] adc_dat_raw;
 
 // IO block registers should be used here
 // lowest 2 bits reserved for 16bit ADC
-always @(posedge adc_clk)
-begin
-  adc_dat_raw[0] <= adc_dat_i[0][16-1:2];
-  adc_dat_raw[1] <= adc_dat_i[1][16-1:2];
-end
-    
+
+assign adc_dat_raw[0] = adc_dat_i[0][16-1:2];
+assign adc_dat_raw[1] = adc_dat_i[1][16-1:2];
+
 // transform into 2's complement (negative slope)
-assign adc_dat[0] = digital_loop ? dac_a : {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
-assign adc_dat[1] = digital_loop ? dac_b : {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
+always @(posedge adc_clk) begin
+  adc_dat[0] <= digital_loop ? dac_a : {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
+  adc_dat[1] <= digital_loop ? dac_b : {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
+end
 
 ////////////////////////////////////////////////////////////////////////////////
 // DAC IO
@@ -545,7 +548,7 @@ red_pitaya_scope i_scope (
   .trig_ext_i    (gpio.i[8]   ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   // AXI0 master                 // AXI1 master
-  /*.axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
+  .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
   .axi0_rstn_o   (axi0_rstn  ),  .axi1_rstn_o   (axi1_rstn  ),
   .axi0_waddr_o  (axi0_waddr ),  .axi1_waddr_o  (axi1_waddr ),
   .axi0_wdata_o  (axi0_wdata ),  .axi1_wdata_o  (axi1_wdata ),
@@ -554,7 +557,7 @@ red_pitaya_scope i_scope (
   .axi0_wlen_o   (axi0_wlen  ),  .axi1_wlen_o   (axi1_wlen  ),
   .axi0_wfixed_o (axi0_wfixed),  .axi1_wfixed_o (axi1_wfixed),
   .axi0_werr_i   (axi0_werr  ),  .axi1_werr_i   (axi1_werr  ),
-  .axi0_wrdy_i   (axi0_wrdy  ),  .axi1_wrdy_i   (axi1_wrdy  ),*/
+  .axi0_wrdy_i   (axi0_wrdy  ),  .axi1_wrdy_i   (axi1_wrdy  ),
   // System bus
   .sys_addr      (sys[1].addr ),
   .sys_wdata     (sys[1].wdata),
@@ -634,7 +637,7 @@ red_pitaya_daisy i_daisy (
   .par_dv_i        (  daisy_rx_rdy               ),
   .par_dat_i       (  16'h1234                   ),
    // RX
-  .par_clk_o       (                             ),
+  .par_clk_o       ( adc_clk_daisy               ),
   .par_rstn_o      (                             ),
   .par_dv_o        (                             ),
   .par_dat_o       (                             ),

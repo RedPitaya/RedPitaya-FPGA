@@ -350,13 +350,13 @@ endgenerate
 // 6: CH4 falling edge data  7: CH4 rising edge data
 
 // delay input ADC signals
-//(* IODELAY_GROUP = adc_inputs *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
 logic [4*7-1:0] idly_rst ;
 logic [4*7-1:0] idly_ce  ;
 logic [4*7-1:0] idly_inc ;
 logic [4*7-1:0] [5-1:0] idly_cnt ;
 logic [4-1:0] [14-1:0] adc_dat_raw;
 
+//(* IODELAY_GROUP = "adc_inputs" *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
 IDELAYCTRL i_idelayctrl (
   .RDY(idly_rdy),   // 1-bit output: Ready output
   .REFCLK(fclk[3]), // 1-bit input: Reference clock input
@@ -374,7 +374,7 @@ for (GVC = 0; GVC < 4; GVC = GVC + 1) begin : channels
     logic [ 2-1:0] adc_dat_ddr;
 
 
-   //(* IODELAY_GROUP = adc_inputs *)
+   //(* IODELAY_GROUP = "adc_inputs" *)
    IDELAYE2 #(
       .DELAY_SRC("IDATAIN"),           // Delay input (IDATAIN, DATAIN)
       .HIGH_PERFORMANCE_MODE("TRUE"),  // Reduced jitter ("TRUE"), Reduced power ("FALSE")

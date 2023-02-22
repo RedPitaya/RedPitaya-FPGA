@@ -131,8 +131,8 @@ wire [  8-1: 0] hp3_saxi_wstrb  , hp2_saxi_wstrb  , hp1_saxi_wstrb  , hp0_saxi_w
 axi_master #(
   .DW   (  64    ), // data width (8,16,...,1024)
   .AW   (  32    ), // address width
-  .ID   (   0    ), // master ID
-  .IW   (   6    ), // master ID width
+  .ID   (   1    ), // master ID
+  .IW   (   4    ), // master ID width
   .LW   (   4    )  // length width
 ) axi_master_0 (
    // global signals
@@ -203,8 +203,8 @@ axi_master #(
 axi_master #(
   .DW   (  64    ), // data width (8,16,...,1024)
   .AW   (  32    ), // address width
-  .ID   (   1    ), // master ID
-  .IW   (   6    ), // master ID width
+  .ID   (   2    ), // master ID
+  .IW   (   4    ), // master ID width
   .LW   (   4    )  // length width
 ) axi_master_1 (
    // global signals
@@ -275,8 +275,8 @@ axi_master #(
 axi_master #(
   .DW   (  64    ), // data width (8,16,...,1024)
   .AW   (  32    ), // address width
-  .ID   (   2    ), // master ID // TODO, it is not OK to have two masters with same ID
-  .IW   (   6    ), // master ID width
+  .ID   (   3    ), // master ID // TODO, it is not OK to have two masters with same ID
+  .IW   (   4    ), // master ID width
   .LW   (   4    )  // length width
 ) axi_master_2 (
    // global signals
@@ -347,8 +347,8 @@ axi_master #(
 axi_master #(
   .DW   (  64    ), // data width (8,16,...,1024)
   .AW   (  32    ), // address width
-  .ID   (   3    ), // master ID // TODO, it is not OK to have two masters with same ID
-  .IW   (   6    ), // master ID width
+  .ID   (   4    ), // master ID // TODO, it is not OK to have two masters with same ID
+  .IW   (   4    ), // master ID width
   .LW   (   4    )  // length width
 ) axi_master_3 (
    // global signals

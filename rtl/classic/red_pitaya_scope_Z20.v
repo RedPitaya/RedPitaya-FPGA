@@ -61,6 +61,7 @@ module red_pitaya_scope_Z20 #(
    input                 trig_asg_i      ,  // ASG trigger
    output     [  4-1: 0] trig_ch_o       ,  // output trigger to ADC for other 2 channels
    input      [  4-1: 0] trig_ch_i       ,  // input ADC trigger from other 2 channels
+   output                daisy_trig_o    ,  // trigger for daisy chaining
 
    // AXI0 master
    output                axi0_clk_o      ,  // global clock
@@ -699,6 +700,7 @@ end else begin
 end
 
 assign trig_ch_o = {adc_trig_bn, adc_trig_bp, adc_trig_an, adc_trig_ap};
+assign daisy_trig_o = adc_trig;
 //---------------------------------------------------------------------------------
 //  Trigger created from input signal
 
