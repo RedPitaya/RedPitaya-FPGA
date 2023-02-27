@@ -121,7 +121,7 @@ rp_dma_s2mm_ctrl #(
   .reg_buf_size   (reg_buf_size), 
   .ctl_start_o    (ctl_start_o),  
   .ctl_start_ext  (ctl_start_ext),     
-  .upsized_we     (fifo_wr_we),
+  .upsized_we_i   (fifo_wr_we),
   .fifo_rst       (fifo_rst),    
   .fifo_lvl       (fifo_rd_cnt),
   .upsize_lvl     (upsize_lvl),

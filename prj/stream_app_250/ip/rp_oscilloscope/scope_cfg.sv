@@ -193,15 +193,15 @@ localparam BUF2_LOST_SAMP_CNT_CH2   = 12'hA0;  // Number of lost samples in buff
 localparam CURR_WP_CH1              = 12'hA4;  //current write pointer CH1
 localparam CURR_WP_CH2              = 12'hA8;  //current write pointer CH2
 
-localparam FILT_COEFF_AA_CH1        = 12'h1C0;  // Filter coeff AA address CH1
-localparam FILT_COEFF_BB_CH1        = 12'h1C4;  // Filter coeff BB address CH1
-localparam FILT_COEFF_KK_CH1        = 12'h1C8;  // Filter coeff KK address CH1
-localparam FILT_COEFF_PP_CH1        = 12'h1CC;  // Filter coeff PP address CH1
+localparam FILT_COEFF_AA_CH1        = 12'hC0;  // Filter coeff AA address CH1
+localparam FILT_COEFF_BB_CH1        = 12'hC4;  // Filter coeff BB address CH1
+localparam FILT_COEFF_KK_CH1        = 12'hC8;  // Filter coeff KK address CH1
+localparam FILT_COEFF_PP_CH1        = 12'hCC;  // Filter coeff PP address CH1
 
-localparam FILT_COEFF_AA_CH2        = 12'h1D0;  // Filter coeff AA address CH2
-localparam FILT_COEFF_BB_CH2        = 12'h1D4;  // Filter coeff BB address CH2
-localparam FILT_COEFF_KK_CH2        = 12'h1D8;  // Filter coeff KK address CH2
-localparam FILT_COEFF_PP_CH2        = 12'h1DC;  // Filter coeff PP address CH2
+localparam FILT_COEFF_AA_CH2        = 12'hD0;  // Filter coeff AA address CH2
+localparam FILT_COEFF_BB_CH2        = 12'hD4;  // Filter coeff BB address CH2
+localparam FILT_COEFF_KK_CH2        = 12'hD8;  // Filter coeff KK address CH2
+localparam FILT_COEFF_PP_CH2        = 12'hDC;  // Filter coeff PP address CH2
 
 localparam BUF1_LOST_SAMP_CNT_CH3   = 12'h15C;  // Number of lost samples in buffer 1
 localparam BUF2_LOST_SAMP_CNT_CH3   = 12'h160;  // Number of lost samples in buffer 2
@@ -377,7 +377,7 @@ assign s_axi_reg_bvalid  = axi_gp.BVALID   ;
 assign s_axi_reg_rdata   = axi_gp.RDATA    ;
 assign s_axi_reg_rresp   = axi_gp.RRESP    ;
 assign s_axi_reg_rvalid  = axi_gp.RVALID   ;
-assign s_axi_reg_rlast   = axi_gp.RLAST    ;
+//assign s_axi_reg_rlast   = axi_gp.RLAST    ;
 assign s_axi_reg_bid     = axi_gp.BID;
 assign s_axi_reg_rid     = axi_gp.RID;
 
