@@ -60,7 +60,7 @@ module scope_cfg
    output wire                         cfg_event_op_stop_o     ,
    output wire                         cfg_event_op_start_o    ,
    output wire                         cfg_event_op_reset_o    ,
-   output wire [               4-1:0]  cfg_event_sts_i         ,
+   input  wire [               4-1:0]  cfg_event_sts_i         ,
    output wire [               3-1:0]  cfg_event_sel_o         ,
    output wire [    TRIG_SRC_NUM-1:0]  cfg_trig_mask_o         ,
    output wire [   TRIG_CNT_BITS-1:0]  cfg_trig_pre_samp_o     ,
