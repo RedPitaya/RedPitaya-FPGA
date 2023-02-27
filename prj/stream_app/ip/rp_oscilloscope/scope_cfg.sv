@@ -296,7 +296,7 @@ wire axi_clk_regs;
 
 reg pll_locked;
 always @(posedge clk_adc_i) begin
-   if (adc_rstn_i)
+   if (adc_rstn_i == 1'b0)
       pll_locked <= 1'b0;
    else
       pll_locked <= 1'b1;
