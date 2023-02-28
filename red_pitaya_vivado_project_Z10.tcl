@@ -29,6 +29,7 @@ set path_sdc_prj sdc
 ################################################################################
 
 set_param board.repoPaths [list $path_brd]
+set_param iconstr.diffPairPulltype {opposite}
 
 ################################################################################
 # setup an in memory project
