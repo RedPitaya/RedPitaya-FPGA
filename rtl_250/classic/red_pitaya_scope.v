@@ -59,6 +59,7 @@ module red_pitaya_scope #(
    // trigger sources
    input                 trig_ext_i      ,  // external trigger
    input                 trig_asg_i      ,  // ASG trigger
+   output                daisy_trig_o    ,  // trigger for daisy chaining
 
    // AXI0 master
    output                axi0_clk_o      ,  // global clock
@@ -770,6 +771,7 @@ end else begin
    endcase
 end
 
+assign daisy_trig_o = adc_trig;
 //---------------------------------------------------------------------------------
 //  Trigger created from input signal
 

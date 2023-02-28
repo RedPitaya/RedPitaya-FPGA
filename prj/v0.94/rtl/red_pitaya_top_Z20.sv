@@ -123,8 +123,9 @@ logic [4-1:0] frstn;
 logic [16-1:0] par_dat;
 
 logic          daisy_trig;
-logic [ 2-1:0] daisy_mode;
+logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
+logic          trig_output_sel;
 
 // AXI masters
 logic            axi1_clk    , axi0_clk    ;
@@ -453,8 +454,9 @@ red_pitaya_hk i_hk (
 // GPIO
 ////////////////////////////////////////////////////////////////////////////////
 
+assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
 assign exp_p_otr = exp_p_out;
-assign exp_n_otr = exp_n_out | ({8{daisy_mode[1]}} & {7'h0,scope_trigo});
+assign exp_n_otr = exp_n_out | ({8{daisy_mode[1]}} & {7'h0,trig_output_sel});
 
 assign exp_p_dtr = exp_p_dir;
 assign exp_n_dtr = exp_n_dir | ({8{daisy_mode[1]}} & {8'h1});
@@ -553,7 +555,7 @@ red_pitaya_pid i_pid (
 
 wire daisy_rx_rdy ;
 wire dly_clk = fclk[3]; // 200MHz clock from PS - used for IDELAY (optionaly)
-wire [16-1:0] par_dati = daisy_mode[0] ? {16{scope_trigo}} : 16'h1234;
+wire [16-1:0] par_dati = daisy_mode[0] ? {16{trig_output_sel}} : 16'h1234;
 wire          par_dvi  = daisy_mode[0] ? 1'b0 : daisy_rx_rdy;
 
 red_pitaya_daisy i_daisy (

@@ -130,6 +130,14 @@ logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
 logic         idly_rdy;
 
+logic [16-1:0] par_dat;
+
+logic          daisy_trig;
+logic [ 3-1:0] daisy_mode;
+logic          trig_ext;
+logic          trig_output_sel;
+
+
 // AXI masters
 logic            axi1_clk    , axi0_clk    ;
 logic            axi1_rstn   , axi0_rstn   ;
@@ -180,6 +188,9 @@ SBA_T [2-1:0]            pid_dat;
 
 // configuration
 logic                    digital_loop;
+
+logic                 adc_clk_daisy;
+logic                 scope_trigo;
 
 // system bus
 sys_bus_if   ps_sys      (.clk (adc_clk2d), .rstn (adc_rstn));
@@ -238,6 +249,12 @@ adc_rstn <=  frstn[0] &  pll_locked & idly_rdy;
 // PWM reset (active low)
 always @(posedge pwm_clk)
 pwm_rstn <=  frstn[0] &  pll_locked & idly_rdy;
+
+always @(posedge adc_clk2d)
+  daisy_trig <= |par_dat;
+
+//assign daisy_trig = |par_dat;
+assign trig_ext   = trig_i & ~(daisy_mode[0] & daisy_trig);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
@@ -551,6 +568,8 @@ end
 logic [  9-1: 0] exp_p_in , exp_n_in ;
 logic [  9-1: 0] exp_p_out, exp_n_out;
 logic [  9-1: 0] exp_p_dir, exp_n_dir;
+logic [  9-1: 0] exp_p_otr, exp_n_otr;
+logic [  9-1: 0] exp_p_dtr, exp_n_dtr;
 logic            exp_9_in,  exp_9_out, exp_9_dir;
 logic [  8-1: 0] led_hk;
 
@@ -569,6 +588,7 @@ i_hk (
   .idly_cnt_i      ({idly_cnt[7],idly_cnt[0]}),
   // global configuration
   .digital_loop    (digital_loop),
+  .daisy_mode_o    (daisy_mode),
   .pll_sys_i       (adc_10mhz   ),    // system clock
   .pll_ref_i       (pll_ref_i   ),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
@@ -609,8 +629,15 @@ assign led_o = led_hk[7:0];
 // GPIO
 ////////////////////////////////////////////////////////////////////////////////
 
-IOBUF i_iobufp [ 9-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_out), .T(~exp_p_dir) );
-IOBUF i_iobufn [ 9-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_out), .T(~exp_n_dir) );
+assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
+assign exp_p_otr = exp_p_out;
+assign exp_n_otr = exp_n_out | ({9{daisy_mode[1]}} & {8'h0,trig_output_sel});
+
+assign exp_p_dtr = exp_p_dir;
+assign exp_n_dtr = exp_n_dir | ({9{daisy_mode[1]}} & {9'h1});
+
+IOBUF i_iobufp [ 9-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
+IOBUF i_iobufn [ 9-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
 IOBUF i_iobuf9          (.O(exp_9_in), .IO(exp_9_io), .I(exp_9_out), .T(~exp_9_dir) );
 
 assign gpio.i[15: 8] = exp_p_in[7:0];
@@ -629,8 +656,9 @@ red_pitaya_scope i_scope (
   .adc_clk_i     (adc_clk        ),  // clock
   .adc_clk2d_i   (adc_clk2d      ),  // clock divided
   .adc_rstn_i    (adc_rstn       ),  // reset - active low
-  .trig_ext_i    (trig_i         ),  // external trigger
+  .trig_ext_i    (trig_ext       ),  // external trigger
   .trig_asg_i    (trig_asg_out   ),  // ASG trigger
+  .daisy_trig_o  (scope_trigo    ),
   // AXI0 master                 // AXI1 master
   .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
   .axi0_rstn_o   (axi0_rstn  ),  .axi1_rstn_o   (axi1_rstn  ),
@@ -663,8 +691,8 @@ red_pitaya_asg i_asg (
   .dac_b_o         (asg_dat[1]  ),  // CH 2
   .dac_clk_i       (adc_clk     ),  // clock
   .dac_rstn_i      (adc_rstn    ),  // reset - active low
-  .trig_a_i        (trig_i      ),
-  .trig_b_i        (trig_i      ),
+  .trig_a_i        (trig_ext    ),
+  .trig_b_i        (trig_ext    ),
   .trig_out_o      (trig_asg_out),
   .temp_prot_i     (temp_prot_i ),
   // System bus
@@ -716,6 +744,8 @@ assign pid_dat[1] = 14'h0 ;
 
 wire daisy_rx_rdy ;
 wire dly_clk = fclk[3]; // 200MHz clock from PS - used for IDELAY (optionaly)
+wire [16-1:0] par_dati = daisy_mode[0] ? {16{trig_output_sel}} : 16'h1234;
+wire          par_dvi  = daisy_mode[0] ? 1'b0 : daisy_rx_rdy;
 
 red_pitaya_daisy i_daisy (
    // SATA connector
@@ -730,14 +760,15 @@ red_pitaya_daisy i_daisy (
   .par_clk_i       (  adc_clk2d                  ),  // data paralel clock
   .par_rstn_i      (  adc_rstn                   ),  // reset - active low
   .par_rdy_o       (  daisy_rx_rdy               ),
-  .par_dv_i        (  daisy_rx_rdy               ),
-  .par_dat_i       (  16'h1234                   ),
+  .par_dv_i        (  par_dvi                    ),
+  .par_dat_i       (  par_dati                   ),
    // RX
-  .par_clk_o       (                             ),
+  .par_clk_o       ( adc_clk_daisy               ),
   .par_rstn_o      (                             ),
   .par_dv_o        (                             ),
-  .par_dat_o       (                             ),
+  .par_dat_o       ( par_dat                     ),
 
+  .sync_mode_i     (  daisy_mode[0]              ),
   .debug_o         (/*led_o*/                    ),
    // System bus
   .sys_clk_i       (  adc_clk2d                  ),  // clock
