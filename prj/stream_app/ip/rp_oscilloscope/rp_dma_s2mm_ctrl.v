@@ -27,7 +27,7 @@ module rp_dma_s2mm_ctrl
   input  wire                       ctl_start_ext,
   //
 
-  input  wire                       upsized_we,
+  input  wire                       upsized_we_i,
   output reg                        fifo_rst,
   input  wire [FIFO_CNT_BITS-1:0]   fifo_lvl,
   input  wire [1:0]                 upsize_lvl,
@@ -218,6 +218,21 @@ always @(posedge m_axi_aclk)
 begin
   axi_last_r  <= m_axi_wlast;
   axi_last_r2 <= axi_last_r; // FIFO level is delayed by 2 clocks
+end
+
+reg upsized_we, upsized_we_r;
+always @(posedge s_axis_aclk)
+begin
+  upsized_we_r <= upsized_we_i;
+end
+
+always @(posedge m_axi_aclk)
+begin
+  if (m_axi_aresetn == 0) begin
+    upsized_we <= 1'b0;
+  end else begin
+    upsized_we <= ~upsized_we & (upsized_we_i | upsized_we_r);
+  end
 end
 
 ////////////////////////////////////////////////////////////

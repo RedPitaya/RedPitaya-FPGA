@@ -150,10 +150,13 @@ dac_rst  <= ~rstn_0 | ~pll_locked;
 wire [ 4-1:0] loopback_sel_ch1, loopback_sel_ch2;
 reg  [16-1:0] adc_dat_ch1,      adc_dat_ch2;
 reg  [16-1:0] adc_dat_ch1_r,    adc_dat_ch2_r;
-wire [14-1:0] dac_dat_a_o,      dac_dat_b_o;
+reg  [14-1:0] dac_dat_a_o,      dac_dat_b_o;
 
-assign dac_dat_a_o = {dac_dat_a[16-1], ~dac_dat_a[16-2:2]};
-assign dac_dat_b_o = {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
+always @(posedge dac_clk_1x)
+begin
+  dac_dat_a_o <= {dac_dat_a[16-1], ~dac_dat_a[16-2:2]};
+  dac_dat_b_o <= {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
+end
 
 always @(posedge clk_125) begin
   adc_dat_ch1_r <= adc_dat_i[0];
@@ -169,10 +172,10 @@ always @(posedge clk_125) begin
     adc_dat_ch2 <= adc_dat_ch2_r;
 end
 
-reg [10-1:0] daisy_cnt;
-reg          daisy_slave;
-reg          daisy_slave_r ;
-reg          daisy_slave_r2;
+reg [10-1:0] daisy_cnt      =  'h0;
+reg          daisy_slave_r  = 1'b0;
+reg          daisy_slave    = 1'b0;
+reg          daisy_slave_r2 = 1'b0;
 
 always @(posedge adc_clk_daisy) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
   if (~rstn_0) begin
