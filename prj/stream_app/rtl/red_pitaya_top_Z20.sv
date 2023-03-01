@@ -118,7 +118,6 @@ begin
     end
   end
 end
-assign led_o = {6'h0,~rstn_0,clk_rec_blnk};
 
 red_pitaya_pll pll (
   // inputs
@@ -173,26 +172,20 @@ always @(posedge clk_125) begin
 end
 
 reg [10-1:0] daisy_cnt      =  'h0;
-reg          daisy_slave_r  = 1'b0;
 reg          daisy_slave    = 1'b0;
-reg          daisy_slave_r2 = 1'b0;
 
 always @(posedge adc_clk_daisy) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
   if (~rstn_0) begin
     daisy_cnt     <= 'h0;
-    daisy_slave_r <= 1'b0;
+    daisy_slave <= 1'b0;
   end else begin 
     daisy_cnt <= daisy_cnt + 'h1;
     if (&daisy_cnt)
-      daisy_slave_r <= 1'b1;
+      daisy_slave <= 1'b1;
   end
 end
 
-always @(posedge clk_125) begin
-  daisy_slave_r2 <= daisy_slave_r;
-  daisy_slave    <= daisy_slave_r2;
-end
-
+assign led_o = {5'h0,daisy_slave,~rstn_0,clk_rec_blnk};
 
 ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
 ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
@@ -271,14 +264,14 @@ IBUFDS #() i_IBUF_clkadc
   .O  ( adc_clk_in    )
 );
 
-IBUFDS #() i_IBUF_clkdaisy
+IBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I")) i_IBUF_clkdaisy
 (
   .I  ( daisy_p_i[1]  ),
   .IB ( daisy_n_i[1]  ),
   .O  ( adc_clk_daisy )
 );
 
-IBUFDS #() i_IBUFDS_trig
+IBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I")) i_IBUFDS_trig
 (
   .I  ( daisy_p_i[0]  ),
   .IB ( daisy_n_i[0]  ),

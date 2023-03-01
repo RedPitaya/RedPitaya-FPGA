@@ -193,15 +193,15 @@ localparam BUF2_LOST_SAMP_CNT_CH2   = 12'hA0;  // Number of lost samples in buff
 localparam CURR_WP_CH1              = 12'hA4;  //current write pointer CH1
 localparam CURR_WP_CH2              = 12'hA8;  //current write pointer CH2
 
-localparam FILT_COEFF_AA_CH1        = 12'h1C0;  // Filter coeff AA address CH1
-localparam FILT_COEFF_BB_CH1        = 12'h1C4;  // Filter coeff BB address CH1
-localparam FILT_COEFF_KK_CH1        = 12'h1C8;  // Filter coeff KK address CH1
-localparam FILT_COEFF_PP_CH1        = 12'h1CC;  // Filter coeff PP address CH1
+localparam FILT_COEFF_AA_CH1        = 12'hC0;  // Filter coeff AA address CH1
+localparam FILT_COEFF_BB_CH1        = 12'hC4;  // Filter coeff BB address CH1
+localparam FILT_COEFF_KK_CH1        = 12'hC8;  // Filter coeff KK address CH1
+localparam FILT_COEFF_PP_CH1        = 12'hCC;  // Filter coeff PP address CH1
 
-localparam FILT_COEFF_AA_CH2        = 12'h1D0;  // Filter coeff AA address CH2
-localparam FILT_COEFF_BB_CH2        = 12'h1D4;  // Filter coeff BB address CH2
-localparam FILT_COEFF_KK_CH2        = 12'h1D8;  // Filter coeff KK address CH2
-localparam FILT_COEFF_PP_CH2        = 12'h1DC;  // Filter coeff PP address CH2
+localparam FILT_COEFF_AA_CH2        = 12'hD0;  // Filter coeff AA address CH2
+localparam FILT_COEFF_BB_CH2        = 12'hD4;  // Filter coeff BB address CH2
+localparam FILT_COEFF_KK_CH2        = 12'hD8;  // Filter coeff KK address CH2
+localparam FILT_COEFF_PP_CH2        = 12'hDC;  // Filter coeff PP address CH2
 
 localparam BUF1_LOST_SAMP_CNT_CH3   = 12'h15C;  // Number of lost samples in buffer 1
 localparam BUF2_LOST_SAMP_CNT_CH3   = 12'h160;  // Number of lost samples in buffer 2
@@ -300,6 +300,25 @@ always @(posedge clk_adc_i) begin
       pll_locked <= 1'b0;
    else
       pll_locked <= 1'b1;
+end
+
+reg [13-1:0] daisy_cnt      =  'h0;
+reg          daisy_slave    = 1'b0;
+reg          daisy_slave_r  = 1'b0;
+reg          daisy_slave_r2 = 1'b0;
+
+always @(posedge clk_adc_i) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
+   daisy_slave_r  <= daisy_slave_i;
+   daisy_slave_r2 <= daisy_slave_r;
+   if (adc_rstn_i == 1'b0) begin
+      daisy_cnt     <= 'h0;
+      daisy_slave <= 1'b0;
+  end else begin 
+      if (daisy_cnt < 13'h1100)
+         daisy_cnt <= daisy_cnt + 'h1;
+      if (daisy_cnt == 13'hFFF)
+         daisy_slave <= daisy_slave_r2;
+  end
 end
 
 assign axi_clk_regs =  (bus.addr[12-1:0] == DMA_CTRL_ADDR          ||
@@ -529,8 +548,8 @@ begin
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end
       DIAG_REG3              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag4_i;                  end
-      STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}             , daisy_slave_i, pll_locked}; end
-/*
+      STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
+
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
       CALIB_OFFSET_ADDR_CH2  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[2*16-1:1*16]};    end
       CALIB_OFFSET_ADDR_CH3  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[3*16-1:2*16]};    end

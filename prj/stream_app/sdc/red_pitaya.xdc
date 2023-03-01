@@ -6,6 +6,7 @@ set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_i[*]}]
 
 create_clock -period 8.000 -name daisy_clk  [get_ports daisy_p_i[1]]
 set_property PULLTYPE PULLUP [get_ports daisy_p_i[1]]
+#set_property PULLTYPE PULLDOWN [get_ports daisy_n_i[1]]
 
 set_clock_groups -asynchronous -group [get_clocks clk_125_system_clk_gen_0] -group [get_clocks clk]
 #set_clock_groups -asynchronous -group [get_clocks clk_62_5_system_clk_gen_0] -group [get_clocks clk]

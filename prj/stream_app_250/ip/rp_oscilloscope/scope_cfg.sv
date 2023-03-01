@@ -302,6 +302,25 @@ always @(posedge clk_adc_i) begin
       pll_locked <= 1'b1;
 end
 
+reg [13-1:0] daisy_cnt      =  'h0;
+reg          daisy_slave    = 1'b0;
+reg          daisy_slave_r  = 1'b0;
+reg          daisy_slave_r2 = 1'b0;
+
+always @(posedge clk_adc_i) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
+   daisy_slave_r  <= daisy_slave_i;
+   daisy_slave_r2 <= daisy_slave_r;
+   if (adc_rstn_i == 1'b0) begin
+      daisy_cnt     <= 'h0;
+      daisy_slave <= 1'b0;
+  end else begin 
+      if (daisy_cnt < 13'h1100)
+         daisy_cnt <= daisy_cnt + 'h1;
+      if (daisy_cnt == 13'hFFF)
+         daisy_slave <= daisy_slave_r2;
+  end
+end
+
 assign axi_clk_regs =  (bus.addr[12-1:0] == DMA_CTRL_ADDR          ||
                         bus.addr[12-1:0] == DMA_STS_ADDR           ||
                         bus.addr[12-1:0] == DMA_BUF_SIZE_ADDR      ||
@@ -377,7 +396,7 @@ assign s_axi_reg_bvalid  = axi_gp.BVALID   ;
 assign s_axi_reg_rdata   = axi_gp.RDATA    ;
 assign s_axi_reg_rresp   = axi_gp.RRESP    ;
 assign s_axi_reg_rvalid  = axi_gp.RVALID   ;
-//assign s_axi_reg_rlast   = axi_gp.RLAST    ;
+assign s_axi_reg_rlast   = axi_gp.RLAST    ;
 assign s_axi_reg_bid     = axi_gp.BID;
 assign s_axi_reg_rid     = axi_gp.RID;
 
@@ -529,8 +548,8 @@ begin
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end
       DIAG_REG3              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag4_i;                  end
-      STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}             , daisy_slave_i, pll_locked}; end
-/*
+      STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
+
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
       CALIB_OFFSET_ADDR_CH2  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[2*16-1:1*16]};    end
       CALIB_OFFSET_ADDR_CH3  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[3*16-1:2*16]};    end
