@@ -67,6 +67,7 @@ module red_pitaya_asg_ch #(
    input     [  16-1: 0] set_ncyc_i      ,  //!< set number of cycle
    input     [  16-1: 0] set_rnum_i      ,  //!< set number of repetitions
    input     [  32-1: 0] set_rdly_i      ,  //!< set delay between repetitions
+   input     [  20-1: 0] set_deb_len_i   ,  //!< set trigger debouncer
    input                 set_rgate_i        //!< set external gated repetition
 );
 
@@ -284,12 +285,12 @@ always @(posedge dac_clk_i) begin
 
       // look for input changes
       if ((ext_trig_debp == 20'h0) && (ext_trig_in[1] && !ext_trig_in[2]))
-         ext_trig_debp <= 20'd62500 ; // ~0.5ms
+         ext_trig_debp <= set_deb_len_i ; // default 0.5ms
       else if (ext_trig_debp != 20'h0)
          ext_trig_debp <= ext_trig_debp - 20'd1 ;
 
       if ((ext_trig_debn == 20'h0) && (!ext_trig_in[1] && ext_trig_in[2]))
-         ext_trig_debn <= 20'd62500 ; // ~0.5ms
+         ext_trig_debn <= set_deb_len_i ; // default 0.5ms
       else if (ext_trig_debn != 20'h0)
          ext_trig_debn <= ext_trig_debn - 20'd1 ;
 

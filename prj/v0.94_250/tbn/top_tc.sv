@@ -387,7 +387,7 @@ endtask: test_sata
 ////////////////////////////////////////////////////////////////////////////////
 // AXI4 read/write tasks
 ////////////////////////////////////////////////////////////////////////////////
-
+/*
 task axi_read_osc1 (
   input  logic [32-1:0] adr,
   output logic [32-1:0] dat
@@ -409,7 +409,7 @@ task axi_read_osc1 (
      .RDelay (0),   .rdat (dat)
   );
 endtask: axi_read_osc1
-
+*/
 /*task axi_read_osc2 (
   input  logic [32-1:0] adr,
   output logic [32-1:0] dat
@@ -431,7 +431,7 @@ endtask: axi_read_osc1
   );
 endtask: axi_read_osc2*/
 
-
+/*
 task axi_write (
   input  logic [32-1:0] adr,
   input  logic [32-1:0] dat
@@ -461,9 +461,37 @@ task axi_write (
   );
 endtask: axi_write
 
+*/
+
+task axi_read_osc1 (
+  input  logic [32-1:0] adr,
+  output logic [32-1:0] dat
+);
+  top_tb.red_pitaya_top.ps.system_i.i_m_axi_gp0.rd_single(
+    .adr_i (adr),
+    .dat_o (dat),
+    .id_i  ('h0),
+    .size_i('h1),
+    .lock_i('h0),
+    .prot_i('h0)
+  );
+
+endtask: axi_read_osc1
 
 
-
+task axi_write (
+  input  logic [32-1:0] adr,
+  input  logic [32-1:0] dat
+);
+  top_tb.red_pitaya_top.ps.system_i.i_m_axi_gp0.wr_single(
+    .adr_i (adr),
+    .dat_i (dat),
+    .id_i  ('h0),
+    .size_i('h1),
+    .lock_i('h0),
+    .prot_i('h0)
+  );
+endtask: axi_write
 
 
 endmodule

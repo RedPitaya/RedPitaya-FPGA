@@ -62,7 +62,7 @@ end
 //  IIR 1
 
 logic signed [41-1:0] aa_mult;
-logic signed [49-1:0] r3_sum ; //24 + 25
+logic signed [48-1:0] r3_sum ; //24 + 25
 (* use_dsp="yes" *) logic signed [23-1:0] r3_reg_dsp1;
 (* use_dsp="yes" *) logic signed [23-1:0] r3_reg_dsp2;
 logic signed [23-1:0] r3_reg_dsp3;
@@ -109,7 +109,8 @@ logic signed [15-1:0] r4_reg_r ;
 logic signed [15-1:0] r4_reg_rr;
 logic signed [14-1:0] r5_reg   ;
 
-assign kk_mult = r4_reg * cfg_kk_i;
+always_ff @(posedge adc_clk_i)
+   kk_mult <= r4_reg * cfg_kk_i;
 
 always_ff @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
@@ -120,6 +121,7 @@ end else begin
    else                                            r5_reg <= kk_mult >>> 24;
 end
 
-assign adc_dat_o = r5_reg;
+always_ff @(posedge adc_clk_i)
+   adc_dat_o <= r5_reg;
 
 endmodule: red_pitaya_dfilt1

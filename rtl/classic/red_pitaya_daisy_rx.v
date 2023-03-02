@@ -82,8 +82,7 @@ wire           ser_clk     ;
 wire           par_clk     ;
 reg  [16-1: 0] par_rstn_r  ;
 reg            par_rstn    ;
-wire           par_clk_125 ;
-wire           par_clk_250 ;
+
 
 `ifdef SER_DLY
 wire           ser_clk_dly ;

@@ -71,6 +71,7 @@ module red_pitaya_daisy
    output                par_rdy_o       ,  //!< parallel TX data - ready to receive new
    input                 par_dv_i        ,  //!< parallel TX data valid
    input      [ 16-1: 0] par_dat_i       ,  //!< parallel TX data to send
+   input                 sync_mode_i     ,
    // RX port
    output                par_clk_o       ,  //!< parallel RX clock   !!! not in relation with TX par_clk_i !!!
    output                par_rstn_o      ,  //!< parallel RX reset - active low
@@ -141,6 +142,7 @@ red_pitaya_daisy_tx i_tx
   .par_clk_i       (  par_clk_i        ),
   .par_rstn_i      (  cfg_tx_en        ),
 
+  .sync_mode_i     (  sync_mode_i      ),
   .par_rdy_o       (  txp_rdy          ),
   .par_dv_i        (  txp_dv           ),
   .par_dat_i       (  txp_dat          ) 
@@ -200,6 +202,7 @@ red_pitaya_daisy_rx i_rx
   .cfg_trained_o   (  cfg_rx_trained     ),
   .dly_clk_i       (  dly_clk_i          ),
 
+  .sync_mode_i     (  sync_mode_i        ),
   .par_clk_o       (  rxp_clk            ), // rxp_clk is not the same as par_clk_i (its par_clk_i from transmitter)!!!
   .par_rstn_o      (  rxp_rstn           ),
   .par_dv_o        (  rxp_dv             ),
@@ -257,6 +260,7 @@ red_pitaya_daisy_test i_test
 
 reg  [ 4-1: 0] tx_cfg_new   ;
 reg  [ 3-1: 0] tx_cfg_sel   ;
+wire [ 3-1: 0] tx_sel       ;
 reg  [16-1: 0] tx_cfg_dat   ; 
 
 reg            rxp_dv_n     ;
@@ -294,9 +298,10 @@ always @(posedge par_clk_i) begin
    end
 end
 
+assign tx_sel = sync_mode_i ? 3'h1 : tx_cfg_sel;
 // output data selector
 always @(*) begin
-   case (tx_cfg_sel)
+   case (tx_sel)
       3'h0 : begin txp_dat <= 16'h0         ;   txp_dv <= 1'b0         ; end
       3'h1 : begin txp_dat <= par_dat_i     ;   txp_dv <= par_dv_i     ; end  // working data
       3'h2 : begin txp_dat <= tx_cfg_dat    ;   txp_dv <= txp_rdy      ; end  // manual value
@@ -333,7 +338,7 @@ assign par_clk_o  = rxp_clk   ;
 assign par_rstn_o = rxp_rstn  ;
 assign par_rdy_o  = txp_rdy && (tx_cfg_sel == 3'h1) ;
 assign par_dv_o   = rxp_dvr   ;
-assign par_dat_o  = rxp_datr  ;
+assign par_dat_o  = sync_mode_i ? rxp_dat : rxp_datr  ;
 
 
 

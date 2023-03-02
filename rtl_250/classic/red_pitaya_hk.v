@@ -43,6 +43,7 @@ module red_pitaya_hk #(
   input      [2*5-1:0] idly_cnt_i,
   // global configuration
   output reg           digital_loop,
+  output reg [  3-1:0] daisy_mode_o,
   input                pll_sys_i,    // system clock
   input                pll_ref_i,    // reference clock
   output               pll_hi_o,     // PLL high
@@ -314,6 +315,7 @@ end
 always @(posedge clk_i)
 if (rstn_i == 1'b0) begin
   digital_loop <= 1'b0 ;
+  daisy_mode_o <= 3'h0;
   led_o        <= {DWL{1'b0}};
   exp_p_dat_o  <= {DWE{1'b0}};
   exp_p_dir_o  <= {DWE{1'b0}};
@@ -336,6 +338,8 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h54)   spi_wr_l[0]  <= sys_wdata[ 16-1:0];
   if (sys_addr[19:0]==20'h60)   spi_wr_h[1]  <= sys_wdata[ 16-1:0];
   if (sys_addr[19:0]==20'h64)   spi_wr_l[1]  <= sys_wdata[ 16-1:0];
+
+  if (sys_addr[19:0]==20'h1000) daisy_mode_o <= sys_wdata[  3-1:0];
 end
 
 
@@ -396,6 +400,7 @@ end else begin
     20'h00068: begin sys_ack <= sys_en;  sys_rdata <= {15'h0,spi_bsy[1],  spi_rd_l[1]}    ; end
 
     20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
+    20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase
