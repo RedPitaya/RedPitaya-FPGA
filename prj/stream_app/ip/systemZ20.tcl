@@ -305,7 +305,7 @@ proc create_root_design { parentCell } {
    CONFIG.NUM_OUT_CLKS {4} \
    CONFIG.PRIMITIVE {MMCM} \
    CONFIG.PRIM_IN_FREQ {122.88} \
-   CONFIG.USE_LOCKED {false} \
+   CONFIG.USE_LOCKED {true} \
    CONFIG.USE_RESET {false} \
  ] $clk_gen
 
