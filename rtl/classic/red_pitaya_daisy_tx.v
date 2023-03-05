@@ -50,6 +50,7 @@ module red_pitaya_daisy_tx
    output                ser_dat_o       ,  //!< TX high-speed clock
 
    // paralel ports
+   input                 sync_mode_i     ,
    input                 par_clk_i       ,  //!< parallel clock
    input                 par_rstn_i      ,  //!< parallel reset - active low
 
@@ -88,7 +89,8 @@ ODDR #(
 //
 //  Serializer - data
 
-reg  [ 4-1: 0] par_dat ;
+reg  [ 4-1: 0] par_dat   ;
+wire [ 4-1: 0] par_dat_s ;
 
 OSERDESE2
 #(
@@ -100,10 +102,10 @@ OSERDESE2
 )
 i_oserdese
 (
-  .D1             (  par_dat[0]     ),
-  .D2             (  par_dat[1]     ),
-  .D3             (  par_dat[2]     ),
-  .D4             (  par_dat[3]     ),
+  .D1             (  par_dat_s[0]   ),
+  .D2             (  par_dat_s[1]   ),
+  .D3             (  par_dat_s[2]   ),
+  .D4             (  par_dat_s[3]   ),
   .D5             (  1'b0           ),
   .D6             (  1'b0           ),
   .D7             (  1'b0           ),
@@ -142,6 +144,7 @@ reg  [12-1: 0] par_dat_r     ;
 
 
 assign par_rdy_o = (par_sel==2'h0) ;
+assign par_dat_s = sync_mode_i ? par_dat_i[3:0] : par_dat;
 
 // First level of serializing. Break input 16-bits into nibbles.
 // If value is not valid sent 0.

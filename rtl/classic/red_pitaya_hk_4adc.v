@@ -42,6 +42,7 @@ module red_pitaya_hk_4adc #(
   output reg [DWL-1:0] led_o      ,  // LED output
   // global configuration
   output reg           digital_loop,
+  output reg [  3-1:0] daisy_mode_o,
   input                pll_sys_i  ,  // system clock
   input                pll_ref_i  ,  // reference clock
   output               pll_hi_o   ,  // PLL high
@@ -248,6 +249,7 @@ if (rstn_i == 1'b0) begin
   exp_n_dir_o  <= {DWE{1'b0}};
   pll_cfg_en   <= 1'b1 ;
   digital_loop <= 1'b0;
+  daisy_mode_o <= 3'h0;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
 
@@ -257,6 +259,7 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h1C)   exp_n_dat_o  <= sys_wdata[DWE-1:0];
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
+  if (sys_addr[19:0]==20'h1000) daisy_mode_o <= sys_wdata[  3-1:0];
 
   if (sys_addr[19:0]==20'h40)   pll_cfg_en   <= sys_wdata[0];
 end
@@ -311,8 +314,9 @@ end else begin
     20'h00050: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[14:10]}   ; end
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[19:15]}   ; end
 
-    20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}            ; end
-
+    20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
+    20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end
+    
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase
 end

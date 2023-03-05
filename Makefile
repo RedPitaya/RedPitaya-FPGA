@@ -18,6 +18,7 @@ DTS_VER ?= 2017.2
 
 # build artefacts
 FPGA_BIT    = prj/$(PRJ)/out/red_pitaya.bit
+FPGA_BIN    = prj/$(PRJ)/out/red_pitaya.bit.bin
 FSBL_ELF    = prj/$(PRJ)/sdk/fsbl/executable.elf
 MEMTEST_ELF = prj/$(PRJ)/sdk/dram_test/executable.elf
 DEVICE_TREE = prj/$(PRJ)/sdk/dts/system.dts
@@ -27,11 +28,12 @@ DEVICE_TREE = prj/$(PRJ)/sdk/dts/system.dts
 # both tools are run in batch mode with an option to avoid log/journal files
 VIVADO = vivado -nojournal -mode batch
 HSI    = hsi    -nolog -nojournal -mode batch
+BOOTGEN= bootgen -image prj/$(PRJ)/out/red_pitaya.bif -arch zynq -process_bitstream bin
 #HSI    = hsi    -nolog -mode batch
 
 .PHONY: all clean project
 
-all: $(FPGA_BIT) $(FSBL_ELF) $(DEVICE_TREE)
+all: $(FPGA_BIT) $(FSBL_ELF) $(DEVICE_TREE) $(FPGA_BIN)
 
 # TODO: clean should go into each project
 clean:
@@ -54,8 +56,11 @@ endif
 	./synCheck.sh
 
 $(FSBL_ELF): $(FPGA_BIT)
-	$(HSI) -source red_pitaya_hsi_fsbl.tcl -tclargs $(PRJ)
+	xsct red_pitaya_hsi_fsbl.tcl $(PRJ)
 
 $(DEVICE_TREE): $(FPGA_BIT)
-	$(HSI) -source red_pitaya_hsi_dts.tcl -tclargs $(PRJ) DTS_VER=$(DTS_VER)
+	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER)
 
+$(FPGA_BIN): $(FPGA_BIT)
+	@echo all:{$(FPGA_BIT)} > prj/$(PRJ)/out/red_pitaya.bif
+	$(BOOTGEN)

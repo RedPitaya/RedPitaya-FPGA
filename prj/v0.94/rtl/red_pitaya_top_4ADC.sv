@@ -124,6 +124,13 @@ logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
 logic         idly_rdy;
 
+logic [16-1:0] par_dat;
+
+logic          daisy_trig;
+logic [ 3-1:0] daisy_mode;
+logic          trig_ext;
+logic          trig_output_sel;
+
 // AXI masters 0, 1
 logic            axi1_clk    , axi0_clk    ;
 logic            axi1_rstn   , axi0_rstn   ;
@@ -176,7 +183,9 @@ localparam type SBA_T = logic signed [14-1:0];
 SBA_T [MNA-1:0]          adc_dat, adc_dat_r;
 
 // configuration
-logic                    digital_loop;
+logic                 digital_loop;
+logic                 adc_clk_daisy;
+logic                 scope_trigo;
 
 // system bus
 sys_bus_if   ps_sys      (.clk (adc_clk_01), .rstn (adc_rstn_01));
@@ -250,6 +259,10 @@ adc_rstn_23 <=  frstn[0] & spi_done & pll_locked[1];
 // PWM reset (active low)
 always @(posedge pwm_clk)
 pwm_rstn <=  frstn[0] & spi_done & pll_locked[0];
+
+
+assign daisy_trig = |par_dat;
+assign trig_ext   = gpio.i[8] & ~(daisy_mode[0] & daisy_trig);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
@@ -350,13 +363,13 @@ endgenerate
 // 6: CH4 falling edge data  7: CH4 rising edge data
 
 // delay input ADC signals
-//(* IODELAY_GROUP = adc_inputs *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
 logic [4*7-1:0] idly_rst ;
 logic [4*7-1:0] idly_ce  ;
 logic [4*7-1:0] idly_inc ;
 logic [4*7-1:0] [5-1:0] idly_cnt ;
 logic [4-1:0] [14-1:0] adc_dat_raw;
 
+//(* IODELAY_GROUP = "adc_inputs" *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
 IDELAYCTRL i_idelayctrl (
   .RDY(idly_rdy),   // 1-bit output: Ready output
   .REFCLK(fclk[3]), // 1-bit input: Reference clock input
@@ -374,7 +387,7 @@ for (GVC = 0; GVC < 4; GVC = GVC + 1) begin : channels
     logic [ 2-1:0] adc_dat_ddr;
 
 
-   //(* IODELAY_GROUP = adc_inputs *)
+   //(* IODELAY_GROUP = "adc_inputs" *)
    IDELAYE2 #(
       .DELAY_SRC("IDATAIN"),           // Delay input (IDATAIN, DATAIN)
       .HIGH_PERFORMANCE_MODE("TRUE"),  // Reduced jitter ("TRUE"), Reduced power ("FALSE")
@@ -430,6 +443,8 @@ end
 logic [DWE-1: 0] exp_p_in , exp_n_in ;
 logic [DWE-1: 0] exp_p_out, exp_n_out;
 logic [DWE-1: 0] exp_p_dir, exp_n_dir;
+logic [DWE-1: 0] exp_p_otr, exp_n_otr;
+logic [DWE-1: 0] exp_p_dtr, exp_n_dtr;
 
 red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
   // system signals
@@ -440,6 +455,8 @@ red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
   .spi_done_o      (spi_done),  // PLL reset
   // LED
   .led_o           (led_o       ),  // LED output
+  .daisy_mode_o    (daisy_mode),
+
   // idelay control
   .idly_rst_o      (idly_rst    ),
   .idly_ce_o       (idly_ce     ),
@@ -516,8 +533,15 @@ red_pitaya_pdm pdm (
 // GPIO
 ////////////////////////////////////////////////////////////////////////////////
 
-IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_out), .T(~exp_p_dir) );
-IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_out), .T(~exp_n_dir) );
+assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
+assign exp_p_otr = exp_p_out;
+assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},trig_output_sel});
+
+assign exp_p_dtr = exp_p_dir;
+assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
+
+IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
+IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
 
 assign gpio.i[2*DWE-1:  DWE] = exp_p_in;
 assign gpio.i[3*DWE-1:2*DWE] = exp_n_in;
@@ -535,10 +559,11 @@ red_pitaya_scope #(.CHN(0)) i_scope_0_1 (
   .adc_b_i       (adc_dat[1]  ),  // CH 2
   .adc_clk_i     (adc_clk_01  ),  // clock
   .adc_rstn_i    (adc_rstn_01 ),  // reset - active low
-  .trig_ext_i    (gpio.i[8]   ),  // external trigger
+  .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
+  .daisy_trig_o  (scope_trigo ),
   // AXI0 master                 // AXI1 master
   .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
   .axi0_rstn_o   (axi0_rstn  ),  .axi1_rstn_o   (axi1_rstn  ),
@@ -569,7 +594,7 @@ red_pitaya_scope #(.CHN(1)) i_scope_2_3 (
   .adc_b_i       (adc_dat[3]  ),  // CH 2
   .adc_clk_i     (adc_clk_01  ),  // clock
   .adc_rstn_i    (adc_rstn_01 ),  // reset - active low
-  .trig_ext_i    (gpio.i[8]   ),  // external trigger
+  .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_2_3 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_0_1 ),  // input ADC trigger from other 2 channels
@@ -600,6 +625,8 @@ red_pitaya_scope #(.CHN(1)) i_scope_2_3 (
 
 wire daisy_rx_rdy ;
 wire dly_clk = fclk[3]; // 200MHz clock from PS - used for IDELAY (optionaly)
+wire [16-1:0] par_dati = daisy_mode[0] ? {16{trig_output_sel}} : 16'h1234;
+wire          par_dvi  = daisy_mode[0] ? 1'b0 : daisy_rx_rdy;
 
 red_pitaya_daisy i_daisy (
    // SATA connector
@@ -614,14 +641,15 @@ red_pitaya_daisy i_daisy (
   .par_clk_i       (  adc_clk_01                 ),  // data paralel clock
   .par_rstn_i      (  adc_rstn_01                ),  // reset - active low
   .par_rdy_o       (  daisy_rx_rdy               ),
-  .par_dv_i        (  daisy_rx_rdy               ),
-  .par_dat_i       (  16'h1234                   ),
+  .par_dv_i        (  par_dvi                    ),
+  .par_dat_i       (  par_dati                   ),
    // RX
-  .par_clk_o       (                             ),
+  .par_clk_o       ( adc_clk_daisy               ),
   .par_rstn_o      (                             ),
   .par_dv_o        (                             ),
-  .par_dat_o       (                             ),
+  .par_dat_o       ( par_dat                     ),
 
+  .sync_mode_i     (  daisy_mode[0]              ),
   .debug_o         (/*led_o*/                    ),
    // System bus
   .sys_clk_i       (  adc_clk_01                 ),  // clock

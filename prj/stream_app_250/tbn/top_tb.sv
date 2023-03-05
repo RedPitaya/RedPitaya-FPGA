@@ -109,7 +109,7 @@ axi4_if #(.DW (OSC_DW), .AW (OSC_AW), .IW (IW), .LW (LW)) axi_osc1 (
 );*/
 
 axi4_if #(.DW (REG_DW), .AW (REG_AW), .IW (IW), .LW (LW)) axi_reg (
-  .ACLK    (clkout_625   ),  .ARESETn (rstn_out)
+  .ACLK    (clkout_125   ),  .ARESETn (rstn_out)
 );
 
 axi4_if #(.DW (OSC_DW), .AW (OSC_AW), .IW (IW), .LW (LW)) axi_osc1 (
@@ -123,8 +123,53 @@ axi4_if #(.DW (OSC_DW), .AW (OSC_AW), .IW (IW), .LW (LW)) axi_osc1 (
 
 
 axi_bus_model #(.AW (REG_AW), .DW (REG_DW), .IW (IW), .LW (LW)) axi_bm_reg  (axi_reg );
-axi_bus_model #(.AW (OSC_AW), .DW (OSC_DW), .IW (IW), .LW (LW)) axi_bm_osc1 (axi_osc1);
-//axi_bus_model #(.AW (OSC_AW), .DW (OSC_DW), .IW (IW), .LW (LW)) axi_bm_osc2 (axi_osc2);
+axi_slave_model #(.AXI_AW (OSC_AW), .AXI_DW (OSC_DW), .AXI_IW (IW), .AXI_ID(0)) 
+axi_bm_osc1 (
+   // global signals
+  .axi_clk_i      (clkout_125), // global clock
+  .axi_rstn_i     (rstn_out  ), // global reset
+   // axi write address channel
+  .axi_awid_i     (axi_osc1.AWID), // write address ID
+  .axi_awaddr_i   (axi_osc1.AWADDR), // write address
+  .axi_awlen_i    (axi_osc1.AWLEN), // write burst length
+  .axi_awsize_i   (axi_osc1.AWSIZE), // write burst size
+  .axi_awburst_i  (axi_osc1.AWBURST), // write burst type
+  .axi_awlock_i   (axi_osc1.AWLOCK), // write lock type
+  .axi_awcache_i  (axi_osc1.AWCACHE), // write cache type
+  .axi_awprot_i   (axi_osc1.AWPROT), // write protection type
+  .axi_awvalid_i  (axi_osc1.AWVALID), // write address valid
+  .axi_awready_o  (axi_osc1.AWREADY), // write ready
+   // axi write data channel
+  .axi_wid_i      (axi_osc1.WID), // write data ID
+  .axi_wdata_i    (axi_osc1.WDATA), // write data
+  .axi_wstrb_i    (axi_osc1.WSTRB), // write strobes
+  .axi_wlast_i    (axi_osc1.WLAST), // write last
+  .axi_wvalid_i   (axi_osc1.WVALID), // write valid
+  .axi_wready_o   (axi_osc1.WREADY), // write ready
+   // axi write response channel
+  .axi_bid_o      (axi_osc1.BID), // write response ID
+  .axi_bresp_o    (axi_osc1.BRESP), // write response
+  .axi_bvalid_o   (axi_osc1.BVALID), // write response valid
+  .axi_bready_i   (axi_osc1.BREADY), // write response ready
+   // axi read address channel
+  .axi_arid_i     (axi_osc1.ARID), // read address ID
+  .axi_araddr_i   (axi_osc1.ARADDR), // read address
+  .axi_arlen_i    (axi_osc1.ARLEN), // read burst length
+  .axi_arsize_i   (axi_osc1.ARSIZE), // read burst size
+  .axi_arburst_i  (axi_osc1.ARBURST), // read burst type
+  .axi_arlock_i   (axi_osc1.ARLOCK), // read lock type
+  .axi_arcache_i  (axi_osc1.ARCACHE), // read cache type
+  .axi_arprot_i   (axi_osc1.ARPROT), // read protection type
+  .axi_arvalid_i  (axi_osc1.ARVALID), // read address valid
+  .axi_arready_o  (axi_osc1.ARREADY), // read address ready
+   // axi read data channel
+  .axi_rid_o      (axi_osc1.RID), // read response ID
+  .axi_rdata_o    (axi_osc1.RDATA), // read data
+  .axi_rresp_o    (axi_osc1.RRESP), // read response
+  .axi_rlast_o    (axi_osc1.RLAST), // read last
+  .axi_rvalid_o   (axi_osc1.RVALID), // read response valid
+  .axi_rready_i   (axi_osc1.RREADY) // read response ready
+);
 
 
 
@@ -192,7 +237,7 @@ initial begin
 
    //top_tc.test_hk                 (0<<20, 32'h55);
    //top_tc.test_sata               (5<<20, 32'h55);
-   top_tc.test_osc                (32'h40100000, OSC1_EVENT);
+   top_tc.test_osc                (32'h40000000, OSC1_EVENT);
 
 //   top_tc.test_asg                (2<<20, 32'h40090000, 2);
 

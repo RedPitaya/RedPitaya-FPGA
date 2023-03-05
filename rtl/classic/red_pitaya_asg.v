@@ -96,6 +96,7 @@ reg   [   3-1: 0] trig_a_src   , trig_b_src   ;
 wire              trig_a_done  , trig_b_done  ;
 reg   [  14-1: 0] set_a_last   , set_b_last   ;
 reg   [  32-1: 0] set_a_step_lo, set_b_step_lo;
+reg   [  20-1: 0] set_deb_len  ;
 
 red_pitaya_asg_ch  #(.RSZ (RSZ)) ch [1:0] (
   // DAC
@@ -128,7 +129,8 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) ch [1:0] (
   .set_ncyc_i      ({set_b_ncyc       , set_a_ncyc       }),  // set number of cycle
   .set_rnum_i      ({set_b_rnum       , set_a_rnum       }),  // set number of repetitions
   .set_rdly_i      ({set_b_rdly       , set_a_rdly       }),  // set delay between repetitions
-  .set_rgate_i     ({set_b_rgate      , set_a_rgate      })   // set external gated repetition
+  .set_rgate_i     ({set_b_rgate      , set_a_rgate      }),  // set external gated repetition
+  .set_deb_len_i   ({set_deb_len      , set_deb_len      })   // set external trigger debouncer
 );
 
 always @(posedge dac_clk_i)
@@ -184,6 +186,7 @@ if (dac_rstn_i == 1'b0) begin
    set_b_last  <= 14'h0    ;
    set_a_step_lo <=  32'b0    ;
    set_b_step_lo <=  32'b0    ;
+   set_deb_len   <=  20'd62500; //0.5 ms
 
    ren_dly     <=  3'h0    ;
    ack_dly     <=  1'b0    ;
@@ -224,6 +227,8 @@ end else begin
 
       if (sys_addr[19:0]==20'h4C)  set_a_step_lo <= sys_wdata[  32-1: 0] ;
       if (sys_addr[19:0]==20'h50)  set_b_step_lo <= sys_wdata[  32-1: 0] ;
+
+      if (sys_addr[19:0]==20'h54)  set_deb_len   <= sys_wdata[  20-1: 0] ;
    end
 
    if (sys_ren) begin
@@ -271,6 +276,8 @@ end else begin
 
      20'h00044 : begin sys_ack <= sys_en;          sys_rdata <= {{32-14{1'b0}},set_a_last}         ; end
      20'h00048 : begin sys_ack <= sys_en;          sys_rdata <= {{32-14{1'b0}},set_b_last}         ; end
+
+     20'h00054 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}},set_deb_len}        ; end
 
      20'h00060 : begin sys_ack <= sys_en;          sys_rdata <= buf_a_rpnt_rd                      ; end
      20'h00064 : begin sys_ack <= sys_en;          sys_rdata <= buf_b_rpnt_rd                      ; end

@@ -2025,53 +2025,48 @@
     <spirit:fileSet>
       <spirit:name>xilinx_anylanguagesynthesis_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>src/const.xdc</spirit:name>
-        <spirit:userFileType>xdc</spirit:userFileType>
-        <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>src/reg_ctrl/reg_ctrl.xci</spirit:name>
+        <spirit:name>reg_ctrl/reg_ctrl.xci</spirit:name>
         <spirit:userFileType>xci</spirit:userFileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/dac_calib.v</spirit:name>
+        <spirit:name>dac_calib.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/dac_top.v</spirit:name>
+        <spirit:name>dac_top.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s.v</spirit:name>
+        <spirit:name>rp_dma_mm2s.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s_ctrl.v</spirit:name>
+        <spirit:name>rp_dma_mm2s_ctrl.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s_data_ctrl.v</spirit:name>
+        <spirit:name>rp_dma_mm2s_data_ctrl.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s_downsize.v</spirit:name>
+        <spirit:name>rp_dma_mm2s_downsize.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dac.v</spirit:name>
+        <spirit:name>rp_dac.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>CHECKSUM_0d983eff</spirit:userFileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/fifo_axi_data_dac/fifo_axi_data_dac.xci</spirit:name>
+        <spirit:name>fifo_axi_data_dac/fifo_axi_data_dac.xci</spirit:name>
         <spirit:userFileType>xci</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
@@ -2098,47 +2093,47 @@
     <spirit:fileSet>
       <spirit:name>xilinx_anylanguagebehavioralsimulation_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>src/reg_ctrl/reg_ctrl.xci</spirit:name>
+        <spirit:name>reg_ctrl/reg_ctrl.xci</spirit:name>
         <spirit:userFileType>xci</spirit:userFileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/dac_calib.v</spirit:name>
+        <spirit:name>dac_calib.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/dac_top.v</spirit:name>
+        <spirit:name>dac_top.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s.v</spirit:name>
+        <spirit:name>rp_dma_mm2s.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s_ctrl.v</spirit:name>
+        <spirit:name>rp_dma_mm2s_ctrl.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s_data_ctrl.v</spirit:name>
+        <spirit:name>rp_dma_mm2s_data_ctrl.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dma_mm2s_downsize.v</spirit:name>
+        <spirit:name>rp_dma_mm2s_downsize.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/rp_dac.v</spirit:name>
+        <spirit:name>rp_dac.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>src/fifo_axi_data_dac/fifo_axi_data_dac.xci</spirit:name>
+        <spirit:name>fifo_axi_data_dac/fifo_axi_data_dac.xci</spirit:name>
         <spirit:userFileType>xci</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
@@ -2165,7 +2160,7 @@
     <spirit:fileSet>
       <spirit:name>xilinx_xpgui_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>xgui/rp_dac_v1_0.tcl</spirit:name>
+        <spirit:name>rp_dac_v1_0.tcl</spirit:name>
         <spirit:fileType>tclSource</spirit:fileType>
         <spirit:userFileType>CHECKSUM_a045fc36</spirit:userFileType>
         <spirit:userFileType>XGUI_VERSION_2</spirit:userFileType>

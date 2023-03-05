@@ -78,7 +78,7 @@ logic                  pll_ref;
 logic                  trig;
 
 logic                  intr;
-
+logic                  daisy_trig=1'b0;
 logic               clk,clk1 ;
 logic               clkn, clk1n;
 wire               rstn_out;
@@ -86,6 +86,15 @@ wire               clkout;
 
 logic               rstn;
 wire clkout_125;
+wire [ 1:0] clko;
+wire [8-1:0] gpio_p;
+wire [8-1:0] gpio_n;
+reg  [8-1:0] gpio_p_drv;
+reg  [8-1:0] gpio_n_drv;
+wire [8-1:0] gpio_p_rec;
+wire [8-1:0] gpio_n_rec;
+
+
 //glbl glbl();
 
 localparam OSC_DW = 64;
@@ -151,6 +160,13 @@ initial        pll_ref = 1'b0;
 always #(RP/2) pll_ref = ~pll_ref;
 
 
+//--------------------------------------------------------------------------------------------
+localparam MASTER = 0;
+localparam SLAVE  = 1;
+wire mode = MASTER;
+
+
+//--------------------------------------------------------------------------------------------
 
 // default clocking 
 default clocking cb @ (posedge clk);
@@ -168,6 +184,11 @@ initial begin
 
 end
 
+initial begin
+  gpio_p_drv = {8{1'bz}};
+  gpio_n_drv = {8{1'bz}};
+end
+
 // clock cycle counter
 int unsigned cyc=0;
 always_ff @ (posedge clk)
@@ -176,7 +197,7 @@ cyc <= cyc+1;
 reg ext_trig;
 
 initial begin
-  ext_trig = 1'b0;
+  ext_trig = 1'b1;
  /* ##150000;
   ext_trig = 1'b1;
   ##10;
@@ -216,8 +237,8 @@ end
 
 initial begin
   ##500;
-
-   top_tc.test_hk                 (32'h40000000, 32'h0);
+    top_tc.daisy_trigs();
+   //top_tc.test_hk                 (32'h40000000, 32'h0);
    //top_tc.test_sata               (5<<20, 32'h55);
 
    //top_tc.test_asg                (32'h40200000, 32'h0, 2);
@@ -343,6 +364,34 @@ assign wdat2 = red_pitaya_top_sim.system_wrapper_i.system_i.rp_oscilloscope.m_ax
 assign wdat3 = red_pitaya_top_sim.system_wrapper_i.system_i.rp_oscilloscope.m_axi_osc1_wdata[43:32];
 assign wdat4 = red_pitaya_top_sim.system_wrapper_i.system_i.rp_oscilloscope.m_axi_osc1_wdata[59:48];
 */
+
+wire [13:0] filt1_i = red_pitaya_top.i_scope.adc_b_filt_out;
+
+reg  [13:0] filt1_r1, filt1_r2, filt1_r3, filt1_r4, filt1_r5, filt1_r6, filt1_r7;
+wire [13:0] filt1 = filt1_i;
+wire [13:0] filt2 = red_pitaya_top.i_scope.adc_a_filt_out;
+wire [13:0] difftest = filt2-filt1;
+
+always @(posedge red_pitaya_top.i_scope.adc_clk_i) begin
+  filt1_r1 <= filt1_i;
+  filt1_r2 <= filt1_r1;
+  filt1_r3 <= filt1_r2;
+  filt1_r4 <= filt1_r3;
+  filt1_r5 <= filt1_r4;
+  filt1_r6 <= filt1_r5;
+  filt1_r7 <= filt1_r6;
+  
+  if(filt1 != filt2)
+    $display ("filters don't match! %d != %d at %t", filt1, filt2, $time);
+end
+/*
+always @(*) begin
+  if(filt1 != filt2)
+    $display ("filters don't match! %d != %d at %t", filt1, filt2, $time);
+end
+
+*/
+
 reg [12:0] cnter1, cnter2, cnter3, cnter4;
 
 wire [13:0] cnter1_dat = {1'b0, cnter1};
@@ -444,7 +493,30 @@ always @(clk) begin
     end
 end
 
+always @(*) begin
+  gpio_p_drv = {7'h0,ext_trig};
+  gpio_n_drv = 8'h0;
+end
 
+assign gpio_p = gpio_p_drv;
+assign gpio_n = gpio_p_drv;
+assign gpio_p_rec = gpio_p;
+assign gpio_n_rec = gpio_n;
+
+wire adc_clk;
+wire pll_in_clk = mode == MASTER ? clk  : clko[0] & ~clko[1];
+wire daisy_clk  = mode == MASTER ? 1'b0 : clk;
+
+clk_gen #(
+  .CLKA_PERIOD  (  8000   ),
+  .CLKA_JIT     (  0      ),
+  .DEL          (  70     ) // in percent
+)
+i_clgen_model
+(
+  .clk_i  ( pll_in_clk ) ,
+  .clk_o  ( adc_clk    )
+);
 
 ////////////////////////////////////////////////////////////////////////////////
 // module instances
@@ -480,7 +552,7 @@ end
   inout  logic [ 8-1:0] led_o
 */
 wire [14-1:0] dac_dat_o;
- red_pitaya_top_4ADC red_pitaya_top
+ red_pitaya_top red_pitaya_top
        (.DDR_addr(),
         .DDR_ba(),
         .DDR_cas_n(),
@@ -503,16 +575,15 @@ wire [14-1:0] dac_dat_o;
         .FIXED_IO_ps_porb(),
         .FIXED_IO_ps_srstb(),
 
-        //.axi_reg(axi_reg),
-        .adc_dat_i({cnter4_o, cnter3_o, cnter2_o, cnter1_o}),  // ADC data
-        //`ifdef SLAVE
-        //.daisy_p_i({clk,trigr}),  // ADC clock {p,n}       
-        //.daisy_n_i({clkn,~trigr}),  // ADC clock {p,n}         
-        //`else
-        .adc_clk_i({{clk1,clk1n},{clk,clkn}}),  // ADC clock {p,n}
-        //`endif
-        //.adc_clk_o(),  // optional ADC clock source (unused)
-        //.adc_cdcs_o(), // ADC clock duty cycle stabilizer
+        .daisy_p_o({d_clko_p,d_trigo_p}),
+        .daisy_n_o({d_clko_n,d_trigo_n}),
+        .daisy_p_i({d_clko_p,d_trigo_p}),
+        .daisy_n_i({d_clko_n,d_trigo_n}),
+
+        .adc_dat_i({{cnter2_dat,2'b0}, {cnter1_dat,2'b0}}),
+
+        .adc_clk_i({~adc_clk,adc_clk}),
+        .adc_clk_o(clko),
 
         // PWM DAC
         .dac_pwm_o  (),  // 1-bit PWM DAC
@@ -520,14 +591,12 @@ wire [14-1:0] dac_dat_o;
         .vinp_i     (),  // voltages p
         .vinn_i     (),  // voltages n
         // Expansion connector
-        //.exp_p_io   ({7'h0,ext_trig}),
-        //.exp_n_io   (8'h0),
+        .exp_p_io   (gpio_p),
+        .exp_n_io   (gpio_n),
         // SATA connector
-        .daisy_p_o  (),  // line 1 is clock capable
-        .daisy_n_o  (),
+
         //.pll_ref_i  (pll_ref),
-        //.daisy_p_i  (),  // line 1 is clock capable
-        //.daisy_n_i  (),
+
         // LED
         .led_o());
         //.rstn(rstn),
