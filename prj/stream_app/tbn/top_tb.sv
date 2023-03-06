@@ -106,8 +106,21 @@ localparam LA_EVENT = 4;
 localparam GPIO_IN_CTRL_ADDR  = 'h8C;
 localparam GPIO_OUT_CTRL_ADDR = 'h90;
 
+
 wire interf_clk, interf_rst;
 wire clkout_125, clkout_625;
+
+//--------------------------------------------------------------------------------------------
+localparam MASTER = 0;
+localparam SLAVE  = 1;
+wire mode = SLAVE;
+
+assign interf_clk=clkout_125;
+assign interf_rst=rstn_out;
+
+//--------------------------------------------------------------------------------------------
+
+wire [4-1:0] fclk, frstn;
 
 wire          [ 8-1:0] gpio_p_i;
 wire          [ 8-1:0] gpio_n_i;
@@ -147,24 +160,14 @@ wire [31:0] read_dat1={8'd100, gpio_p_o,   8'd100, gpio_n_o  };
 wire [31:0] read_dat2={8'd100, gpio_p_o+1, 8'd100, gpio_n_o-1};
 wire [63:0] read_dat ={read_dat1, read_dat2};
 
-assign interf_clk=clkout_125;
-assign interf_rst=rstn_out;
-
-/*axi4_if #(.DW (REG_DW), .AW (REG_AW), .IW (IW), .LW (LW)) axi_reg (
-  .ACLK    (clk   ),  .ARESETn (rstn)
-);
-
-axi4_if #(.DW (OSC_DW), .AW (OSC_AW), .IW (IW), .LW (LW)) axi_osc1 (
-  .ACLK    (clk   ),  .ARESETn (rstn)
-);*/
 
 axi4_if #(.DW (REG_DW), .AW (REG_AW), .IW (IW), .LW (LW)) axi_reg (
-  .ACLK    (clkout_625   ),  .ARESETn (rstn_out)
+  .ACLK    (fclk[2]   ),  .ARESETn (rstn_axi)
 );
 
 
 axi4_if #(.DW (REG_DW), .AW (REG_AW), .IW (IW), .LW (LW)) axi_syncd (
-  .ACLK    (clkout_625   ),  .ARESETn (rstn_out)
+  .ACLK    (fclk[2]   ),  .ARESETn (rstn_axi)
 );
 
 axi4_if #(.DW (OSC_DW), .AW (OSC_AW), .IW (IW), .LW (LW)) axi_osc1 (
@@ -225,11 +228,6 @@ axi_bm_osc1 (
   .axi_rvalid_o   (axi_osc1.RVALID), // read response valid
   .axi_rready_i   (axi_osc1.RREADY) // read response ready
 );
-/*
-axi4_sync sync (
-.axi_i(axi_reg),
-.axi_o(axi_syncd)
-);*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // Clock and reset generation
@@ -296,9 +294,9 @@ initial begin
 
    //top_tc.test_hk                 (0<<20, 32'h55);
    //top_tc.test_sata               (5<<20, 32'h55);
-  // top_tc.test_osc                (32'h40000000, OSC1_EVENT);
+   top_tc.test_osc                (32'h40000000, OSC1_EVENT);
 
-  top_tc_gpio.test_gpio (32'h40100000, GPIO_OUT_CTRL_ADDR, LA_EVENT);
+  //top_tc_gpio.test_gpio (32'h40100000, GPIO_OUT_CTRL_ADDR, LA_EVENT);
    //top_tc_dac.test_dac2            (32'h40100000, GEN1_EVENT);
 
 //   top_tc.test_asg                (2<<20, 32'h40090000, 2);
@@ -458,8 +456,42 @@ assign wdat6 = red_pitaya_top_sim.system_wrapper_i.system_i.rp_oscilloscope.m_ax
 assign wdat7 = red_pitaya_top_sim.system_wrapper_i.system_i.rp_oscilloscope.m_axi_osc2_wdata[47:32];
 assign wdat8 = red_pitaya_top_sim.system_wrapper_i.system_i.rp_oscilloscope.m_axi_osc2_wdata[63:48];
 
+reg [15:0] wdat1_r; 
+reg [15:0] wdat2_r;
+reg [15:0] wdat3_r;
+reg [15:0] wdat4_r;
+
+reg [15:0] wdat5_r; 
+reg [15:0] wdat6_r;
+reg [15:0] wdat7_r;
+reg [15:0] wdat8_r;
+
+always @(posedge interf_clk) begin
+  if (interf_rst==0) begin
+    wdat1_r <= 'h0;
+    wdat2_r <= 'h0;
+    wdat3_r <= 'h0;
+    wdat4_r <= 'h0;
+    wdat5_r <= 'h0;
+    wdat6_r <= 'h0;
+    wdat7_r <= 'h0;
+    wdat8_r <= 'h0;
+  end else begin
+    if (axi_osc1.WVALID & axi_osc1.WREADY) begin
+      wdat1_r <= wdat1;
+      wdat2_r <= wdat2;
+      wdat3_r <= wdat3;
+      wdat4_r <= wdat4;
+      wdat5_r <= wdat5;
+      wdat6_r <= wdat6;
+      wdat7_r <= wdat7;
+      wdat8_r <= wdat8;
+    end
+  end
+end
+
 reg [15:0] cnter;
-always @(clk) begin
+always @(adc_clk) begin
 
     if (rstn==0)
         cnter <= 16'b0;
@@ -481,9 +513,20 @@ always @(posedge clk) begin
   daisy_trig <= &trig_cnt[12-1:0];
 end
 
+wire adc_clk;
+wire pll_in_clk = mode == MASTER ? clk  : clko[0] & ~clko[1];
+wire daisy_clk  = mode == MASTER ? 1'b0 : clk;
 
-
-
+clk_gen #(
+  .CLKA_PERIOD  (  8000   ),
+  .CLKA_JIT     (  0      ),
+  .DEL          (  70     ) // in percent
+)
+i_clgen_model
+(
+  .clk_i  ( pll_in_clk ) ,
+  .clk_o  ( adc_clk    )
+);
 ////////////////////////////////////////////////////////////////////////////////
 // module instances
 ////////////////////////////////////////////////////////////////////////////////
@@ -512,7 +555,7 @@ end
         .FIXED_IO_ps_clk(),
         .FIXED_IO_ps_porb(),
         .FIXED_IO_ps_srstb(),
-
+/*
         .M_AXI_OSC_araddr(axi_osc1.ARADDR),
         .M_AXI_OSC_arburst(axi_osc1.ARBURST),
         .M_AXI_OSC_arcache(axi_osc1.ARCACHE),
@@ -524,6 +567,7 @@ end
         .M_AXI_OSC_arready(axi_osc1.ARREADY),
         .M_AXI_OSC_arsize(axi_osc1.ARSIZE),
         .M_AXI_OSC_arvalid(axi_osc1.ARVALID),
+        */
         .M_AXI_OSC_awaddr(axi_osc1.AWADDR),
         .M_AXI_OSC_awburst(axi_osc1.AWBURST),
         .M_AXI_OSC_awcache(axi_osc1.AWCACHE),
@@ -539,12 +583,15 @@ end
         .M_AXI_OSC_bready(axi_osc1.BREADY),
         .M_AXI_OSC_bresp(axi_osc1.BRESP),
         .M_AXI_OSC_bvalid(axi_osc1.BVALID),
+        /*
         .M_AXI_OSC_rdata(axi_osc1.RDATA),
         .M_AXI_OSC_rid(axi_osc1.RID),
         .M_AXI_OSC_rlast(axi_osc1.RLAST),
         .M_AXI_OSC_rready(axi_osc1.RREADY),
         .M_AXI_OSC_rresp(axi_osc1.RRESP),
         .M_AXI_OSC_rvalid(axi_osc1.RVALID),
+        
+        */
         .M_AXI_OSC_wdata(axi_osc1.WDATA),
         .M_AXI_OSC_wid(axi_osc1.WID),
         .M_AXI_OSC_wlast(axi_osc1.WLAST),
@@ -590,17 +637,19 @@ end
         .S_AXI_REG_wready(axi_reg.WREADY),
         .S_AXI_REG_wstrb(axi_reg.WSTRB),
         .S_AXI_REG_wvalid(axi_reg.WVALID),
-
+        .fclk         (fclk      ),
+        .frstn        (frstn     ),
         .clkout_625(clkout_625),
         .clkout_125(clkout_125),
         .clkout_200(clkout_200),
 
         .daisy_p_o(),
         .daisy_n_o(),
-        .daisy_p_i({ clk, daisy_trig}),
-        .daisy_n_i({~clk,~daisy_trig}),
+        .daisy_p_i({ daisy_clk, daisy_trig}),
+        .daisy_n_i({~daisy_clk,~daisy_trig}),
 
         .rstn_out(rstn_out),
+        .rstn_axi(rstn_axi),
         .rstn_200(rstn_200),
 
         .rst_in(~rstn),
@@ -609,16 +658,15 @@ end
         .dac_sel_o(dac_sel_o),
         .dac_clk_o(dac_clk_o),
         .dac_rst_o(dac_rst_o),
-
-        .gpio_p_o,(gpio_p_i),
-        .gpio_n_o,(gpio_n_i),
-        .gpio_p_i,(gpio_p_o),
-        .gpio_n_i,(gpio_n_o),
+/*
+        .gpio_p_o(gpio_p_i),
+        .gpio_n_o(gpio_n_i),
+        .gpio_p_i(gpio_p_o),
+        .gpio_n_i(gpio_n_o),
         .dirp(dirp),
         .dirn(dirn),
-
-        .adc_clk(clk),
-        .adc_clk_i({~clk,clk}),
+*/
+        .adc_clk_i({~adc_clk,adc_clk}),
         .adc_clk_o(clko),
         //.adc_clk_p(clk),
         //.adc_data_ch1({1'b0,cnter,2'b0}),

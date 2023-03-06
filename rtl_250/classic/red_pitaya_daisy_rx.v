@@ -61,12 +61,13 @@ module red_pitaya_daisy_rx
    input                 cfg_en_i        ,  //!< global module enable
    input                 cfg_train_i     ,  //!< enable training
    output                cfg_trained_o   ,  //!< module trained
+   input                 sync_mode_i     ,
    input                 dly_clk_i       ,  //!< IDELAY clock
 
    output                par_clk_o       ,  //!< parallel clock
    output reg            par_rstn_o      ,  //!< parallel reset - active low
-   output reg            par_dv_o        ,  //!< parallel data enable
-   output reg [ 16-1: 0] par_dat_o          //!< parallel data
+   output                par_dv_o        ,  //!< parallel data enable
+   output     [ 16-1: 0] par_dat_o          //!< parallel data
 );
 
 
@@ -78,50 +79,56 @@ module red_pitaya_daisy_rx
 //  De-serialize - clock
 
 wire           ser_clk     ;
-wire           ser_clk_dly = ser_clk_i;
 wire           par_clk     ;
 reg  [16-1: 0] par_rstn_r  ;
 reg            par_rstn    ;
+
+
+`ifdef SER_DLY
+wire           ser_clk_dly ;
+wire           dly_rdy     ;
+
+// IDELAYCTRL is needed for calibration
+//(* IODELAY_GROUP = "daisy_rx_clk_group" *)
+IDELAYCTRL
+delayctrl (
+ .RDY    (  dly_rdy    ),
+ .REFCLK (  dly_clk_i  ),
+ .RST    ( !cfg_en_i   )
+);
+
+ // delay the input clock
+//(* IODELAY_GROUP = "daisy_rx_clk_group" *)
+IDELAYE2
+# (
+ .CINVCTRL_SEL           ( "FALSE"    ),  // TRUE, FALSE
+ .DELAY_SRC              ( "IDATAIN"  ),  // IDATAIN, DATAIN
+ .HIGH_PERFORMANCE_MODE  ( "TRUE"     ),  // TRUE, FALSE
+ .IDELAY_TYPE            ( "FIXED"    ),  // FIXED, VARIABLE, or VAR_LOADABLE
+ .IDELAY_VALUE           (  15         ),  // 0 to 31
+ .REFCLK_FREQUENCY       (  200.0     ),
+ .PIPE_SEL               ( "FALSE"    ),
+ .SIGNAL_PATTERN         ( "CLOCK"    )   // CLOCK, DATA
+)
+idelaye2_clk
+(
+ .DATAOUT                (  ser_clk_dly  ),  // Delayed clock
+ .DATAIN                 (  1'b0         ),  // Data from FPGA logic
+ .C                      (  1'b0         ),
+ .CE                     (  1'b0         ),
+ .INC                    (  1'b0         ),
+ .IDATAIN                (  ser_clk_i    ),
+ .LD                     ( !cfg_en_i     ),
+ .LDPIPEEN               (  1'b0         ),
+ .REGRST                 (  1'b0         ),
+ .CNTVALUEIN             (  5'b00000     ),
+ .CNTVALUEOUT            (),
+ .CINVCTRL               (  1'b0         )
+);
+`else
+wire           ser_clk_dly = ser_clk_i;
 wire           dly_rdy     = 1'b1;
-
-
-//  // delay the input clock
-//(* IODELAY_GROUP = "daisy_rx_clk_group" *)
-//IDELAYE2
-//# (
-//  .CINVCTRL_SEL           ( "FALSE"    ),  // TRUE, FALSE
-//  .DELAY_SRC              ( "IDATAIN"  ),  // IDATAIN, DATAIN
-//  .HIGH_PERFORMANCE_MODE  ( "TRUE"     ),  // TRUE, FALSE
-//  .IDELAY_TYPE            ( "FIXED"    ),  // FIXED, VARIABLE, or VAR_LOADABLE
-//  .IDELAY_VALUE           (  0         ),  // 0 to 31
-//  .REFCLK_FREQUENCY       (  200.0     ),
-//  .PIPE_SEL               ( "FALSE"    ),
-//  .SIGNAL_PATTERN         ( "CLOCK"    )   // CLOCK, DATA
-//)
-//idelaye2_clk
-//(
-//  .DATAOUT                (  ser_clk_dly  ),  // Delayed clock
-//  .DATAIN                 (  1'b0         ),  // Data from FPGA logic
-//  .C                      (  1'b0         ),
-//  .CE                     (  1'b0         ),
-//  .INC                    (  1'b0         ),
-//  .IDATAIN                (  ser_clk_i    ),
-//  .LD                     ( !cfg_en_i     ),
-//  .LDPIPEEN               (  1'b0         ),
-//  .REGRST                 (  1'b0         ),
-//  .CNTVALUEIN             (  5'b00000     ),
-//  .CNTVALUEOUT            (),
-//  .CINVCTRL               (  1'b0         )
-//);
-
-//// IDELAYCTRL is needed for calibration
-//(* IODELAY_GROUP = "daisy_rx_clk_group" *)
-//IDELAYCTRL
-//delayctrl (
-//  .RDY    (  dly_rdy    ),
-//  .REFCLK (  dly_clk_i  ),
-//  .RST    ( !cfg_en_i   )
-//);
+`endif
 
 // High Speed BUFIO clock buffer
 BUFIO i_BUFIO_clk
@@ -130,8 +137,6 @@ BUFIO i_BUFIO_clk
   .I (  ser_clk_dly  )
 );
 
-  
-// BUFR generates slow clock
 BUFR #(.SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("2")) i_BUFR_clk
 (
   .O   (  par_clk      ),
@@ -139,8 +144,6 @@ BUFR #(.SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("2")) i_BUFR_clk
   .CLR (  1'b0         ),
   .I   (  ser_clk_dly  )
 );
-
-
 
 // Reset on receive clock domain
 always @(posedge par_clk or negedge cfg_en_i) begin
@@ -318,14 +321,18 @@ end
 
 
 
-
+reg          par_dv_or;
+reg [16-1:0] par_dat_or;
 
 always @(posedge par_clk_o) begin
-   par_dv_o    <= par_dv && par_ok && !par_train ;
-   par_dat_o   <= par_dat_r;
+   par_dv_or   <= par_dv && par_ok && !par_train ;
+   par_dat_or  <= par_dat_r;
 
    par_rstn_o  <= par_rstn ;
 end
+
+assign par_dat_o = sync_mode_i ? {8'h0,rxp_dat} : par_dat_or;
+assign par_dv_o  = sync_mode_i ? 1'b1 : par_dv_or;
 
 BUFG i_parclk_buf   (.O(par_clk_o), .I(par_clk));
 

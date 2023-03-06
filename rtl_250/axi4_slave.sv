@@ -53,7 +53,7 @@ module axi4_slave #(
   int unsigned SW = DW >> 3  // select width - 1 bit for every data byte
 )(
   // AXI MM
-  `ifdef SIMULATION
+  `ifdef SYNC
     axi4_if.s    axi_in,
   `else
     axi4_if.s    axi,
@@ -85,13 +85,14 @@ logic           wr_errorw;
 
 logic           xx_do;
 
-`ifdef SIMULATION
+`ifdef SYNC
 axi4_if #(.DW (32), .AW (32), .IW (12), .LW (8)) axi (.ACLK (axi_in.ACLK), .ARESETn (axi_in.ARESETn));
 axi4_sync sync (
 .axi_i(axi_in),
 .axi_o(axi)
 );
 `endif
+
 
 // access cycle in progress
 assign xx_do = rd_do | wr_do;
