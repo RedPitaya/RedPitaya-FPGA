@@ -79,7 +79,7 @@ module red_pitaya_top_sim #(
   inout  logic          DDR_ras_n  ,
   inout  logic          DDR_reset_n,
   inout  logic          DDR_we_n   ,
-  axi4_if.s axi_reg,
+  //axi4_if.s axi_reg,
 
   // Red Pitaya periphery
   input  logic          trig_i ,
@@ -274,7 +274,7 @@ red_pitaya_ps_sim ps (
   .bus           (ps_sys      ),
   .rstn          (rstn        ),
   .clk_in        (adc_clk     ),
-  .axi_reg(axi_reg),
+ // .axi_reg(axi_reg),
   // AXI masters
   .axi1_clk_i    (axi1_clk    ),  .axi0_clk_i    (axi0_clk    ),  // global clock
   .axi1_rstn_i   (axi1_rstn   ),  .axi0_rstn_i   (axi0_rstn   ),  // global reset

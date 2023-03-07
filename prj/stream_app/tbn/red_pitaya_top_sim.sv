@@ -113,8 +113,11 @@ module red_pitaya_top_sim
     clkout_625,
     clkout_125,
     clkout_200,
+    fclk,
+    frstn,
 
     rstn_out,
+    rstn_axi,
     rstn_200,
 
     rst_in,
@@ -257,7 +260,10 @@ module red_pitaya_top_sim
   input  [ 8-1:0] gpio_n_i  ;
 
   output rstn_out;
+  output rstn_axi;
   output rstn_200;
+  output [ 4-1:0] fclk;
+  output [ 4-1:0] frstn;
 
   input  rst_in;
 
@@ -382,13 +388,19 @@ module red_pitaya_top_sim
   wire clkout_625;
   wire clkout_125;
   wire clkout_200;
-  wire rstn_out;
+  wire [3:0] fclk;
+  wire [3:0] frstn;
+
+  reg trig_ext_sync1, trig_ext_sync2;
+  wire rstn_out; 
+  wire rstn_axi;
   wire rstn_200;
 
   wire rst_in;
 
   wire adc_clk;
   wire  [ 2-1:0] adc_clk_i;
+  wire           adc_clk_in;
   wire  [ 2-1:0] adc_clk_o;
   //wire adc_clk_p;
   wire [15:0]adc_data_ch1;
@@ -434,19 +446,29 @@ ODDR oddr_dac_wrt          (.Q(dac_wrt_o), .D1(1'b0     ), .D2(1'b1     ), .C(da
 ODDR oddr_dac_sel          (.Q(dac_sel_o), .D1(1'b1     ), .D2(1'b0     ), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
 ODDR oddr_dac_rst          (.Q(dac_rst_o), .D1(dac_rst  ), .D2(dac_rst  ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
 ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b_o), .D2(dac_dat_a_o), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
+localparam DWE = 11;
+
+ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
+ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
+////////////////////////////////////////////////////////////////////////////////
+//  House Keeping
+////////////////////////////////////////////////////////////////////////////////
+
+logic [DWE-1: 0] exp_p_in , exp_n_in ;
+logic [DWE-1: 0] exp_p_out, exp_n_out;
+logic [DWE-1: 0] exp_p_dir, exp_n_dir;
+
+wire clksel;
 
 // DAC reset (active high)
 always @(posedge dac_clk_1x)
 dac_rst  <= ~rstn_out | ~pll_locked;
 
-`ifdef SLAVE
-wire adc_clk_out = adc_clk_daisy;
-`else
-wire adc_clk_out = 1'b0;
-`endif
-
+wire trig_ext_syncd;
+wire gpio_trig;
   system_wrapper system_wrapper_i
-       (.DDR_addr(DDR_addr),
+       (
+        .DDR_addr(DDR_addr),
         .DDR_ba(DDR_ba),
         .DDR_cas_n(DDR_cas_n),
         .DDR_ck_n(DDR_ck_n),
@@ -553,30 +575,40 @@ wire adc_clk_out = 1'b0;
         .S_AXI_REG_wready(S_AXI_REG_wready),
         .S_AXI_REG_wstrb(S_AXI_REG_wstrb),
         .S_AXI_REG_wvalid(S_AXI_REG_wvalid),
-
+        .FCLK_CLK0         (fclk[0]      ),
+        .FCLK_CLK1         (fclk[1]      ),
+        .FCLK_CLK2         (fclk[2]      ),
+        .FCLK_CLK3         (fclk[3]      ),
+        .FCLK_RESET0_N     (frstn[0]     ),
+        .FCLK_RESET1_N     (frstn[1]     ),
+        .FCLK_RESET2_N     (frstn[2]     ),
+        .FCLK_RESET3_N     (frstn[3]     ),
+        .clksel(clksel),
         .clkout_625(clkout_625),
         .clkout_200(clkout_200),
         .clkout_125(clkout_125),
         .rstn_out(rstn_out),
+        .rstn_axi(rstn_axi),
+        //.rstn_50(rstn_50),
         .rstn_200(rstn_200),
         .rst_in(rst_in),
-        .adc_clk(adc_clk),
+        .adc_clk(adc_clk_in),
         .dac_dat_a(dac_dat_a),
         .dac_dat_b(dac_dat_b),
         .trig_in(trig_ext_syncd),
         .trig_out(trig_out),
-        .gpio_p_o,(gpio_p_i),
-        .gpio_n_o,(gpio_n_i),
-        .gpio_p_i,(gpio_p_o),
-        .gpio_n_i,(gpio_n_o),
+        .gpio_trig(gpio_trig),
+        /*
+        .gpio_p_o(gpio_p_i),
+        .gpio_n_o(gpio_n_i),
+        .gpio_p_i(gpio_p_o),
+        .gpio_n_i(gpio_n_o),
         
-        /*.adc_clk_n(adc_clk_n),
+        .adc_clk_n(adc_clk_n),
         .adc_clk_p(adc_clk_p),*/
         .adc_data_ch1(adc_data_ch1[16-1:2]),
-        .adc_data_ch2(adc_data_ch2[16-1:2]));
-
-wire trig_ext_syncd;
-reg trig_ext_sync1, trig_ext_sync2;
+        .adc_data_ch2(adc_data_ch2[16-1:2])
+        );
 
 OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_trig
 (
@@ -589,7 +621,7 @@ OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
-  .I  ( adc_clk_daisy )
+  .I  ( adc_clk_in    )
 );
 
 IBUFDS #() i_IBUF_clkadc
@@ -598,9 +630,6 @@ IBUFDS #() i_IBUF_clkadc
   .IB ( adc_clk_i[0]  ),
   .O  ( adc_clk_in    )
 );
-
-
-`ifdef SLAVE
 
 IBUFDS #() i_IBUF_clkdaisy
 (
@@ -615,56 +644,14 @@ IBUFDS #() i_IBUFDS_trig
   .IB ( daisy_n_i[0]  ),
   .O  ( trig_ext      )
 );
-assign trig_ext_syncd = trig_ext;
-
-`else
-
-IBUFDS #() i_IBUFDS_trig
-(
-  .I  ( daisy_p_i[0]  ),
-  .IB ( daisy_n_i[0]  ),
-  .O  ( trig_ext)
-);
 
 
-assign adc_clk_daisy = adc_clk_in;
-
-always @(posedge clkout_125) //sync external trigger from external master to local clock
+always @(posedge clkout_125) //sync external trigger from external master to local clock, only if 2 masters
 begin
   trig_ext_sync1 <= trig_ext;
   trig_ext_sync2 <= trig_ext_sync1;
 end
-assign trig_ext_syncd = trig_ext_sync2;
+assign trig_ext_syncd = clksel ? trig_ext : trig_ext_sync2;
+assign external_trig = trig_ext_syncd | gpio_trig;
 
-//assign trig_ext = gpio.i[8];
-
-`endif
-/*
-`else
-
-IBUFDS #() i_IBUFDS_trig
-(
-  .I  ( daisy_p_i[0]  ),
-  .IB ( daisy_n_i[0]  ),
-  .O  ( trig_ext)
-);
-
-always @(posedge clkout_125) //sync external trigger from external master to local clock
-begin
-  trig_ext_sync1 <= trig_ext;
-  trig_ext_sync2 <= trig_ext_sync1;
-end
-assign trig_ext_syncd = trig_ext_sync2;
-
-
-IBUFDS #() i_IBUF_clk
-(
-  .I  ( adc_clk_i[1]  ),
-  .IB ( adc_clk_i[0]  ),
-  .O  ( adc_clk_in    )
-);
-
-//assign trig_ext = gpio.i[8];
-
-`endif*/
 endmodule

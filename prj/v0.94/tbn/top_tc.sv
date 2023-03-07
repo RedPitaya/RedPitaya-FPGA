@@ -55,6 +55,21 @@ task test_hk (
 endtask: test_hk
 
 
+task daisy_trigs (
+
+);
+  int unsigned dat;
+  // test registers
+   $display("setting up daisy triggering") ;
+  axi_write(32'h40000000+'h1000, 32'h1); // reset IDELAY
+  ##100;
+  axi_write(32'h40500000+'h0, 32'h1); // reset IDELAY
+  ##100;
+  axi_write(32'h40500000+'h0, 32'h3); // reset IDELAY
+  ##100;
+  axi_write(32'h40500000+'h4, 32'h1); // reset IDELAY
+
+endtask: daisy_trigs
 
 ////////////////////////////////////////////////////////////////////////////////
 // Testing osciloscope
@@ -88,11 +103,13 @@ task test_osc(
 8 - arbitrary wave generator application positive edge
 9 - arbitrary wave generator application negative edge 
 */
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+ //axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  //axi_write(offset+'h0 ,  'h3  );  // ARM trigger
+
   axi_write(offset+'h4 ,  'd0  );  // manual trigger
   axi_write(offset+'h8 ,  'd100);  // chA threshold
   axi_write(offset+'hC ,  'd200);  // chB threshold
-  axi_write(offset+'h10,  'h1000);  // delay after trigger
+  axi_write(offset+'h10,  'h10);  // delay after trigger
   axi_write(offset+'h14,  'h1);  // decimation
   axi_read_osc1(offset+'h18,  dat);  // current WP
   axi_read_osc1(offset+'h1C,  dat);  // trigger WP
@@ -100,15 +117,35 @@ task test_osc(
   axi_write(offset+'h24,  'd0);  // chB hysteresis
   axi_write(offset+'h28,  'd1);  // enable signal average at decimation
   axi_write(offset+'h2C,  'd0);  // chA hysteresis
-  axi_write(offset+'h50,  'h0);  // chA AXI low address
-  axi_write(offset+'h54,  'h10000);  // chA AXI hi address
+  //axi_write(offset+'h50,  'h0);  // chA AXI low address
+  //axi_write(offset+'h54,  'h10000);  // chA AXI hi address
 
   axi_read_osc1(offset+'h60,  dat);  // chA AXI WP trigger
   axi_read_osc1(offset+'h64,  dat);  // chA AXI WP current
-  axi_write(offset+'h70,  'h0);  // chB AXI low address
-  axi_write(offset+'h74,  'h0);  // chB AXI hi address
-  axi_write(offset+'h78,  'h0);  // chB AXI trig dly
-  axi_write(offset+'h7C,  'h0);  // chB AXI enable master
+
+  axi_write(offset+'h50,  'h1000000);  // chA AXI low address
+  axi_write(offset+'h54,  'h1000010);  // chA AXI hi address
+  axi_write(offset+'h58,  'h2010);  // chA AXI trig dly
+  axi_write(offset+'h5C,  'h1);  // chA AXI enable master
+
+
+  axi_write(offset+'h30,  32'h7D93);  // filter
+  axi_write(offset+'h34,  32'h437C7);  // filter
+  axi_write(offset+'h38,  32'hD9999A);  // filter
+  axi_write(offset+'h3C,  32'h2666);  // filter
+  
+
+  axi_write(offset+'h40,  32'h7D93);  // filter
+  axi_write(offset+'h44,  32'h437C7);  // filter
+  axi_write(offset+'h48,  32'hD9999A);  // filter
+  axi_write(offset+'h4C,  32'h2666);  // filter
+  
+  axi_write(offset+'h70,  'h10C000);  // chB AXI low address
+  axi_write(offset+'h74,  'h10C100);  // chB AXI hi address
+  axi_write(offset+'h78,  'h100);  // chB AXI trig dly
+  axi_write(offset+'h7C,  'h1);  // chB AXI enable master
+    axi_write(offset+'h0 ,  'h2  );  // ARM trigger
+
   axi_read_osc1(offset+'h80,  dat);  // chB AXI WP trigger
   axi_read_osc1(offset+'h84,  dat);  // chB AXI WP current
   axi_write(offset+'h90,  'h64);  // trig debounce
@@ -116,113 +153,49 @@ task test_osc(
   axi_write(offset+'hA4,  'h64);  // Accumulator data offset corection ChA
   axi_write(offset+'hA8,  'h64);  // Accumulator data offset corection ChA
   
-  axi_write(offset+'h0 ,  'd2  );  // ARM trigger
-  axi_write(offset+'h5C,  'h1);  // chA AXI enable master
-  axi_write(offset+'h58,  'h1000);  // chA AXI trig dly
+  axi_read_osc1(offset+'h0,  dat);  // chA AXI WP trigger
+  axi_read_osc1(offset+'h4,  dat);  // chA AXI WP current 
+  
+  //axi_write(offset+'h5C,  'h1);  // chA AXI enable master
+  //axi_write(offset+'h58,  'h1000);  // chA AXI trig dly
   
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+  ##1000;
   axi_write(offset+'h4 ,  'd1  );  // manual trigger
-  #100;
+  ##100;
+  axi_write(offset+'h0 ,  'd0  );  // ARM trigger
+
+ // axi_write(offset+'h0 ,  'd0  );  // ARM trigger
+
+  axi_read_osc1(offset+'h0,  dat);  // chA AXI WP trigger
+  axi_read_osc1(offset+'h4,  dat);  // chA AXI WP trigger
+  axi_read_osc1(offset+'h18,  dat);  // chA AXI WP trigger
+  axi_read_osc1(offset+'ha0,  dat);  // chA AXI WP trigger
+
+
+##10000;
+
+  axi_write(offset+'h0 ,  'd1  );  // ARM
+  ##1000;
+  axi_write(offset+'h4 ,  'd1  );  // manual trigger
+
+##10000;
+
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
+  ##1200;
+  axi_write(offset+'h4 ,  'd1  );  // manual trigger
+
+##10000;
+
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
+  ##800;
+  axi_write(offset+'h4 ,  'd1  );  // manual trigger
+  
+##10000;
+
   axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  #100;
-  ##5000;
-  axi_write(offset+'h14,  'd1);  // decimation
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  ##5000;
-  axi_write(offset+'h14,  'd1);  // decimation
-  axi_write(offset+'h28,  'd0);  // enable signal average at decimation
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // manual trigger
-  ##5000;
-  axi_write(offset+'h14,  'h4);  // decimation
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 ,  'd4  );  // pos chA trigger
+  ##1000;
+  axi_write(offset+'h4 ,  'd1  );  // manual trigger
 ##10000;
 endtask: test_osc
 

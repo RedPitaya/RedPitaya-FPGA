@@ -42,6 +42,7 @@ file mkdir $path_sdk
 ################################################################################
 
 set_param board.repoPaths [list $path_brd]
+set_param iconstr.diffPairPulltype {opposite}
 
 ################################################################################
 # setup an in memory project

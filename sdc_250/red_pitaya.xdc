@@ -259,7 +259,13 @@ set_false_path -from [get_clocks pll_adc_clk]   -to [get_clocks pll_adc_clk2d]
 
 set_false_path -from [get_clocks pll_adc_clk2d] -to [get_clocks pll_pwm_clk]
 set_false_path -from [get_clocks pll_adc_10mhz] -to [get_clocks pll_adc_clk2d]
+set_false_path -from [get_clocks pll_adc_clk2d] -to [get_clocks pll_adc_10mhz]
 
+set_false_path -from [get_clocks pll_adc_clk2d] -to [get_clocks par_clk]
+set_false_path -from [get_clocks pll_adc_10mhz] -to [get_clocks pll_ref_i]
+
+set_false_path -from [get_clocks par_clk]   -to [get_clocks pll_adc_clk2d]
+set_false_path -from [get_clocks pll_ref_i] -to [get_clocks pll_adc_10mhz]
 
 set_input_delay -clock [get_clocks adc_clk] -clock_fall -min -add_delay -1.000 [get_ports {adc_dat_n_i[0][*]}]
 set_input_delay -clock [get_clocks adc_clk] -clock_fall -max -add_delay -0.400 [get_ports {adc_dat_n_i[0][*]}]
