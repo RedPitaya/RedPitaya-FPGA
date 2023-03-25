@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 set project_name freq
 
 =======
@@ -15,7 +14,6 @@ set project_name freq
 
 
 #set project_name 4_averager
->>>>>>> dev-250-12
 set part_name xc7z010clg400-1
 set bd_path tmp/$project_name/$project_name.srcs/sources_1/bd/system
 
