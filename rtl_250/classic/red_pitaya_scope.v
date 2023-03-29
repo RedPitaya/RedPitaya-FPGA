@@ -442,7 +442,7 @@ wire            axi_a_clr          ;
 wire [ 32-1: 0] axi_a_cur_addr     ;
 wire [  5-1: 0] axi_a_state        ;
 
-assign axi_a_clr = adc_rst_do ;
+assign axi_a_clr = adc_rst_do || (sys_wen && (sys_addr[19:0]==20'h5C) && sys_wdata[0]) ; // when AXI A is enabled
 assign axi_a_state = {axi_a_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_a_we};
 
 
@@ -589,7 +589,7 @@ wire            axi_b_clr          ;
 wire [ 32-1: 0] axi_b_cur_addr     ;
 wire [  5-1: 0] axi_b_state        ;
 
-assign axi_b_clr = adc_rst_do ;
+assign axi_b_clr = adc_rst_do || (sys_wen && (sys_addr[19:0]==20'h7C) && sys_wdata[0]) ; // when AXI B is enabled
 assign axi_b_state = {axi_b_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_b_we};
 
 always @(posedge adc_clk_i) begin
