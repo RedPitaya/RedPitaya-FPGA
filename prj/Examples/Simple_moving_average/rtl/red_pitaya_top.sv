@@ -8,9 +8,9 @@
 /**
  * GENERAL DESCRIPTION:
  *
- * Top module connects PS part with rest of Red Pitaya applications.  
+ * Top module connects PS part with rest of Red Pitaya applications.
  *
- *                   /-------\      
+ *                   /-------\
  *   PS DDR <------> |  PS   |      AXI <-> custom bus
  *   PS MIO <------> |   /   | <------------+
  *   PS CLK -------> |  ARM  |              |
@@ -27,14 +27,14 @@
  *            \--------/   ^   \-----/      |
  *                         |                |
  *                         |  /-------\     |
- *                         -- |  ASG  | <---+ 
+ *                         -- |  ASG  | <---+
  *                            \-------/     |
  *                                          |
  *             /--------\                   |
  *    RX ----> |        |                   |
  *   SATA      | DAISY  | <-----------------+
- *    TX <---- |        | 
- *             \--------/ 
+ *    TX <---- |        |
+ *             \--------/
  *               |    |
  *               |    |
  *               (FREE)
@@ -288,13 +288,10 @@ sys_bus_interconnect #(
 
 // silence unused busses
 generate
-<<<<<<< HEAD
-for (genvar i=7; i<8; i++) begin: for_sys
-    sys_bus_stub sys_bus_stub_5_7 (sys[i]);
-=======
+
 for (genvar i=6; i<8; i++) begin: for_sys
   sys_bus_stub sys_bus_stub_5_7 (sys[i]);
->>>>>>> dev-250-12
+
 end: for_sys
 endgenerate
 
@@ -356,7 +353,7 @@ begin
   adc_dat_raw[0] <= adc_dat_i[0][16-1:2];
   adc_dat_raw[1] <= adc_dat_i[1][16-1:2];
 end
-    
+
 // transform into 2's complement (negative slope)
 assign adc_dat[0] = digital_loop ? dac_a : {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
 assign adc_dat[1] = digital_loop ? dac_b : {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
@@ -365,7 +362,7 @@ assign adc_dat[1] = digital_loop ? dac_b : {adc_dat_raw[1][14-1], ~adc_dat_raw[1
 // DAC IO
 ////////////////////////////////////////////////////////////////////////////////
 
-// Sumation of ASG and PID signal perform saturation before sending to DAC 
+// Sumation of ASG and PID signal perform saturation before sending to DAC
 assign dac_a_sum = asg_dat[0] + pid_dat[0];
 assign dac_b_sum = asg_dat[1] + pid_dat[1];
 
@@ -439,33 +436,8 @@ assign gpio.i[23:16] = exp_n_in;
 ////////////////////////////////////////////////////////////////////////////////
 
 logic trig_asg_out;
-<<<<<<< HEAD
-logic  [14-1: 0] adc_i;
-logic  [14-1: 0] adc_o;
-
-// Simple Moving Average
-red_pitaya_proc i_proc (
-    .clk_i    (  adc_clk     ),  // clock
-    .rstn_i   (  adc_rstn    ),  // reset - active low
-    .addr_i   (  sys[6].addr ),  // address
-    .wdata_i  (  sys[6].wdata),  // write data
-    .wen_i    (  sys[6].wen  ),  // write enable
-    .ren_i    (  sys[6].ren  ),  // read enable
-    .rdata_o  (  sys[6].rdata),  // read data
-    .err_o    (  sys[6].err  ),  // error indicator
-    .ack_o    (  sys[6].ack  ),  // acknowledge signal
-    .adc_i    (  adc_i       ),
-    .adc_o    (  adc_o       )
-);
-
-loop_scope i_scope (
-  // Simple Moving Average
-  .adc_in        (adc_o       ),
-  .adc_out       (adc_i       ),
-=======
 
 red_pitaya_scope i_scope (
->>>>>>> dev-250-12
   // ADC
   .adc_a_i       (adc_dat[0]  ),  // CH 1
   .adc_b_i       (adc_dat[1]  ),  // CH 2
