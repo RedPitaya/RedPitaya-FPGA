@@ -293,7 +293,7 @@ begin
    end
 end
 
-assign stat_cur_addr_o = next_address ; // current address
+assign stat_cur_addr_o = (ctrl_wrap_i && (axi_waddr_o==sys_stop_addr_r)) ? sys_start_addr_r : next_address ; // current address
 
 
 
