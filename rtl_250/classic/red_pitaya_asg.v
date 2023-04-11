@@ -106,6 +106,7 @@ reg   [  32-1: 0] buf_a_rpnt_rd, buf_b_rpnt_rd;
 reg               trig_a_sw    , trig_b_sw    ;
 reg   [   3-1: 0] trig_a_src   , trig_b_src   ;
 wire              trig_a_done  , trig_b_done  ;
+reg   [  14-1: 0] set_a_first  , set_b_first  ;
 reg   [  14-1: 0] set_a_last   , set_b_last   ;
 reg   [  32-1: 0] set_a_step_lo, set_b_step_lo;
 reg   [  20-1: 0] set_deb_len  ;
@@ -138,7 +139,8 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) ch [1:0] (
   .set_wrap_i      ({ set_b_wrap                  ,  set_a_wrap                   }),  // set wrap pointer
   .set_amp_i       ({ set_b_amp                   ,  set_a_amp                    }),  // set amplitude scale
   .set_dc_i        ({ set_b_dc                    ,  set_a_dc                     }),  // set output offset
-  .set_last_i      ({set_b_last                   , set_a_last                    }),  // set last value
+  .set_first_i     ({ set_b_first                 ,  set_a_first                  }),  // set initial value before start
+  .set_last_i      ({ set_b_last                  ,  set_a_last                   }),  // set last value
   .set_zero_i      ({(set_b_zero || set_b_talm)   , (set_a_zero || set_a_talm)    }),  // set output to zero
   .set_ncyc_i      ({ set_b_ncyc                  ,  set_a_ncyc                   }),  // set number of cycle
   .set_rnum_i      ({ set_b_rnum                  ,  set_a_rnum                   }),  // set number of repetitions
@@ -200,6 +202,8 @@ if (sys_rstn == 1'b0) begin
    set_b_rgate <=  1'b0    ;
    set_b_tpen  <=  1'b0    ;
    set_b_talm  <=  1'b0    ;
+   set_a_first <= 14'h0    ;
+   set_b_first <= 14'h0    ;
    set_a_last  <= 14'h0    ;
    set_b_last  <= 14'h0    ;
    set_a_step_lo <=  32'b0    ;
@@ -251,6 +255,9 @@ end else begin
       if (sys_addr[19:0]==20'h50)  set_b_step_lo <= sys_wdata[  32-1: 0] ;
 
       if (sys_addr[19:0]==20'h54)  set_deb_len   <= sys_wdata[  20-1: 0] ;
+
+      if (sys_addr[19:0]==20'h68)  set_a_first   <= sys_wdata[  14-1: 0] ;
+      if (sys_addr[19:0]==20'h6C)  set_b_first   <= sys_wdata[  14-1: 0] ;
    end
 
    if (sys_ren) begin
@@ -304,6 +311,8 @@ end else begin
      20'h00060 : begin sys_ack <= sys_en;          sys_rdata <= buf_a_rpnt_rd                      ; end
      20'h00064 : begin sys_ack <= sys_en;          sys_rdata <= buf_b_rpnt_rd                      ; end
 
+     20'h00068 : begin sys_ack <= sys_en;          sys_rdata <= {{32-14{1'b0}},set_a_first}        ; end
+     20'h0006C : begin sys_ack <= sys_en;          sys_rdata <= {{32-14{1'b0}},set_b_first}        ; end
 
      20'h1zzzz : begin sys_ack <= ack_dly;         sys_rdata <= {{32-14{1'b0}},buf_a_rdata}        ; end
      20'h2zzzz : begin sys_ack <= ack_dly;         sys_rdata <= {{32-14{1'b0}},buf_b_rdata}        ; end

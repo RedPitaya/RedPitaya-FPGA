@@ -62,6 +62,7 @@ module red_pitaya_asg_ch #(
    input                 set_wrap_i      ,  //!< set wrap enable
    input     [  14-1: 0] set_amp_i       ,  //!< set amplitude scale
    input     [  14-1: 0] set_dc_i        ,  //!< set output offset
+   input     [  14-1: 0] set_first_i     ,  //!< set initial value before start
    input     [  14-1: 0] set_last_i      ,  //!< set final value in burst
    input                 set_zero_i      ,  //!< set output to zero
    input     [  16-1: 0] set_ncyc_i      ,  //!< set number of cycle
@@ -106,7 +107,7 @@ begin
    buf_rpnt_o <= dac_pnt[PNT_SIZE-1:16+32];
    dac_rp     <= dac_pnt[PNT_SIZE-1:16+32];
    dac_rd     <= dac_buf[dac_rp] ;
-   dac_rdat   <= dac_rd ;  // improve timing
+   dac_rdat   <= dac_do ? dac_rd : set_first_i;  // improve timing
 end
 
 always @(posedge dac_clk_i) // shift regs are needed because of processing path delay
