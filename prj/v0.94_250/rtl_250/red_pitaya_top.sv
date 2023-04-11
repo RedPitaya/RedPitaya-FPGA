@@ -397,7 +397,7 @@ red_pitaya_ams i_ams (
 
 red_pitaya_pdm pdm (
   // system signals
-  .clk   (adc_clk ),
+  .clk   (adc_clk2d ),
   .rstn  (adc_rstn),
   // configuration
   .cfg   (pdm_cfg),
