@@ -470,7 +470,6 @@ always @(posedge adc_clk_i) begin
       axi_a_dly_do  <=  1'b0 ;
       axi_a_dly_end <=  1'b0      ;
       axi_a_dly_end_reg <= 1'b0   ;
-      axi_a_fifo_o       <= 128'h0;
       axi_a_md           <= 64'h0;
    end
    else begin
@@ -642,7 +641,6 @@ always @(posedge adc_clk_i) begin
       axi_b_dly_do  <=  1'b0 ;
       axi_b_dly_end <=  1'b0      ;
       axi_b_dly_end_reg <= 1'b0   ;
-      axi_b_fifo_o       <= 128'h0;
       axi_b_md           <= 64'h0;
    end
    else begin
