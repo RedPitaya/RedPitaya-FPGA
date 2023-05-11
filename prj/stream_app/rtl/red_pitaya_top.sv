@@ -162,14 +162,14 @@ always @(posedge clk_125) begin
   adc_dat_ch1_r <= adc_dat_i[0][16-1:2];
   adc_dat_ch2_r <= adc_dat_i[1][16-1:2];
   if (loopback_sel_ch1[1])
-    adc_dat_ch1 <= dac_dat_a[16-1:2];
+    adc_dat_ch1 <= {dac_dat_a[16-1],     ~dac_dat_a[16-2:2]};
   else
-    adc_dat_ch1 <= adc_dat_ch1_r;
+    adc_dat_ch1 <= {adc_dat_ch1_r[14-1], ~adc_dat_ch1_r[14-2:0]};
 
   if (loopback_sel_ch2[1])
-    adc_dat_ch2 <= dac_dat_b[16-1:2];
+    adc_dat_ch2 <= {dac_dat_b[16-1],     ~dac_dat_b[16-2:2]};
   else
-    adc_dat_ch2 <= adc_dat_ch2_r;
+    adc_dat_ch2 <= {adc_dat_ch2_r[14-1], ~adc_dat_ch2_r[14-2:0]};
 end
 
 reg [10-1:0] daisy_cnt      =  'h0;
@@ -228,30 +228,30 @@ assign adc_cdcs_o = 1'b1 ;
         .FCLK_RESET1_N     (frstn[1]     ),
         .FCLK_RESET2_N     (frstn[2]     ),
         .FCLK_RESET3_N     (frstn[3]     ),
-        .trig_in(external_trig),
-        .gpio_trig(gpio_trig),
-        .trig_out(trig_out),
-        .clksel(clksel),
-        .daisy_slave(daisy_slave),
-        .adc_clk(adc_clk_in),
-        .clk_out(clk_125),
-        .rstn_out(rstn_0),
-        .dac_dat_a(dac_dat_a),
-        .dac_dat_b(dac_dat_b),
-        .gpio_p(exp_p_io),
-        .gpio_n(exp_n_io),
-        .loopback_sel({loopback_sel_ch2,loopback_sel_ch1}),
-        .adc_data_ch1(adc_dat_ch1),
-        .adc_data_ch2(adc_dat_ch2));
+        .trig_in           (external_trig),
+        .gpio_trig         (gpio_trig),
+        .trig_out          (trig_out),
+        .clksel            (clksel),
+        .daisy_slave       (daisy_slave),
+        .adc_clk           (adc_clk_in),
+        .clk_out           (clk_125),
+        .rstn_out          (rstn_0),
+        .dac_dat_a         (dac_dat_a),
+        .dac_dat_b         (dac_dat_b),
+        .gpio_p            (exp_p_io),
+        .gpio_n            (exp_n_io),
+        .loopback_sel      ({loopback_sel_ch2,loopback_sel_ch1}),
+        .adc_data_ch1      (adc_dat_ch1),
+        .adc_data_ch2      (adc_dat_ch2));
 
-OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_trig
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_trig
 (
   .O  ( daisy_p_o[0]  ),
   .OB ( daisy_n_o[0]  ),
   .I  ( trig_out      )
 );
 
-OBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_clk
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
@@ -265,14 +265,14 @@ IBUFDS #() i_IBUF_clkadc
   .O  ( adc_clk_in    )
 );
 
-IBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I")) i_IBUF_clkdaisy
+IBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18")) i_IBUF_clkdaisy
 (
   .I  ( daisy_p_i[1]  ),
   .IB ( daisy_n_i[1]  ),
   .O  ( adc_clk_daisy )
 );
 
-IBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I")) i_IBUFDS_trig
+IBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18")) i_IBUFDS_trig
 (
   .I  ( daisy_p_i[0]  ),
   .IB ( daisy_n_i[0]  ),

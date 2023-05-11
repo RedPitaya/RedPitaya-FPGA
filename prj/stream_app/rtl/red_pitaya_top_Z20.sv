@@ -161,14 +161,14 @@ always @(posedge clk_125) begin
   adc_dat_ch1_r <= adc_dat_i[0];
   adc_dat_ch2_r <= adc_dat_i[1];
   if (loopback_sel_ch1[1])
-    adc_dat_ch1 <= dac_dat_a;
+    adc_dat_ch1 <= {dac_dat_a[16-1],     ~dac_dat_a[16-2:2]};
   else
-    adc_dat_ch1 <= adc_dat_ch1_r;
+    adc_dat_ch1 <= {adc_dat_ch1_r[16-1], ~adc_dat_ch1_r[16-2:0]};
 
   if (loopback_sel_ch2[1])
-    adc_dat_ch2 <= dac_dat_b;
+    adc_dat_ch2 <= {dac_dat_b[16-1],     ~dac_dat_b[16-2:2]};
   else
-    adc_dat_ch2 <= adc_dat_ch2_r;
+    adc_dat_ch2 <= {adc_dat_ch2_r[16-1], ~adc_dat_ch2_r[16-2:0]};
 end
 
 reg [10-1:0] daisy_cnt      =  'h0;

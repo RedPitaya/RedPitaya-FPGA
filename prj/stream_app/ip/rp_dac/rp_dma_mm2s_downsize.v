@@ -23,15 +23,17 @@ localparam NUM_SAMPS      = AXI_DATA_BITS/16;  // how many samples in one read f
 localparam NUM_SAMPS_BITS = $clog2(NUM_SAMPS); // how many bits is the above number
 localparam ADDR_DECS      = AXI_ADDR_BITS+16;  // to be able to get a finer pointer step
 
-assign fifo_rd_re = (first_full & ~fifo_empty_r && (dac_rp_next_next[NUM_SAMPS_BITS+1+16] ^ dac_rp_next[NUM_SAMPS_BITS+1+16]));
 reg  [ADDR_DECS-1:0]      dac_rp_curr;
-wire [ADDR_DECS-1:0]      dac_rp_next      = dac_rp_curr+{15'h0, dac_pntr_step, 1'b0}; //shifted by 1 so that step 1 is a read of 1 address.
-wire [ADDR_DECS-1:0]      dac_rp_next_next = dac_rp_next+{15'h0, dac_pntr_step, 1'b0}; //shifted by 1 so that step 1 is a read of 1 address.
+(* use_dsp="yes" *) wire [ADDR_DECS-1:0]      dac_rp_next      = dac_rp_curr+{15'h0, dac_pntr_step, 1'b0}; //shifted by 1 so that step 1 is a read of 1 address.
+//wire [ADDR_DECS-1:0]      dac_rp_next_next = dac_rp_next+{15'h0, dac_pntr_step, 1'b0}; //shifted by 1 so that step 1 is a read of 1 address.
+(* use_dsp="yes" *) wire [ADDR_DECS-1:0]      dac_rp_next_next = dac_rp_curr+{14'h0, dac_pntr_step, 2'h0}; //shifted by 1 so that step 1 is a read of 1 address.
 
 reg [AXIS_DATA_BITS-1:0] samp_buf [0:NUM_SAMPS-1]; 
 reg fifo_empty_r;
 reg first_full;
 reg  [AXIS_DATA_BITS-1:0]  m_axis_tdata_r;
+
+assign fifo_rd_re = (first_full & ~fifo_empty_r && (dac_rp_next_next[NUM_SAMPS_BITS+1+16] ^ dac_rp_next[NUM_SAMPS_BITS+1+16]));
 ////////////////////////////////////////////////////////////
 // Name : First full
 // must wait to fill up the FIFO before starting to read

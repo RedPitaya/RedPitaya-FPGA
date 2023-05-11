@@ -10,16 +10,18 @@ module rp_dma_mm2s
 )(    
   input  wire                           m_axi_aclk,
   input  wire                           s_axis_aclk,   
-  input  wire                           aresetn,      
+  input  wire                           axi_rstn,      
+  input  wire                           adc_rstn,      
+
   //
   output wire                           busy,
   output wire                           intr,
   output wire                           mode,  
   //
-  output      [31:0]                    reg_ctrl,
+  //output      [31:0]                    reg_ctrl,
   input  wire                           ctrl_val, 
   output      [31:0]                    reg_sts,
-  input  wire                           sts_val, 
+  //input  wire                           sts_val, 
 
   input [AXI_ADDR_BITS-1:0]             dac_step,
   input [AXI_ADDR_BITS-1:0]             dac_buf_size,
@@ -67,31 +69,38 @@ localparam FIFO_MAX      = (1<<FIFO_CNT_BITS)-2-256;
 ////////////////////////////////////////////////////////////
 
 wire                      fifo_rst;
-wire [AXI_DATA_BITS-1:0]  fifo_wr_data; 
-wire                      fifo_wr_we;
+//wire [AXI_DATA_BITS-1:0]  fifo_wr_data; 
+//wire                      fifo_wr_we;
+reg  [AXI_DATA_BITS-1:0]  fifo_wr_data; 
+reg                       fifo_wr_we;
+
 wire [AXI_DATA_BITS-1:0]  fifo_rd_data;
 wire                      fifo_rd_re;
 wire                      fifo_empty;
 wire                      fifo_full;
 wire [FIFO_CNT_BITS-1:0]  fifo_wr_cnt; 
 wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt; 
-wire                      fifo_almost_full = fifo_wr_cnt > FIFO_MAX;
+wire                      fifo_almost_full    = fifo_wr_cnt > FIFO_MAX;
+wire                      fifo_almost_full_rd = fifo_rd_cnt > FIFO_MAX;
 
 // DMA control reg
-localparam CTRL_STRT            = 0;
-localparam CTRL_RESET           = 1;
-localparam CTRL_MODE_NORM       = 4;
-localparam CTRL_MODE_STREAM     = 5;
+// localparam CTRL_STRT            = 0;
+// localparam CTRL_RESET           = 1;
+// localparam CTRL_MODE_NORM       = 4;
+// localparam CTRL_MODE_STREAM     = 5;
 
-wire                      ctrl_start = dac_ctrl_reg[CTRL_STRT];
-wire                      ctrl_reset = dac_ctrl_reg[CTRL_RESET];
-wire                      ctrl_norm  = dac_ctrl_reg[CTRL_MODE_NORM];
-wire                      ctrl_strm  = dac_ctrl_reg[CTRL_MODE_STREAM];
+// wire                      ctrl_start = dac_ctrl_reg[CTRL_STRT];
+// wire                      ctrl_reset = dac_ctrl_reg[CTRL_RESET];
+// wire                      ctrl_norm  = dac_ctrl_reg[CTRL_MODE_NORM];
+// wire                      ctrl_strm  = dac_ctrl_reg[CTRL_MODE_STREAM];
 
-assign fifo_wr_data = m_axi_rdata_i;                    // write data into the FIFO from AXI
-//assign fifo_wr_data = {4{1'b0,m_axi_araddr_o[14:0]}};                    // write data into the FIFO from AXI
+//assign fifo_wr_data = m_axi_rdata_i;                    // write data into the FIFO from AXI
+//assign fifo_wr_we   = m_axi_rvalid_i && m_axi_rready_o; // when valid data is on the bus
 
-assign fifo_wr_we   = m_axi_rvalid_i && m_axi_rready_o; // when valid data is on the bus
+always @(posedge m_axi_aclk) begin
+fifo_wr_data <= m_axi_rdata_i;                    // write data into the FIFO from AXI
+fifo_wr_we   <= m_axi_rvalid_i && m_axi_rready_o; // when valid data is on the bus
+end
 
 assign m_axi_arlock_o  = 2'b00; 
 assign m_axi_arsize_o  = $clog2(AXI_DATA_BITS/8); // how many bytes per beat  
@@ -118,20 +127,20 @@ rp_dma_mm2s_ctrl #(
   U_dma_mm2s_ctrl(
   .m_axi_aclk     (m_axi_aclk),         
   .s_axis_aclk    (s_axis_aclk),       
-  .m_axi_aresetn  (aresetn),     
+  .m_axi_aresetn  (axi_rstn),     
   .busy           (busy),
   .intr           (intr),      
   .mode           (mode),    
-  .reg_ctrl       (reg_ctrl),
+  //.reg_ctrl       (reg_ctrl),
   .ctrl_val       (ctrl_val),
   .reg_sts        (reg_sts),
-  .sts_val        (sts_val),  
-  .ctrl_reset     (ctrl_reset),
-  .ctrl_start     (ctrl_start),
-  .ctrl_norm      (ctrl_norm),
-  .ctrl_strm      (ctrl_norm),
-  .data_valid     (dac_rvalid_o),
-  .dac_pntr_step    (dac_step),
+  //.sts_val        (sts_val),  
+  //.ctrl_reset     (ctrl_reset),
+  //.ctrl_start     (ctrl_start),
+  //.ctrl_norm      (ctrl_norm),
+  //.ctrl_strm      (ctrl_norm),
+  .data_valid       (dac_rvalid_o),
+ // .dac_pntr_step    (dac_step),
   .dac_rp           (dac_rp),
   .dac_buf_size     (dac_buf_size),
   .dac_buf1_adr     (dac_buf1_adr),
@@ -161,9 +170,9 @@ rp_dma_mm2s_downsize #(
   .AXI_BURST_LEN  (AXI_BURST_LEN))
   U_dma_mm2s_downsize(
   .clk            (s_axis_aclk),              
-  .rst            (aresetn ),        
+  .rst            (adc_rstn ),        
   .fifo_empty     (fifo_empty),
-  .fifo_full      (fifo_full | fifo_almost_full),
+  .fifo_full      (fifo_full | fifo_almost_full_rd),
   .fifo_rd_data   (fifo_rd_data),          
   .fifo_rd_re     (fifo_rd_re),     
   .dac_pntr_step  (dac_step),
@@ -181,7 +190,7 @@ fifo_axi_data_dac
   U_fifo_axi_data(
   .wr_clk         (m_axi_aclk),               
   .rd_clk         (s_axis_aclk),               
-  .rst            (~aresetn),     
+  .rst            (~axi_rstn),     
   .din            (fifo_wr_data),                                 
   .wr_en          (fifo_wr_we),            
   .full           (fifo_full),   

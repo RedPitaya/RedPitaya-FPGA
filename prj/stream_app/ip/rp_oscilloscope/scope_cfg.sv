@@ -12,6 +12,7 @@ module scope_cfg
 #(
     parameter M_AXI_ADDR_BITS   = 32, // DMA Address bits
     parameter M_AXI_DATA_BITS   = 64, // DMA data bits
+    parameter ID_WIDTHS         = 4,
     parameter S_AXIS_DATA_BITS  = 16, // ADC data bits
     parameter REG_ADDR_BITS     = 32, // Register interface address bits
     parameter DEC_CNT_BITS      = 17, // Decimator counter bits
@@ -33,6 +34,7 @@ module scope_cfg
    input  wire [3:0]                             s_axi_reg_wstrb,
    input  wire                                   s_axi_reg_wvalid,
    output wire                                   s_axi_reg_wready,
+   input  wire                                   s_axi_reg_wlast,
    output wire [1:0]                             s_axi_reg_bresp,
    output wire                                   s_axi_reg_bvalid,
    input  wire                                   s_axi_reg_bready,
@@ -44,11 +46,12 @@ module scope_cfg
    output wire [1:0]                             s_axi_reg_rresp,
    output wire                                   s_axi_reg_rvalid,
    input  wire                                   s_axi_reg_rready,
-   input  wire [3:0]                             s_axi_reg_awid,     
-   input  wire [3:0]                             s_axi_reg_arid,     
-   input  wire [3:0]                             s_axi_reg_wid,     
-   output wire [3:0]                             s_axi_reg_rid,     
-   output wire [3:0]                             s_axi_reg_bid,     
+   output wire                                   s_axi_reg_rlast,
+   input  wire [ID_WIDTHS-1:0]                   s_axi_reg_awid,
+   input  wire [ID_WIDTHS-1:0]                   s_axi_reg_arid,
+   input  wire [ID_WIDTHS-1:0]                   s_axi_reg_wid,
+   output wire [ID_WIDTHS-1:0]                   s_axi_reg_rid,
+   output wire [ID_WIDTHS-1:0]                   s_axi_reg_bid,   
 
    // signals
    input                               clk_axi_i               ,
@@ -78,42 +81,15 @@ module scope_cfg
    output wire                         cfg_avg_en_o            ,
    output wire [              32-1:0]  cfg_loopback_o          ,
    output wire                         cfg_8bit_dat_o          ,
-   output wire [              16-1:0]  cfg_calib_offset_ch1_o  ,
-   output wire [              16-1:0]  cfg_calib_offset_ch2_o  ,
-   output wire [              16-1:0]  cfg_calib_gain_ch1_o    ,
-   output wire [              16-1:0]  cfg_calib_gain_ch2_o    ,
    output reg                          clksel_o                ,
    input  wire                         daisy_slave_i           ,
 
    output wire                         cfg_filt_bypass_o       ,
-   output wire [              18-1:0]  cfg_filt_coeff_aa_ch1_o ,
-   output wire [              25-1:0]  cfg_filt_coeff_bb_ch1_o ,
-   output wire [              25-1:0]  cfg_filt_coeff_kk_ch1_o ,
-   output wire [              25-1:0]  cfg_filt_coeff_pp_ch1_o ,
-   output wire [              18-1:0]  cfg_filt_coeff_aa_ch2_o ,
-   output wire [              25-1:0]  cfg_filt_coeff_bb_ch2_o ,
-   output wire [              25-1:0]  cfg_filt_coeff_kk_ch2_o ,
-   output wire [              25-1:0]  cfg_filt_coeff_pp_ch2_o ,
-
-   output wire [              32-1:0]  cfg_dma_dst_addr1_ch1_o ,
-   output wire [              32-1:0]  cfg_dma_dst_addr2_ch1_o ,
-   output wire [              32-1:0]  cfg_dma_dst_addr1_ch2_o ,
-   output wire [              32-1:0]  cfg_dma_dst_addr2_ch2_o ,
    output wire [              32-1:0]  cfg_dma_buf_size_o      ,
    output wire [              32-1:0]  cfg_dma_ctrl_o          ,
    output wire                         cfg_dma_ctrl_we_o       ,
    input  wire [              32-1:0]  cfg_dma_sts_i           ,
 
-
-   input  wire [              32-1:0]  buf1_ms_cnt_ch1_i       ,
-   input  wire [              32-1:0]  buf2_ms_cnt_ch1_i       ,
-   input  wire [              32-1:0]  buf1_ms_cnt_ch2_i       ,
-   input  wire [              32-1:0]  buf2_ms_cnt_ch2_i       ,
-
-   input  wire [              32-1:0]  curr_wp_ch1_i           ,
-   input  wire [              32-1:0]  curr_wp_ch2_i           ,
-
-/*
    output wire [            4*16-1:0]  cfg_calib_offset_o  ,
    output wire [            4*16-1:0]  cfg_calib_gain_o    ,
 
@@ -130,7 +106,6 @@ module scope_cfg
 
    input  wire [            4*32-1:0]  curr_wp_i           ,
 
-*/
    input  wire [              32-1:0]  diag1_i                 ,
    input  wire [              32-1:0]  diag2_i                 ,
    input  wire [              32-1:0]  diag3_i                 ,
@@ -253,32 +228,13 @@ reg  [DEC_SHIFT_BITS-1:0]   cfg_dec_rshift;
 reg  [            32-1:0]   cfg_loopback;
 
 reg                         cfg_filt_bypass;  
-reg signed [18-1:0]         cfg_filt_coeff_aa_ch1; 
-reg signed [25-1:0]         cfg_filt_coeff_bb_ch1; 
-reg signed [25-1:0]         cfg_filt_coeff_kk_ch1; 
-reg signed [25-1:0]         cfg_filt_coeff_pp_ch1; 
-reg signed [18-1:0]         cfg_filt_coeff_aa_ch2; 
-reg signed [25-1:0]         cfg_filt_coeff_bb_ch2; 
-reg signed [25-1:0]         cfg_filt_coeff_kk_ch2; 
-reg signed [25-1:0]         cfg_filt_coeff_pp_ch2; 
 
-
-reg  [32-1:0]               cfg_dma_dst_addr1_ch1;
-reg  [32-1:0]               cfg_dma_dst_addr2_ch1;
-reg  [32-1:0]               cfg_dma_dst_addr1_ch2;
-reg  [32-1:0]               cfg_dma_dst_addr2_ch2;
 reg  [32-1:0]               cfg_dma_buf_size;
 reg                         cfg_8bit_dat;
 reg  [32-1:0]               cfg_dma_ctrl;
 reg                         cfg_dma_ctrl_we;
 reg                         cfg_clksel;
 
-reg  [16-1:0]               cfg_calib_offset_ch1;
-reg  [16-1:0]               cfg_calib_gain_ch1;
-reg  [16-1:0]               cfg_calib_offset_ch2;
-reg  [16-1:0]               cfg_calib_gain_ch2;
-
-/*
 reg  [4*32-1:0]               cfg_dma_dst_addr1;
 reg  [4*32-1:0]               cfg_dma_dst_addr2;
 
@@ -289,7 +245,7 @@ reg signed [4*18-1:0]         cfg_filt_coeff_aa;
 reg signed [4*25-1:0]         cfg_filt_coeff_bb; 
 reg signed [4*25-1:0]         cfg_filt_coeff_kk; 
 reg signed [4*25-1:0]         cfg_filt_coeff_pp; 
-*/
+
 reg  [ 4-1: 0]              event_op_reg;
 
 wire axi_clk_regs;
@@ -346,14 +302,13 @@ assign axi_clk_regs =  (bus.addr[12-1:0] == DMA_CTRL_ADDR          ||
                         bus.addr[12-1:0] == CURR_WP_CH4              );
 
 sys_bus_if bus (.clk (s_axi_reg_aclk), .rstn (s_axi_reg_aresetn));
-axi4_if #(.DW (32), .AW (REG_ADDR_BITS), .IW (4), .LW (4)) axi_gp (.ACLK (s_axi_reg_aclk), .ARESETn (s_axi_reg_aresetn));
+axi4_if #(.DW (32), .AW (REG_ADDR_BITS), .IW (ID_WIDTHS), .LW (4)) axi_gp (.ACLK (s_axi_reg_aclk), .ARESETn (s_axi_reg_aresetn));
 
 wire [ 4-1:0] s_axi_reg_awlen   = 4'h0;    // single word burst
 wire [ 3-1:0] s_axi_reg_awsize  = 3'b010;  // 4 bytes
 wire [ 3-1:0] s_axi_reg_awburst = 3'b00;   // fixed
 wire [ 2-1:0] s_axi_reg_awlock  = 2'h00;   // normal
 wire [ 4-1:0] s_axi_reg_awcache = 4'b0011; // non-cacheable
-wire          s_axi_reg_wlast   = 1'b0;    // not last
 wire [ 4-1:0] s_axi_reg_arlen   = 4'h0;    // single word burst
 wire [ 3-1:0] s_axi_reg_arsize  = 3'b010;  // 4 bytes
 wire [ 3-1:0] s_axi_reg_arburst = 3'b00;   // fixed
@@ -374,7 +329,6 @@ assign axi_gp.WDATA   = s_axi_reg_wdata    ;
 assign axi_gp.WSTRB   = s_axi_reg_wstrb    ;
 assign axi_gp.WLAST   = s_axi_reg_wlast    ;
 assign axi_gp.WVALID  = s_axi_reg_wvalid   ;
-assign axi_gp.BID     = s_axi_reg_bid      ;
 assign axi_gp.BREADY  = s_axi_reg_bready   ;
 assign axi_gp.ARID    = s_axi_reg_arid     ;
 assign axi_gp.ARADDR  = s_axi_reg_araddr   ;
@@ -385,7 +339,6 @@ assign axi_gp.ARLOCK  = s_axi_reg_arlock   ;
 assign axi_gp.ARCACHE = s_axi_reg_arcache  ;
 assign axi_gp.ARPROT  = s_axi_reg_arprot   ;
 assign axi_gp.ARVALID = s_axi_reg_arvalid  ;
-assign axi_gp.RID     = s_axi_reg_rid      ;
 assign axi_gp.RREADY  = s_axi_reg_rready   ;
 
 assign s_axi_reg_awready = axi_gp.AWREADY  ;
@@ -403,7 +356,7 @@ assign s_axi_reg_rid     = axi_gp.RID;
 axi4_slave #(
   .DW (32),
   .AW (REG_ADDR_BITS),
-  .IW (4)
+  .IW (ID_WIDTHS)
 ) axi_slave (
   // AXI bus
   .axi       (axi_gp),
@@ -436,27 +389,14 @@ begin
       cfg_loopback            <= 32'h0;
       cfg_filt_bypass         <=  1'b1;
       cfg_8bit_dat            <=  1'b0;
-      cfg_filt_coeff_aa_ch1   <= 18'h0;
-      cfg_filt_coeff_bb_ch1   <= 25'h0;
-      cfg_filt_coeff_kk_ch1   <= 25'hffffff;
-      cfg_filt_coeff_pp_ch1   <= 25'h0;
-      cfg_filt_coeff_aa_ch2   <= 18'h0;
-      cfg_filt_coeff_bb_ch2   <= 25'h0;
-      cfg_filt_coeff_kk_ch2   <= 25'hffffff;
-      cfg_filt_coeff_pp_ch2   <= 25'h0;
-      cfg_calib_offset_ch1    <= 16'h0;
-      cfg_calib_offset_ch2    <= 16'h0;
-      cfg_calib_gain_ch1      <= 16'h8000;
-      cfg_calib_gain_ch2      <= 16'h8000;
-/*
+
       cfg_filt_coeff_aa       <= {4{18'h0}};
       cfg_filt_coeff_bb       <= {4{25'h0}};
       cfg_filt_coeff_kk       <= {4{25'hffffff}};
       cfg_filt_coeff_pp       <= {4{25'h0}};
 
       cfg_calib_offset        <= {4{16'h0}};
-      cfg_calib_gain          <= {4{16'h8000}}
-*/
+      cfg_calib_gain          <= {4{16'h8000}};
    end else begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==EVENT_STS_ADDR)        )  event_op_reg            <= reg_wdat_adc[3:0]; else event_op_reg <= 4'h0;
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==EVENT_SEL_ADDR)        )  cfg_event_sel           <= reg_wdat_adc[3-1:0];
@@ -471,20 +411,8 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==AVG_EN_ADDR)           )  cfg_avg_en              <= reg_wdat_adc[0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==LOOPBACK_ADDR)         )  cfg_loopback            <= reg_wdat_adc[32-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==SHIFT_8BIT)            )  cfg_8bit_dat            <= reg_wdat_adc[0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH1) )  cfg_calib_offset_ch1    <= reg_wdat_adc[16-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_GAIN_ADDR_CH1)   )  cfg_calib_gain_ch1      <= reg_wdat_adc[16-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH2) )  cfg_calib_offset_ch2    <= reg_wdat_adc[16-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_GAIN_ADDR_CH2)   )  cfg_calib_gain_ch2      <= reg_wdat_adc[16-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_BYPASS_ADDR)      )  cfg_filt_bypass         <= reg_wdat_adc[0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_AA_CH1)     )  cfg_filt_coeff_aa_ch1   <= reg_wdat_adc[18-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_BB_CH1)     )  cfg_filt_coeff_bb_ch1   <= reg_wdat_adc[25-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_KK_CH1)     )  cfg_filt_coeff_kk_ch1   <= reg_wdat_adc[25-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH1)     )  cfg_filt_coeff_pp_ch1   <= reg_wdat_adc[25-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_AA_CH2)     )  cfg_filt_coeff_aa_ch2   <= reg_wdat_adc[18-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_BB_CH2)     )  cfg_filt_coeff_bb_ch2   <= reg_wdat_adc[25-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_KK_CH2)     )  cfg_filt_coeff_kk_ch2   <= reg_wdat_adc[25-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH2)     )  cfg_filt_coeff_pp_ch2   <= reg_wdat_adc[25-1:0];
-/*
+
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH1) )  cfg_calib_offset[1*16-1:0*16]  <= reg_wdat_adc[16-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH2) )  cfg_calib_offset[2*16-1:1*16]  <= reg_wdat_adc[16-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH3) )  cfg_calib_offset[3*16-1:2*16]  <= reg_wdat_adc[16-1:0];
@@ -514,7 +442,7 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH2)     )  cfg_filt_coeff_pp[2*25-1:1*25] <= reg_wdat_adc[25-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH3)     )  cfg_filt_coeff_pp[3*25-1:2*25] <= reg_wdat_adc[25-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH4)     )  cfg_filt_coeff_pp[4*25-1:3*25] <= reg_wdat_adc[25-1:0];
-*/
+
    end
 end
 
@@ -531,25 +459,14 @@ begin
       TRIG_POST_SAMP_ADDR    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-TRIG_CNT_BITS{1'b0}}    , cfg_trig_post_samp};      end
       TRIG_PRE_CNT_ADDR      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {sts_trig_pre_overflow_i   , sts_trig_pre_cnt_i[30:0]};  end
       TRIG_POST_CNT_ADDR     : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {sts_trig_post_overflow_i  , sts_trig_post_cnt_i[30:0]}; end
-      CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset_ch1};    end
-      CALIB_GAIN_ADDR_CH1    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_gain_ch1};      end
-      CALIB_OFFSET_ADDR_CH2  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset_ch2};    end
-      CALIB_GAIN_ADDR_CH2    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_gain_ch2};      end
       FILT_BYPASS_ADDR       : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}               , cfg_filt_bypass};         end
-      FILT_COEFF_AA_CH1      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-18{1'b0}}               , cfg_filt_coeff_aa_ch1};   end
-      FILT_COEFF_BB_CH1      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_bb_ch1};   end
-      FILT_COEFF_KK_CH1      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_kk_ch1};   end
-      FILT_COEFF_PP_CH1      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_pp_ch1};   end
-      FILT_COEFF_AA_CH2      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-18{1'b0}}               , cfg_filt_coeff_aa_ch2};   end
-      FILT_COEFF_BB_CH2      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_bb_ch2};   end
-      FILT_COEFF_KK_CH2      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_kk_ch2};   end
-      FILT_COEFF_PP_CH2      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_pp_ch2};   end
+
       DIAG_REG1              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag1_i;                  end
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end
       DIAG_REG3              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag4_i;                  end
       STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
-/*
+
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
       CALIB_OFFSET_ADDR_CH2  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[2*16-1:1*16]};    end
       CALIB_OFFSET_ADDR_CH3  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[3*16-1:2*16]};    end
@@ -579,7 +496,7 @@ begin
       FILT_COEFF_PP_CH2      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_pp[2*25-1:1*25]};   end
       FILT_COEFF_PP_CH3      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_pp[3*25-1:2*25]};   end
       FILT_COEFF_PP_CH4      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}               , cfg_filt_coeff_pp[4*25-1:3*25]};   end
-*/
+
       default : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {32{1'b0}} ; end
    endcase
 end
@@ -593,24 +510,14 @@ always @(posedge clk_axi_i)
 begin
    if (adc_rstn_i == 1'b0) begin
       cfg_dma_ctrl            <= 32'h0;
-      cfg_dma_dst_addr1_ch1   <= 32'h0;
-      cfg_dma_dst_addr2_ch1   <= 32'h0;
-      cfg_dma_dst_addr1_ch2   <= 32'h0;
-      cfg_dma_dst_addr2_ch2   <= 32'h0;
       cfg_dma_buf_size        <= 32'h0;
-/*
       cfg_dma_dst_addr1       <= {4{32'h0}};
       cfg_dma_dst_addr2       <= {4{32'h0}};
-*/
+
    end else begin
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_CTRL_ADDR    ))  cfg_dma_ctrl            <= reg_wdat_axi;
-      if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH1))  cfg_dma_dst_addr1_ch1   <= reg_wdat_axi[32-1:0];
-      if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR2_CH1))  cfg_dma_dst_addr2_ch1   <= reg_wdat_axi[32-1:0];
-      if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH2))  cfg_dma_dst_addr1_ch2   <= reg_wdat_axi[32-1:0];
-      if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR2_CH2))  cfg_dma_dst_addr2_ch2   <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_BUF_SIZE_ADDR))  cfg_dma_buf_size        <= reg_wdat_axi[32-1:0];
 
-/*
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH1))  cfg_dma_dst_addr1[1*32-1:0*32] <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH2))  cfg_dma_dst_addr1[2*32-1:1*32] <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH3))  cfg_dma_dst_addr1[3*32-1:2*32] <= reg_wdat_axi[32-1:0];
@@ -620,7 +527,7 @@ begin
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR2_CH2))  cfg_dma_dst_addr2[2*32-1:1*32] <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR2_CH3))  cfg_dma_dst_addr2[3*32-1:2*32] <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR2_CH4))  cfg_dma_dst_addr2[4*32-1:3*32] <= reg_wdat_axi[32-1:0];
-*/
+
    end
 end
 
@@ -632,19 +539,8 @@ begin
    casez(reg_ofs_axi[12-1:0])
       DMA_CTRL_ADDR          : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_ctrl;                end
       DMA_STS_ADDR           : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_sts_i;               end
-      DMA_DST_ADDR1_CH1      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1_ch1;       end
-      DMA_DST_ADDR2_CH1      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr2_ch1;       end
-      DMA_DST_ADDR1_CH2      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1_ch2;       end
-      DMA_DST_ADDR2_CH2      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr2_ch2;       end
       DMA_BUF_SIZE_ADDR      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_buf_size;            end
-      BUF1_LOST_SAMP_CNT_CH1 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_ms_cnt_ch1_i;           end
-      BUF2_LOST_SAMP_CNT_CH1 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_ms_cnt_ch1_i;           end
-      BUF1_LOST_SAMP_CNT_CH2 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_ms_cnt_ch2_i;           end
-      BUF2_LOST_SAMP_CNT_CH2 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_ms_cnt_ch2_i;           end
-      CURR_WP_CH1            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_ch1_i;               end
-      CURR_WP_CH2            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_ch2_i;               end
 
-/*
       DMA_DST_ADDR1_CH1      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1[1*32-1:0*32]; end
       DMA_DST_ADDR1_CH2      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1[2*32-1:1*32]; end
       DMA_DST_ADDR1_CH3      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1[3*32-1:2*32]; end
@@ -669,7 +565,7 @@ begin
       CURR_WP_CH2            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[2*32-1:1*32];      end
       CURR_WP_CH3            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[3*32-1:2*32];      end
       CURR_WP_CH4            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[4*32-1:3*32];      end
-*/
+
       default : begin  reg_ack_axi = 1'b1;       reg_rdat_axi = {32{1'b0}} ; end
    endcase
 end
@@ -691,31 +587,14 @@ assign cfg_dec_rshift_o        = cfg_dec_rshift;
 assign cfg_avg_en_o            = cfg_avg_en;
 assign cfg_loopback_o          = cfg_loopback;
 assign cfg_8bit_dat_o          = cfg_8bit_dat;
-assign cfg_calib_offset_ch1_o  = cfg_calib_offset_ch1;
-assign cfg_calib_offset_ch2_o  = cfg_calib_offset_ch2;
-assign cfg_calib_gain_ch1_o    = cfg_calib_gain_ch1;
-assign cfg_calib_gain_ch2_o    = cfg_calib_gain_ch2;
 assign cfg_dma_ctrl_o          = cfg_dma_ctrl;
 assign cfg_dma_ctrl_we_o       = cfg_dma_ctrl_we;
 
 
 assign cfg_filt_bypass_o       = cfg_filt_bypass;
-assign cfg_filt_coeff_aa_ch1_o = cfg_filt_coeff_aa_ch1;
-assign cfg_filt_coeff_bb_ch1_o = cfg_filt_coeff_bb_ch1;
-assign cfg_filt_coeff_kk_ch1_o = cfg_filt_coeff_kk_ch1;
-assign cfg_filt_coeff_pp_ch1_o = cfg_filt_coeff_pp_ch1;
-assign cfg_filt_coeff_aa_ch2_o = cfg_filt_coeff_aa_ch2;
-assign cfg_filt_coeff_bb_ch2_o = cfg_filt_coeff_bb_ch2;
-assign cfg_filt_coeff_kk_ch2_o = cfg_filt_coeff_kk_ch2;
-assign cfg_filt_coeff_pp_ch2_o = cfg_filt_coeff_pp_ch2;
-
-assign cfg_dma_dst_addr1_ch1_o = cfg_dma_dst_addr1_ch1;
-assign cfg_dma_dst_addr2_ch1_o = cfg_dma_dst_addr2_ch1;
-assign cfg_dma_dst_addr1_ch2_o = cfg_dma_dst_addr1_ch2;
-assign cfg_dma_dst_addr2_ch2_o = cfg_dma_dst_addr2_ch2;
 assign cfg_dma_buf_size_o      = cfg_dma_buf_size;
 
-/*
+
 assign cfg_filt_coeff_aa_o     = cfg_filt_coeff_aa;
 assign cfg_filt_coeff_bb_o     = cfg_filt_coeff_bb;
 assign cfg_filt_coeff_kk_o     = cfg_filt_coeff_kk;
@@ -726,7 +605,7 @@ assign cfg_dma_dst_addr2_o     = cfg_dma_dst_addr2;
 
 assign cfg_calib_offset_o      = cfg_calib_offset;
 assign cfg_calib_gain_o        = cfg_calib_gain;
-*/
+
 //--------------------------------------------------------------------------------------
 wire    reg_write_synced_adc ;
 wire    reg_read_synced_adc  ;

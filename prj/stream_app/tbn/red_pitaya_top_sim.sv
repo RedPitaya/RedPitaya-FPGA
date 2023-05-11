@@ -448,6 +448,33 @@ ODDR oddr_dac_rst          (.Q(dac_rst_o), .D1(dac_rst  ), .D2(dac_rst  ), .C(da
 ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b_o), .D2(dac_dat_a_o), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
 localparam DWE = 11;
 
+reg [10-1:0] daisy_cnt = 'h0;
+reg          daisy_slave;
+reg          daisy_slave_r = 1'b0;
+reg          daisy_slave_r2;
+
+always @(posedge adc_clk_daisy) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
+  if (~rstn_out) begin
+    daisy_cnt     <= 'h0;
+    daisy_slave_r <= 1'b0;
+  end else begin 
+    daisy_cnt <= daisy_cnt + 'h1;
+    if (&daisy_cnt)
+      daisy_slave_r <= 1'b1;
+  end
+end
+
+always @(posedge clkout_125) begin
+  if (~rstn_out) begin
+    daisy_slave_r2 <= 1'b0;
+    daisy_slave    <= 1'b0;  
+  end else begin
+    daisy_slave_r2 <= daisy_slave_r;
+    daisy_slave    <= daisy_slave_r2;
+  end
+end
+
+
 ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
 ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_daisy), .CE(1'b1), .R(1'b0), .S(1'b0));
 ////////////////////////////////////////////////////////////////////////////////
@@ -490,7 +517,7 @@ wire gpio_trig;
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
         
-/*        
+`ifdef DAC
         .M_AXI_OSC_araddr(M_AXI_OSC_araddr),
         .M_AXI_OSC_arburst(M_AXI_OSC_arburst),
         .M_AXI_OSC_arcache(M_AXI_OSC_arcache),
@@ -502,9 +529,14 @@ wire gpio_trig;
         .M_AXI_OSC_arready(M_AXI_OSC_arready),
         .M_AXI_OSC_arsize(M_AXI_OSC_arsize),
         .M_AXI_OSC_arvalid(M_AXI_OSC_arvalid),
-  */      
-        
 
+        .M_AXI_OSC_rdata(M_AXI_OSC_rdata),
+        .M_AXI_OSC_rid(M_AXI_OSC_rid),
+        .M_AXI_OSC_rlast(M_AXI_OSC_rlast),
+        .M_AXI_OSC_rready(M_AXI_OSC_rready),
+        .M_AXI_OSC_rresp(M_AXI_OSC_rresp),
+        .M_AXI_OSC_rvalid(M_AXI_OSC_rvalid),
+`else
         .M_AXI_OSC_awaddr(M_AXI_OSC_awaddr),
         .M_AXI_OSC_awburst(M_AXI_OSC_awburst),
         .M_AXI_OSC_awcache(M_AXI_OSC_awcache),
@@ -521,22 +553,13 @@ wire gpio_trig;
         .M_AXI_OSC_bresp(M_AXI_OSC_bresp),
         .M_AXI_OSC_bvalid(M_AXI_OSC_bvalid),
 
-/*
-        .M_AXI_OSC_rdata(M_AXI_OSC_rdata),
-        .M_AXI_OSC_rid(M_AXI_OSC_rid),
-        .M_AXI_OSC_rlast(M_AXI_OSC_rlast),
-        .M_AXI_OSC_rready(M_AXI_OSC_rready),
-        .M_AXI_OSC_rresp(M_AXI_OSC_rresp),
-        .M_AXI_OSC_rvalid(M_AXI_OSC_rvalid),
-  */      
-
         .M_AXI_OSC_wdata(M_AXI_OSC_wdata),
         .M_AXI_OSC_wid(M_AXI_OSC_wid),
         .M_AXI_OSC_wlast(M_AXI_OSC_wlast),
         .M_AXI_OSC_wready(M_AXI_OSC_wready),
         .M_AXI_OSC_wstrb(M_AXI_OSC_wstrb),
         .M_AXI_OSC_wvalid(M_AXI_OSC_wvalid),
-
+`endif
         .S_AXI_REG_araddr(S_AXI_REG_araddr),
         .S_AXI_REG_arburst(S_AXI_REG_arburst),
         .S_AXI_REG_arcache(S_AXI_REG_arcache),
@@ -592,6 +615,7 @@ wire gpio_trig;
         //.rstn_50(rstn_50),
         .rstn_200(rstn_200),
         .rst_in(rst_in),
+        .daisy_slave(daisy_slave),
         .adc_clk(adc_clk_in),
         .dac_dat_a(dac_dat_a),
         .dac_dat_b(dac_dat_b),

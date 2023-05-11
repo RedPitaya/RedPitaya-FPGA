@@ -1164,6 +1164,7 @@ proc create_root_design { parentCell } {
    CONFIG.EVENT_SRC_NUM {5} \
    CONFIG.TRIG_SRC_NUM {6} \
    CONFIG.S_AXI_REG_ADDR_BITS {16} \
+   CONFIG.NUM_CHANNELS {2} \
  ] $rp_oscilloscope
 
   # Create instance: rst_gen, and set properties

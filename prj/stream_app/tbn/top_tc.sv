@@ -24,6 +24,7 @@ localparam CTRL_BUF1_RDY        = 6;
 localparam CTRL_BUF2_RDY        = 7;
 
 logic [12-1:0] id_test;
+logic [32-1:0] test;
 
 task test_hk (
   int unsigned offset,
@@ -276,7 +277,10 @@ endtask: test_gpio
 task buf_ack(
   int unsigned offset
 );
-  int unsigned dat;
+  logic [32-1:0] dat;
+  ##20;
+
+assign test = dat;
   //axi_read(offset+'d80, dat);
   ##10;
 
@@ -285,17 +289,18 @@ task buf_ack(
 
   do begin
     axi_read(offset+'h2C, dat);
+      $display("read out %x",dat[END_STATE_BUF1]);
     ##5;
   end while (dat[END_STATE_BUF1] != 1'b1); // BUF 1 is full
   ##1000;
-  axi_write(offset+'d28, 1 << CTRL_BUF2_RDY);  // BUF1 ACK
+  axi_write(offset+'h28, 1 << CTRL_BUF2_RDY);  // BUF1 ACK
 
   do begin
     axi_read(offset+'h2C, dat);
     ##5;
   end while (dat[END_STATE_BUF2] != 1'b1); // BUF 1 is full
   ##1000;
-  axi_write(offset+'d28, 1 << CTRL_BUF1_RDY);  // BUF1 ACK
+  axi_write(offset+'h28, 1 << CTRL_BUF1_RDY);  // BUF1 ACK
 
 endtask: buf_ack
 

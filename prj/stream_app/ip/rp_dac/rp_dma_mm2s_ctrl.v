@@ -18,25 +18,25 @@ module rp_dma_mm2s_ctrl
   output reg  [31:0]                reg_ctrl,
   input  wire                       ctrl_val, 
   output reg  [31:0]                reg_sts,
-  input  wire                       sts_val, 
+  //input  wire                       sts_val, 
 
-  input  wire                       ctrl_reset,
-  input  wire                       ctrl_start, 
-  input  wire                       ctrl_norm, 
-  input  wire                       ctrl_strm, 
+  // input  wire                       ctrl_reset,
+  // input  wire                       ctrl_start, 
+  // input  wire                       ctrl_norm, 
+  // input  wire                       ctrl_strm, 
 
   input  wire                       data_valid, 
   output reg                        fifo_rst,
   input  wire                       fifo_full,
   input  wire                       fifo_re,
 
-  input  [AXI_ADDR_BITS-1:0]        dac_pntr_step,
+//  input  [AXI_ADDR_BITS-1:0]        dac_pntr_step,
   input  [AXI_ADDR_BITS-1:0]        dac_buf_size,
   input  [AXI_ADDR_BITS-1:0]        dac_buf1_adr,
   input  [AXI_ADDR_BITS-1:0]        dac_buf2_adr,
-  output [AXI_ADDR_BITS-1:0]        dac_rp,
-  output [           32-1:0]        diag_reg,
-  output [           32-1:0]        diag_reg2,
+  output     [AXI_ADDR_BITS-1:0]    dac_rp,
+  output reg [       32-1:0]        diag_reg,
+  output reg [       32-1:0]        diag_reg2,
 
   input                             dac_trig,
   input  [            8-1:0]        dac_ctrl_reg,
@@ -115,16 +115,25 @@ reg [32-1:0] diag_reg_2;
 reg  [AXI_ADDR_BITS-1:0] dac_rp_curr;
 wire [AXI_ADDR_BITS-1:0] req_addr = dac_rp_curr;
 
-wire [AXI_ADDR_BITS-1:0] dac_rp_next   = dac_rp_curr + AXI_BURST_BYTES;
-wire                     buf_ovr_limit = req_addr + AXI_BURST_BYTES >= (req_buf_addr+dac_buf_size); 
+//wire [AXI_ADDR_BITS-1:0] dac_rp_next = dac_rp_curr + AXI_BURST_BYTES;
+reg  [AXI_ADDR_BITS-1:0] dac_rp_next;
+
+reg [AXI_ADDR_BITS-1:0] buf_final;
+
+//wire                     buf_ovr_limit = req_addr + AXI_BURST_BYTES >= (req_buf_addr+dac_buf_size); 
+//wire                     buf_ovr_limit = dac_rp_next >= buf_final; 
+reg                     buf_ovr_limit; 
 
 assign m_axi_dac_araddr_o = req_addr;
 assign dac_rp             = req_addr;
 assign m_axi_dac_rready_o = m_axi_rready;
 
-assign diag_reg  = diag_reg_1;
-assign diag_reg2 = diag_reg_2;
-
+always @(posedge m_axi_aclk)
+begin
+  buf_final   <= req_buf_addr+dac_buf_size-AXI_DATA_BITS/8;
+  dac_rp_next <= dac_rp_curr + AXI_BURST_BYTES;
+  buf_ovr_limit <= dac_rp_next >= buf_final; 
+end
 //--------------------------------------------------------------------------------------------------------------------------------
 // wait for the buffer to be read out if full
 reg fifo_re_r, fifo_re_r2, fifo_re_r3;
@@ -228,10 +237,10 @@ always @(posedge m_axi_aclk)
 begin
   req_buf_addr_sel_p1 <= req_buf_addr_sel;
 
-    diag_reg_1 <= {{m_axi_dac_arready_i,m_axi_dac_rvalid_i,m_axi_dac_rlast_i,m_axi_dac_arvalid_o},{1'b0,transf_end,dat_ctrl_req_we,m_axi_rready},{1'b0,dat_ctrl_req_we,req_buf_addr_sel,next_buf_nfull},{1'b0,fifo_full,fifo_full_reg,fifo_wait_full},state_cs};
+    diag_reg <= {{m_axi_dac_arready_i,m_axi_dac_rvalid_i,m_axi_dac_rlast_i,m_axi_dac_arvalid_o},{1'b0,transf_end,dat_ctrl_req_we,m_axi_rready},{1'b0,dat_ctrl_req_we,req_buf_addr_sel,next_buf_nfull},{1'b0,fifo_full,fifo_full_reg,fifo_wait_full},state_cs};
 
  if (m_axi_dac_arready_i)
-    diag_reg_2 <= {{m_axi_dac_arready_i,m_axi_dac_rvalid_i,m_axi_dac_rlast_i,m_axi_dac_arvalid_o},{1'b0,transf_end,dat_ctrl_req_we,m_axi_rready},{1'b0,dat_ctrl_req_we,req_buf_addr_sel,next_buf_nfull},{1'b0,fifo_full,fifo_full_reg,fifo_wait_full},state_cs};
+    diag_reg2 <= {{m_axi_dac_arready_i,m_axi_dac_rvalid_i,m_axi_dac_rlast_i,m_axi_dac_arvalid_o},{1'b0,transf_end,dat_ctrl_req_we,m_axi_rready},{1'b0,dat_ctrl_req_we,req_buf_addr_sel,next_buf_nfull},{1'b0,fifo_full,fifo_full_reg,fifo_wait_full},state_cs};
 
 end
 

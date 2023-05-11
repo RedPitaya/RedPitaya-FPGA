@@ -12,20 +12,20 @@ module dac_top
     parameter TRIG_SRC_NUM      = 1,  // Number of trigger sources
     parameter CH_NUM            = 0
 )( // which channel
-  input wire                              clk,
-  input wire                              rst_n,
-  input wire                              axi_clk,
+  input wire                              clk_axi,
+  input wire                              clk_adc,
   input wire                              axi_rstn,
+  input wire                              adc_rstn,
   //
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_trig,
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_stop,
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_start,
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_reset,
   //
-  output reg                              event_op_trig,
-  output reg                              event_op_stop,
-  output reg                              event_op_start,
-  output reg                              event_op_reset,
+  // output reg                              event_op_trig,
+  // output reg                              event_op_stop,
+  // output reg                              event_op_start,
+  // output reg                              event_op_reset,
 
   input  wire [TRIG_SRC_NUM-1:0]          event_sel,
   input  wire                             event_val, 
@@ -33,10 +33,10 @@ module dac_top
   input  wire [TRIG_SRC_NUM-1:0]          trig_ip,
   output wire                             trig_op,
 
-  output      [31:0]                    reg_ctrl,
+  //output      [31:0]                    reg_ctrl,
   input  wire                           ctrl_val, 
   output      [31:0]                    reg_sts,
-  input  wire                           sts_val, 
+  //input  wire                           sts_val, 
 
   input  [16-1:0]                       dac_conf,
 
@@ -113,13 +113,20 @@ wire [DAC_DATA_BITS-1:0]    dac_calibrated;
 
 wire set_zero = dac_conf[OUT_ZERO];
 
-assign dac_data_o = loopback_en ? dac_data_raw : dac_calibrated;
+assign dac_data_o      = loopback_en ? dac_data_raw : dac_calibrated;
 assign dac_data_shiftr = dac_data_raw >>> dac_outshift;
 ////////////////////////////////////////////////////////////
 // Name : DMA S2MM
 // 
 ////////////////////////////////////////////////////////////
-  
+  /*
+reg rstn_cal, rstn_smm;
+always @(posedge clk_adc) // resolve high fanout timing issues
+begin
+  rstn_cal <= adc_rstn;
+  rstn_smm <= adc_rstn;
+end
+*/
 rp_dma_mm2s #(
   .AXI_ADDR_BITS  (M_AXI_DAC_ADDR_BITS),
   .AXI_DATA_BITS  (M_AXI_DAC_DATA_BITS),
@@ -127,17 +134,18 @@ rp_dma_mm2s #(
   .AXI_BURST_LEN  (AXI_BURST_LEN),
   .CH_NUM         (CH_NUM))
   U_dma_mm2s(
-  .m_axi_aclk     (axi_clk),        
-  .s_axis_aclk    (clk),      
-  .aresetn        (rst_n),  
+  .m_axi_aclk     (clk_axi),        
+  .s_axis_aclk    (clk_adc),      
+  .axi_rstn       (axi_rstn),  
+  .adc_rstn       (adc_rstn),  
   .busy           (),
-  .intr           (dma_intr),     
+  //.intr           (dma_intr),     
   .mode           (dma_mode),  
 
-  .reg_ctrl       (reg_ctrl),
+  //.reg_ctrl       (reg_ctrl),
   .ctrl_val       (ctrl_val),
   .reg_sts        (reg_sts),
-  .sts_val        (sts_val),  
+  //.sts_val        (sts_val),  
 
   .dac_step         (dac_step),
   .dac_rp           (dac_rp),
@@ -174,8 +182,8 @@ rp_dma_mm2s #(
 dac_calib #(
   .AXIS_DATA_BITS (DAC_DATA_BITS))
   U_osc_calib(
-  .dac_clk_i      (clk),
-  .dac_rstn_i     (rst_n),
+  .dac_clk_i      (clk_adc),
+  .dac_rstn_i     (adc_rstn),
 
   .dac_o          (dac_calibrated),
   .dac_rdata_i    (dac_data_shiftr),
@@ -186,9 +194,9 @@ dac_calib #(
   .set_zero_i     (set_zero));
 
 
-always @(posedge clk)
+always @(posedge clk_adc)
 begin
-  if (rst_n == 0) begin
+  if (adc_rstn == 0) begin
     event_num_trig  <= 0;    
     event_num_start <= 0;   
     event_num_stop  <= 0;    
@@ -201,36 +209,21 @@ begin
   end  
 end
 
-assign ctl_rst = event_num_reset;
+reg event_trig_r, event_trig_r2;
+always @(posedge clk_axi)
+begin
+  event_trig_r  <= event_num_trig;
+  event_trig_r2 <= event_trig_r;
+end
+
+//assign ctl_rst = event_num_reset;
 assign event_sts_reset = 0;
 
-assign ctl_trg = event_num_trig | |(trig_ip & dac_trig);
+assign ctl_trg = event_trig_r2 | |(trig_ip & dac_trig);
 
 ////////////////////////////////////////////////////////////
 // Name : 
 // 
 ////////////////////////////////////////////////////////////
-
-always @(posedge clk)
-begin
-  if (rst_n == 0) begin
-    event_op_trig   <= 0;
-    event_op_stop   <= 0;
-    event_op_start  <= 0;
-    event_op_reset  <= 0;
-  end else begin
-    if (event_val) begin
-      event_op_trig   <= event_sel[3];
-      event_op_stop   <= event_sel[2];
-      event_op_start  <= event_sel[1];
-      event_op_reset  <= event_sel[0];    
-    end else begin
-      event_op_trig   <= 0;
-      event_op_stop   <= 0;
-      event_op_start  <= 0;
-      event_op_reset  <= 0;     
-    end
-  end
-end       
 
 endmodule

@@ -165,6 +165,62 @@
             <spirit:name>s_axi_reg_rdata</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>RLAST</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_rlast</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>WLAST</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_wlast</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>RID</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_rid</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>AWID</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_awid</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>ARID</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_arid</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>WID</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_wid</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>BID</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>s_axi_reg_bid</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
       </spirit:portMaps>
       <spirit:parameters>
         <spirit:parameter>
@@ -174,6 +230,10 @@
         <spirit:parameter>
           <spirit:name>NUM_WRITE_OUTSTANDING</spirit:name>
           <spirit:value spirit:id="BUSIFPARAM_VALUE.S_AXI_REG.NUM_WRITE_OUTSTANDING"/>
+        </spirit:parameter>
+        <spirit:parameter>
+          <spirit:name>PROTOCOL</spirit:name>
+          <spirit:value spirit:id="BUSIFPARAM_VALUE.S_AXI_REG.PROTOCOL">AXI3</spirit:value>
         </spirit:parameter>
       </spirit:parameters>
     </spirit:busInterface>
@@ -676,7 +736,7 @@
       <spirit:addressBlock>
         <spirit:name>reg0</spirit:name>
         <spirit:baseAddress spirit:format="bitString" spirit:resolve="user" spirit:bitStringLength="32">0</spirit:baseAddress>
-        <spirit:range spirit:format="long" spirit:resolve="dependent" spirit:dependency="pow(2,(spirit:decode(id(&apos;MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS&apos;)) - 1) + 1)" spirit:minimum="4096" spirit:rangeType="long">4096</spirit:range>
+        <spirit:range spirit:format="long" spirit:resolve="dependent" spirit:dependency="pow(2,(spirit:decode(id(&apos;MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS&apos;)) - 1) + 1)" spirit:minimum="4096" spirit:rangeType="long">1048576</spirit:range>
         <spirit:width spirit:format="long" spirit:resolve="user">32</spirit:width>
         <spirit:usage>register</spirit:usage>
       </spirit:addressBlock>
@@ -702,7 +762,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>e1a9f82c</spirit:value>
+            <spirit:value>5efa201a</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -724,7 +784,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>e1a9f82c</spirit:value>
+            <spirit:value>5efa201a</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -738,7 +798,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>08575dcb</spirit:value>
+            <spirit:value>592bb522</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -976,7 +1036,7 @@
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
           <spirit:vector>
-            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS&apos;)) - 1)">11</spirit:left>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS&apos;)) - 1)">19</spirit:left>
             <spirit:right spirit:format="long">0</spirit:right>
           </spirit:vector>
           <spirit:wireTypeDefs>
@@ -1139,7 +1199,7 @@
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
           <spirit:vector>
-            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS&apos;)) - 1)">11</spirit:left>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS&apos;)) - 1)">19</spirit:left>
             <spirit:right spirit:format="long">0</spirit:right>
           </spirit:vector>
           <spirit:wireTypeDefs>
@@ -1245,6 +1305,138 @@
         <spirit:name>s_axi_reg_rready</spirit:name>
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_rlast</spirit:name>
+        <spirit:wire>
+          <spirit:direction>out</spirit:direction>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_wlast</spirit:name>
+        <spirit:wire>
+          <spirit:direction>in</spirit:direction>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_awid</spirit:name>
+        <spirit:wire>
+          <spirit:direction>in</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.ID_WIDTHS&apos;))-1)">11</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_arid</spirit:name>
+        <spirit:wire>
+          <spirit:direction>in</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.ID_WIDTHS&apos;))-1)">11</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_wid</spirit:name>
+        <spirit:wire>
+          <spirit:direction>in</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.ID_WIDTHS&apos;))-1)">11</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_rid</spirit:name>
+        <spirit:wire>
+          <spirit:direction>out</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.ID_WIDTHS&apos;))-1)">11</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>s_axi_reg_bid</spirit:name>
+        <spirit:wire>
+          <spirit:direction>out</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.ID_WIDTHS&apos;))-1)">11</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
           <spirit:wireTypeDefs>
             <spirit:wireTypeDef>
               <spirit:typeName>wire</spirit:typeName>
@@ -1840,7 +2032,7 @@
       <spirit:modelParameter xsi:type="spirit:nameValueTypeType" spirit:dataType="integer">
         <spirit:name>S_AXI_REG_ADDR_BITS</spirit:name>
         <spirit:displayName>S Axi Reg Addr Bits</spirit:displayName>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS">12</spirit:value>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.S_AXI_REG_ADDR_BITS">20</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>M_AXI_GPIO_ADDR_BITS</spirit:name>
@@ -1866,6 +2058,11 @@
         <spirit:name>TRIG_SRC_NUM</spirit:name>
         <spirit:displayName>Trig Src Num</spirit:displayName>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.TRIG_SRC_NUM">6</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="integer">
+        <spirit:name>ID_WIDTHS</spirit:name>
+        <spirit:displayName>ID Width</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.ID_WIDTHS">12</spirit:value>
       </spirit:modelParameter>
     </spirit:modelParameters>
   </spirit:model>
@@ -2166,9 +2363,9 @@
     <spirit:fileSet>
       <spirit:name>xilinx_xpgui_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>rp_gpio_v1_0.tcl</spirit:name>
+        <spirit:name>xgui/rp_gpio_v1_0.tcl</spirit:name>
         <spirit:fileType>tclSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_08575dcb</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_592bb522</spirit:userFileType>
         <spirit:userFileType>XGUI_VERSION_2</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
@@ -2178,7 +2375,7 @@
     <spirit:parameter>
       <spirit:name>S_AXI_REG_ADDR_BITS</spirit:name>
       <spirit:displayName>S Axi Reg Addr Bits</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.S_AXI_REG_ADDR_BITS">12</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.S_AXI_REG_ADDR_BITS">20</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>EVENT_SRC_NUM</spirit:name>
@@ -2209,6 +2406,11 @@
       <spirit:displayName>Gpio Bits</spirit:displayName>
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.GPIO_BITS">8</spirit:value>
     </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>ID_WIDTHS</spirit:name>
+      <spirit:displayName>Id Widths</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.ID_WIDTHS">12</spirit:value>
+    </spirit:parameter>
   </spirit:parameters>
   <spirit:vendorExtensions>
     <xilinx:coreExtensions>
@@ -2224,8 +2426,8 @@
         <xilinx:xpmLibrary>XPM_CDC</xilinx:xpmLibrary>
         <xilinx:xpmLibrary>XPM_MEMORY</xilinx:xpmLibrary>
       </xilinx:xpmLibraries>
-      <xilinx:coreRevision>40</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2021-09-08T07:49:05Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>44</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2023-05-09T07:50:04Z</xilinx:coreCreationDateTime>
       <xilinx:tags>
         <xilinx:tag xilinx:name="xilinx.com:user:rp_gpio:1.0_ARCHIVE_LOCATION">d:/work/p0095_red_pitaya/vivado/rp_gpio/rp_gpio.srcs</xilinx:tag>
         <xilinx:tag xilinx:name="redpitaya.com:user:rp_gpio:1.0_ARCHIVE_LOCATION">d:/work/p0095_red_pitaya/vivado/rp_gpio/rp_gpio.srcs</xilinx:tag>
@@ -3013,17 +3215,51 @@
         <xilinx:tag xilinx:name="ui.data.coregen.dd@15ee0b97_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-public/fpga/prj/stream_app/ip/rp_gpio/rp_gpio.srcs</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@5d9a2536_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-public/fpga/prj/stream_app/ip/rp_gpio/rp_gpio.srcs</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@6765cc79_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-public/fpga/prj/stream_app/ip/rp_gpio/rp_gpio.srcs</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5ce1aee6_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5ec2700e_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@7848f711_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@6282fb1_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@15b62488_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@40c29650_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@664d0e90_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@706235d6_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@2f03cfae_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@620ca505_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@159514e7_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@a9ef2e4_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@d894230_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@1bf65855_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@119e15b7_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@11d5f78c_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@7d3470d6_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@190c72c4_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@75c39fa8_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@131fa38c_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3b620243_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@edf983_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@ffb4363_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@461308b5_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5e032556_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@2be2c0a9_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@27263229_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3446d49a_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@bdd7aaf_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@7a14f6f4_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@112d05ec_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5558c6d9_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@62db9220_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@349054af_ARCHIVE_LOCATION">/home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/ip/rp_gpio</xilinx:tag>
       </xilinx:tags>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2020.1</xilinx:xilinxVersion>
-      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="a1a29337"/>
+      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="5e2218d7"/>
       <xilinx:checksum xilinx:scope="addressSpaces" xilinx:value="f2d8ce3c"/>
-      <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="5406f93f"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="6ec902d3"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="8e3dfe1d"/>
-      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="785b0670"/>
-      <xilinx:checksum xilinx:scope="parameters" xilinx:value="3984094f"/>
+      <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="2a91597e"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="b3ec3d5d"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="c24e627f"/>
+      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="5f4df720"/>
+      <xilinx:checksum xilinx:scope="parameters" xilinx:value="9136c5c0"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>
 </spirit:component>

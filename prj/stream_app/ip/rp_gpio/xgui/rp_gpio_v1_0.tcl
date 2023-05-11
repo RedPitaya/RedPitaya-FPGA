@@ -32,6 +32,15 @@ proc validate_PARAM_VALUE.GPIO_BITS { PARAM_VALUE.GPIO_BITS } {
 	return true
 }
 
+proc update_PARAM_VALUE.ID_WIDTHS { PARAM_VALUE.ID_WIDTHS } {
+	# Procedure called to update ID_WIDTHS when any of the dependent parameters in the arguments change
+}
+
+proc validate_PARAM_VALUE.ID_WIDTHS { PARAM_VALUE.ID_WIDTHS } {
+	# Procedure called to validate ID_WIDTHS
+	return true
+}
+
 proc update_PARAM_VALUE.M_AXI_GPIO_ADDR_BITS { PARAM_VALUE.M_AXI_GPIO_ADDR_BITS } {
 	# Procedure called to update M_AXI_GPIO_ADDR_BITS when any of the dependent parameters in the arguments change
 }
@@ -97,5 +106,10 @@ proc update_MODELPARAM_VALUE.EVENT_SRC_NUM { MODELPARAM_VALUE.EVENT_SRC_NUM PARA
 proc update_MODELPARAM_VALUE.TRIG_SRC_NUM { MODELPARAM_VALUE.TRIG_SRC_NUM PARAM_VALUE.TRIG_SRC_NUM } {
 	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
 	set_property value [get_property value ${PARAM_VALUE.TRIG_SRC_NUM}] ${MODELPARAM_VALUE.TRIG_SRC_NUM}
+}
+
+proc update_MODELPARAM_VALUE.ID_WIDTHS { MODELPARAM_VALUE.ID_WIDTHS PARAM_VALUE.ID_WIDTHS } {
+	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
+	set_property value [get_property value ${PARAM_VALUE.ID_WIDTHS}] ${MODELPARAM_VALUE.ID_WIDTHS}
 }
 

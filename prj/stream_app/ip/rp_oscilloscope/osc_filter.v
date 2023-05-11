@@ -8,7 +8,7 @@ module osc_filter(
   input  wire         s_axis_tvalid,
   output wire         s_axis_tready,
   // Master AXI-
-  output wire [15:0]  m_axis_tdata,
+  output reg  [15:0]  m_axis_tdata,
   output wire         m_axis_tvalid,
   input  wire         m_axis_tready,
   // Confi
@@ -70,8 +70,8 @@ reg  signed [30-1:0]  r02_reg; // BB mult - 10 = 28->30
 
 wire signed [41-1:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
 wire signed [48-1:0]  r3_sum; // r2reg+25+1 = 49->51
-reg  signed [23-1:0]  r3_reg_dsp1; // r3_sum-25 = 23->25
-reg  signed [23-1:0]  r3_reg_dsp2; // r3_sum-25 = 23->25
+(* use_dsp="yes" *) reg  signed [23-1:0]  r3_reg_dsp1; // r3_sum-25 = 23->25
+(* use_dsp="yes" *) reg  signed [23-1:0]  r3_reg_dsp2; // r3_sum-25 = 23->25
 reg  signed [23-1:0]  r3_reg_dsp3; // r3_sum-25 = 23->25
 
 wire signed [40-1:0]  pp_mult; // r4_reg + coeff_pp = 40->42
@@ -79,7 +79,7 @@ wire signed [18-1:0]  r4_sum; // r3shr+1
 reg  signed [17-1:0]  r4_reg; // r3sum-33-1
 reg  signed [17-1:0]  r3_shr; // r3sum-33-1
 
-wire signed [42-1:0]  kk_mult;
+reg  signed [42-1:0]  kk_mult;
 reg  signed [16-1:0]  r5_reg;
 reg                   bypass_reg;
 wire                  bypass_dis;
@@ -90,7 +90,7 @@ assign coeff_aa       = cfg_coeff_aa;
 assign coeff_bb       = cfg_coeff_bb;
 assign coeff_kk       = cfg_coeff_kk;
 assign coeff_pp       = cfg_coeff_pp;
-assign m_axis_tdata   = (cfg_bypass == 1'b0) ? r5_reg : din;
+//assign m_axis_tdata   = (cfg_bypass == 1'b0) ? r5_reg : din;
 //assign m_axis_tdata   = r1_reg[35:20];
 
 assign m_axis_tvalid  = tvalid_pipe[3];
@@ -160,7 +160,11 @@ end
 //---------------------------------------------------------------------------------
 //  Scaling
 
-assign kk_mult = r4_reg * coeff_kk;
+//assign kk_mult = r4_reg * coeff_kk;
+
+
+always @(posedge clk)
+   kk_mult <= r4_reg * coeff_kk;
 
 always @(posedge clk)
 begin
@@ -177,6 +181,14 @@ begin
       end
     end
   end
+end
+
+always @(posedge clk)
+begin
+  if (cfg_bypass)
+    m_axis_tdata <= din;
+  else
+    m_axis_tdata <= r5_reg;
 end
 
 always @(posedge clk)

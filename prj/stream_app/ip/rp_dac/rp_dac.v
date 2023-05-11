@@ -9,6 +9,7 @@ module rp_dac
     parameter AXI_BURST_LEN         = 16,
     parameter EVENT_SRC_NUM         = 7,
     parameter TRIG_SRC_NUM          = 7,
+    parameter ID_WIDTHS             = 4,
     parameter ID_WIDTH              = 4)(    
   input  wire                                   clk,
   input  wire                                   rst_n,
@@ -36,10 +37,11 @@ module rp_dac
   input  wire [2:0]                             s_axi_reg_awprot,  
   input  wire                                   s_axi_reg_awvalid,    
   output wire                                   s_axi_reg_awready,                                   
-  input  wire [31:0]                            s_axi_reg_wdata,   
-  input  wire [3:0]                             s_axi_reg_wstrb,     
-  input  wire                                   s_axi_reg_wvalid,     
-  output wire                                   s_axi_reg_wready,     
+  input  wire [31:0]                            s_axi_reg_wdata,
+  input  wire [3:0]                             s_axi_reg_wstrb,
+  input  wire                                   s_axi_reg_wvalid,
+  output wire                                   s_axi_reg_wready,
+  input  wire                                   s_axi_reg_wlast,  
   output wire [1:0]                             s_axi_reg_bresp,       
   output wire                                   s_axi_reg_bvalid,       
   input  wire                                   s_axi_reg_bready,   
@@ -51,8 +53,12 @@ module rp_dac
   output wire [1:0]                             s_axi_reg_rresp,
   output wire                                   s_axi_reg_rvalid,
   input  wire                                   s_axi_reg_rready, 
-
-
+  output wire                                   s_axi_reg_rlast,
+  input  wire [ID_WIDTHS-1:0]                   s_axi_reg_awid,
+  input  wire [ID_WIDTHS-1:0]                   s_axi_reg_arid,
+  input  wire [ID_WIDTHS-1:0]                   s_axi_reg_wid,
+  output wire [ID_WIDTHS-1:0]                   s_axi_reg_rid,
+  output wire [ID_WIDTHS-1:0]                   s_axi_reg_bid,
 
   input  wire                                   m_axi_dac1_aclk       ,
   input  wire                                   m_axi_dac1_aresetn    ,
@@ -101,298 +107,196 @@ module rp_dac
 ////////////////////////////////////////////////////////////
     
 localparam REG_ADDR_BITS  = 8;
-
-// Regs address map
-localparam DAC_CONF_REG         = 8'h0; 
-
-localparam DAC_CHA_SCALE_OFFS   = 8'h4;
-localparam DAC_CHA_CNT_STEP     = 8'h8;
-localparam DAC_CHA_CUR_RP       = 8'hC;
-
-localparam DAC_CHB_SCALE_OFFS   = 8'h10;
-localparam DAC_CHB_CNT_STEP     = 8'h14;
-localparam DAC_CHB_CUR_RP       = 8'h18;
-
-localparam EVENT_STS_ADDR       = 8'h1C;
-localparam EVENT_SEL_ADDR       = 8'h20;
-localparam TRIG_MASK_ADDR       = 8'h24;
-
-localparam DMA_CTRL_ADDR        = 8'h28;
-localparam DMA_STS_ADDR         = 8'h2C;
-
-localparam DMA_BUF_SIZE_ADDR    = 8'h34;
-localparam DMA_BUF1_ADR_CHA     = 8'h38;
-localparam DMA_BUF2_ADR_CHA     = 8'h3C;
-localparam DMA_BUF1_ADR_CHB     = 8'h40;
-localparam DMA_BUF2_ADR_CHB     = 8'h44;
-
-localparam SETDEC_CHA           = 8'h48; // diagnostic only, to test the ramp signal.
-localparam SETDEC_CHB           = 8'h4C;
-localparam ERRS_RST             = 8'h50;
-localparam ERRS_CNT_CHA         = 8'h54;
-localparam ERRS_CNT_CHB         = 8'h58;
-localparam LOOPBACK_EN          = 8'h5C;
-
-localparam OUT_SHIFT_CH1        = 8'h60;
-localparam OUT_SHIFT_CH2        = 8'h64;
-
-localparam DIAG_REG_ADDR1     = 8'h70;
-localparam DIAG_REG_ADDR2     = 8'h74;
-localparam DIAG_REG_ADDR3     = 8'h78;
-localparam DIAG_REG_ADDR4     = 8'h8C;
-
 ////////////////////////////////////////////////////////////
 // Signals
 ////////////////////////////////////////////////////////////
-reg [16-1:0]                    dac_cha_conf;
-reg [16-1:0]                    dac_chb_conf;
+wire [16-1:0]                   dac_cha_conf;
+wire [16-1:0]                   dac_chb_conf;
 
-reg [DAC_DATA_BITS-1:0]         cfg_cha_scale;
-reg [DAC_DATA_BITS-1:0]         cfg_cha_offs;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_cha_wrap;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_cha_start_offs;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_cha_step;
+wire [DAC_DATA_BITS-1:0]        cfg_cha_scale;
+wire [DAC_DATA_BITS-1:0]        cfg_cha_offs;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_cha_step;
 wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_cha_rp;
-reg [16-1:0]                    cfg_cha_num_cyc;
-reg [16-1:0]                    cfg_cha_num_reps;
-reg [16-1:0]                    cfg_cha_burst_dly;
-reg [ 5-1:0]                    cfg_cha_outshift;
+wire [ 5-1:0]                   cfg_cha_outshift;
 
-reg [DAC_DATA_BITS-1:0]         cfg_chb_scale;
-reg [DAC_DATA_BITS-1:0]         cfg_chb_offs;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_chb_wrap;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_chb_start_offs;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_chb_step;
+wire [DAC_DATA_BITS-1:0]        cfg_chb_scale;
+wire [DAC_DATA_BITS-1:0]        cfg_chb_offs;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_chb_step;
 wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_chb_rp;
-reg [16-1:0]                    cfg_chb_num_cyc;
-reg [16-1:0]                    cfg_chb_num_reps;
-reg [16-1:0]                    cfg_chb_burst_dly;
-reg [ 5-1:0]                    cfg_chb_outshift;
+wire [ 5-1:0]                   cfg_chb_outshift;
 
-reg [16-1:0]                    cfg_cha_setdec;
-reg [16-1:0]                    cfg_chb_setdec;
+wire [16-1:0]                   cfg_cha_setdec;
+wire [16-1:0]                   cfg_chb_setdec;
 
-reg [EVENT_SRC_NUM-1:0]         cfg_event_sts;
-reg [EVENT_SRC_NUM-1:0]         cfg_event_sel;
-reg [TRIG_SRC_NUM -1:0]         cfg_trig_mask;
+wire [EVENT_SRC_NUM-1:0]        cfg_event_sel;
+wire [EVENT_SRC_NUM-1:0]        cfg_event_op;
+wire [TRIG_SRC_NUM -1:0]        cfg_trig_mask;
 
-reg [ 8-1:0]                    cfg_ctrl_reg_cha;
-reg [ 8-1:0]                    cfg_ctrl_reg_chb;
+wire [ 8-1:0]                   cfg_ctrl_reg_cha;
+wire [ 8-1:0]                   cfg_ctrl_reg_chb;
 
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_dma_buf_size;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf1_adr_cha;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf1_adr_chb;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf2_adr_cha;
-reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf2_adr_chb;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_dma_buf_size;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_buf1_adr_cha;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_buf1_adr_chb;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_buf2_adr_cha;
+wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_buf2_adr_chb;
+wire                            cfg_loopback_cha;
+wire                            cfg_loopback_chb;
 
-wire                            reg_clk;
-wire                            reg_rst;
-wire [S_AXI_REG_ADDR_BITS-1:0]  reg_addr;
-wire                            reg_en;
-wire [3:0]                      reg_we;
-wire                            reg_wr_we;
-wire [31:0]                     reg_wr_data;    
-reg  [31:0]                     reg_rd_data;
+wire                            cfg_errs_rst;
+reg  [31:0]                     errs_cnt_cha;
+reg  [31:0]                     errs_cnt_chb;
 
-reg  [31:0]                     errs_cnt_cha, errs_cnt_chb;
-reg                             cfg_loopback_cha, cfg_loopback_chb;
+wire [31:0]                     sts_cha; 
+wire [31:0]                     sts_chb; 
 
-reg ctrl_cha;
-reg ctrl_chb;
-wire sts_cha   = (reg_addr[8-1:0] == DMA_STS_ADDR  ) && (reg_wr_we == 1);
-wire sts_chb   = (reg_addr[8-1:0] == DMA_STS_ADDR  ) && (reg_wr_we == 1);
-wire event_val = (reg_addr[8-1:0] == EVENT_STS_ADDR    ) && (reg_wr_we == 1);
-wire [31:0] ctrl_cha_o; 
-wire [31:0] ctrl_chb_o;
-wire [31:0] sts_cha_o; 
-wire [31:0] sts_chb_o; 
-
-wire [31:0] diag_reg;
-wire [31:0] diag_reg2;
-
-`ifdef SIMULATION
-  assign reg_wr_we = reg_en & (reg_we == 4'h1);
-`else
-  assign reg_wr_we = reg_en & (reg_we == 4'hF);
-`endif //SIMULATION
+wire [31:0]                     diag1_ch1, diag1_ch2;
+wire [31:0]                     diag2_ch1, diag2_ch2;
+wire [31:0]                     diag3_ch1, diag3_ch2;
+wire [31:0]                     diag4_ch1, diag4_ch2;
 
 assign intr = 1'b0;
+assign dac1_event_op = cfg_event_op;
+assign dac2_event_op = cfg_event_op;
+assign dac_data_cha_o = dac_a_r;
+assign dac_data_chb_o = dac_b_r;
 
-
+wire [DAC_DATA_BITS-1:0]        dac_data_cha, dac_data_chb;
 reg  [DAC_DATA_BITS-1:0]        dac_a_r, dac_b_r;
 reg  [DAC_DATA_BITS-1:0]        dac_a_diff, dac_b_diff;    
 always @(posedge clk)
 begin
-  dac_a_r <= dac_data_cha_o;
-  dac_b_r <= dac_data_chb_o;
-  dac_a_diff <= dac_data_cha_o - dac_a_r;
-  dac_b_diff <= dac_data_chb_o - dac_b_r;
-  if (~rst_n) begin
+  dac_a_r <= dac_data_cha;
+  dac_b_r <= dac_data_chb;
+  dac_a_diff <= dac_data_cha - dac_a_r;
+  dac_b_diff <= dac_data_chb - dac_b_r;
+  if (~rstn_cfg) begin
     errs_cnt_cha <= 'h0;
     errs_cnt_chb <= 'h0;
   end else begin
-    if ((reg_addr[8-1:0] == ERRS_RST) && (reg_wr_we == 1))
+    if (cfg_errs_rst)
       errs_cnt_cha <= 'h0;  
     else if ((dac_a_diff != cfg_cha_setdec) & (dac_a_diff != 'h0) & (dac_a_diff < 16'h7000))
       errs_cnt_cha <= errs_cnt_cha + 'h1;
 
-    if ((reg_addr[8-1:0] == ERRS_RST) && (reg_wr_we == 1))
+    if (cfg_errs_rst)
       errs_cnt_chb <= 'h0;
     else if ((dac_b_diff != cfg_chb_setdec) & (dac_b_diff != 'h0) & (dac_b_diff < 16'h7000))
       errs_cnt_chb <= errs_cnt_chb + 'h1;
   end
+end
 
+
+reg rstn_cfg;
+always @(posedge clk)
+begin
+  rstn_cfg <= rst_n;
+end
+
+reg rstn_cfgax;
+always @(posedge m_axi_dac1_aclk)
+begin
+  rstn_cfgax <= m_axi_dac1_aresetn;
 end
 
 ////////////////////////////////////////////////////////////
-// Name : Register Control
-// 
+// Register Interface
 ////////////////////////////////////////////////////////////   
-// probably stays the same as ADC stream //  
-reg_ctrl U_reg_ctrl(
-  .s_axi_aclk     (s_axi_reg_aclk),       
-  .s_axi_aresetn  (s_axi_reg_aresetn), 
-  .s_axi_awaddr   (s_axi_reg_awaddr),   
-  .s_axi_awprot   (s_axi_reg_awprot),   
-  .s_axi_awvalid  (s_axi_reg_awvalid), 
-  .s_axi_awready  (s_axi_reg_awready), 
-  .s_axi_wdata    (s_axi_reg_wdata),     
-  .s_axi_wstrb    (s_axi_reg_wstrb),     
-  .s_axi_wvalid   (s_axi_reg_wvalid),   
-  .s_axi_wready   (s_axi_reg_wready),   
-  .s_axi_bresp    (s_axi_reg_bresp),     
-  .s_axi_bvalid   (s_axi_reg_bvalid),  
-  .s_axi_bready   (s_axi_reg_bready),
-  .s_axi_araddr   (s_axi_reg_araddr),   
-  .s_axi_arprot   (s_axi_reg_arprot),   
-  .s_axi_arvalid  (s_axi_reg_arvalid), 
-  .s_axi_arready  (s_axi_reg_arready), 
-  .s_axi_rdata    (s_axi_reg_rdata),     
-  .s_axi_rresp    (s_axi_reg_rresp),     
-  .s_axi_rvalid   (s_axi_reg_rvalid),   
-  .s_axi_rready   (s_axi_reg_rready),   
-  .bram_rst_a     (reg_rst),       
-  .bram_clk_a     (reg_clk),       
-  .bram_en_a      (reg_en),         
-  .bram_we_a      (reg_we),         
-  .bram_addr_a    (reg_addr),     
-  .bram_wrdata_a  (reg_wr_data), 
-  .bram_rddata_a  (reg_rd_data));  
 
+dac_cfg #(
+  .M_AXI_DAC_ADDR_BITS  (M_AXI_DAC_ADDR_BITS),
+  .DAC_DATA_BITS        (DAC_DATA_BITS),
+  .REG_ADDR_BITS        (REG_ADDR_BITS),
+  .EVENT_SRC_NUM        (EVENT_SRC_NUM),
+  .ID_WIDTHS            (ID_WIDTHS),
+  .TRIG_SRC_NUM         (TRIG_SRC_NUM)
+  )
+  U_dac_cfg
+  (
+    
+  .s_axi_reg_aclk           (s_axi_reg_aclk),       
+  .s_axi_reg_aresetn        (s_axi_reg_aresetn), 
+  .s_axi_reg_awaddr         (s_axi_reg_awaddr),   
+  .s_axi_reg_awprot         (s_axi_reg_awprot),   
+  .s_axi_reg_awvalid        (s_axi_reg_awvalid), 
+  .s_axi_reg_awready        (s_axi_reg_awready), 
+  .s_axi_reg_wdata          (s_axi_reg_wdata),     
+  .s_axi_reg_wstrb          (s_axi_reg_wstrb),     
+  .s_axi_reg_wvalid         (s_axi_reg_wvalid),   
+  .s_axi_reg_wready         (s_axi_reg_wready),   
+  .s_axi_reg_wlast          (s_axi_reg_wlast),   
+  .s_axi_reg_bresp          (s_axi_reg_bresp),     
+  .s_axi_reg_bvalid         (s_axi_reg_bvalid),   
+  .s_axi_reg_bready         (s_axi_reg_bready),   
+  .s_axi_reg_araddr         (s_axi_reg_araddr),   
+  .s_axi_reg_arprot         (s_axi_reg_arprot),   
+  .s_axi_reg_arvalid        (s_axi_reg_arvalid), 
+  .s_axi_reg_arready        (s_axi_reg_arready), 
+  .s_axi_reg_rdata          (s_axi_reg_rdata),     
+  .s_axi_reg_rresp          (s_axi_reg_rresp),     
+  .s_axi_reg_rvalid         (s_axi_reg_rvalid),   
+  .s_axi_reg_rready         (s_axi_reg_rready),  
+  .s_axi_reg_rlast          (s_axi_reg_rlast),   
+  .s_axi_reg_awid           (s_axi_reg_awid),
+  .s_axi_reg_arid           (s_axi_reg_arid),
+  .s_axi_reg_wid            (s_axi_reg_wid),
+  .s_axi_reg_rid            (s_axi_reg_rid),
+  .s_axi_reg_bid            (s_axi_reg_bid),
 
-////////////////////////////////////////////////////////////
-// Name : Register Read Data
-// 
-////////////////////////////////////////////////////////////
+  .clk_axi_i                (m_axi_dac1_aclk),   
+  .clk_adc_i                (clk),   
+  .axi_rstn_i               (rstn_cfgax), 
+  .adc_rstn_i               (rstn_cfg), 
 
-always @(posedge clk)
-begin
-  case (reg_addr[8-1:0])
-    DAC_CONF_REG:           reg_rd_data <= {dac_chb_conf, dac_cha_conf};
+  .cfg_event_op_trig_o      (cfg_event_op[0]),
+  .cfg_event_op_stop_o      (cfg_event_op[1]),
+  .cfg_event_op_start_o     (cfg_event_op[2]),
+  .cfg_event_op_reset_o     (cfg_event_op[3]),
+  .cfg_event_sts_i          (cfg_event_op),
+  .cfg_event_sel_o          (cfg_event_sel),
 
-    DAC_CHA_SCALE_OFFS:     reg_rd_data <= {cfg_cha_offs, cfg_cha_scale};
-    DAC_CHA_CNT_STEP:       reg_rd_data <= cfg_cha_step;
-    DAC_CHA_CUR_RP:         reg_rd_data <= cfg_cha_rp;
-    DAC_CHB_SCALE_OFFS:     reg_rd_data <= {cfg_chb_offs, cfg_chb_scale};
-    DAC_CHB_CNT_STEP:       reg_rd_data <= cfg_chb_step;
-    DAC_CHB_CUR_RP:         reg_rd_data <= cfg_chb_rp;
+  .dac_cha_conf_o           (dac_cha_conf),
+  .dac_chb_conf_o           (dac_chb_conf),
 
-    EVENT_STS_ADDR:         reg_rd_data <= {{32-EVENT_SRC_NUM{1'b0}}, cfg_event_sts};
-    EVENT_SEL_ADDR:         reg_rd_data <= {{32-EVENT_SRC_NUM{1'b0}}, cfg_event_sel};
-    TRIG_MASK_ADDR:         reg_rd_data <= {{32-TRIG_SRC_NUM{1'b0}} , cfg_trig_mask};
+  .cfg_cha_scale_o          (cfg_cha_scale),
+  .cfg_cha_offs_o           (cfg_cha_offs),
+  .cfg_cha_step_o           (cfg_cha_step),
+  .cfg_cha_outshift_o       (cfg_cha_outshift),
+  .cfg_cha_setdec_o         (cfg_cha_setdec),
 
-    DMA_CTRL_ADDR:          reg_rd_data <= {ctrl_chb_o[15:0], ctrl_cha_o[15:0]};      
-    DMA_STS_ADDR:           reg_rd_data <= {sts_chb_o[15:0] , sts_cha_o[15:0]};   
+  .cfg_chb_scale_o          (cfg_chb_scale),
+  .cfg_chb_offs_o           (cfg_chb_offs),
+  .cfg_chb_step_o           (cfg_chb_step),
+  .cfg_chb_outshift_o       (cfg_chb_outshift),
+  .cfg_chb_setdec_o         (cfg_chb_setdec),
 
-    DMA_BUF_SIZE_ADDR:      reg_rd_data <= cfg_dma_buf_size;
-    DMA_BUF1_ADR_CHA:       reg_rd_data <= cfg_buf1_adr_cha;
-    DMA_BUF1_ADR_CHB:       reg_rd_data <= cfg_buf1_adr_chb;
-    DMA_BUF2_ADR_CHA:       reg_rd_data <= cfg_buf2_adr_cha;
-    DMA_BUF2_ADR_CHB:       reg_rd_data <= cfg_buf2_adr_chb;     
-    ERRS_CNT_CHA:           reg_rd_data <= errs_cnt_cha;
-    ERRS_CNT_CHB:           reg_rd_data <= errs_cnt_chb;
+  .cfg_ctrl_reg_cha_o       (cfg_ctrl_reg_cha),
+  .cfg_ctrl_reg_chb_o       (cfg_ctrl_reg_chb),
+  .cfg_dma_ctrl_we_o        (cfg_dma_ctrl_we),
+  .sts_cha_i                (sts_cha),
+  .sts_chb_i                (sts_chb),
 
-    OUT_SHIFT_CH1:          reg_rd_data <= {{32-5{1'b0}}, cfg_cha_outshift};
-    OUT_SHIFT_CH2:          reg_rd_data <= {{32-5{1'b0}}, cfg_chb_outshift};
+  .cfg_dma_buf_size_o       (cfg_dma_buf_size),
+  .cfg_buf1_adr_cha_o       (cfg_buf1_adr_cha),
+  .cfg_buf2_adr_cha_o       (cfg_buf2_adr_cha),
+  .cfg_buf1_adr_chb_o       (cfg_buf1_adr_chb),
+  .cfg_buf2_adr_chb_o       (cfg_buf2_adr_chb),
 
-    DIAG_REG_ADDR1:         reg_rd_data <= diag_reg;                            
-    DIAG_REG_ADDR2:         reg_rd_data <= diag_reg2;                            
-    DIAG_REG_ADDR3:         reg_rd_data <= diag_reg;                            
-    DIAG_REG_ADDR4:         reg_rd_data <= diag_reg;                            
-  endcase
-end
+  .cfg_loopback_cha_o       (cfg_loopback_cha),
+  .cfg_loopback_chb_o       (cfg_loopback_chb),
 
-always @(posedge clk)
-begin
-  if (rst_n == 0) begin
-    dac_cha_conf <= 16'h0;    
-    dac_chb_conf <= 16'h0;
+  .cfg_cha_rp_i             (cfg_cha_rp),
+  .cfg_chb_rp_i             (cfg_chb_rp),
 
-    cfg_cha_scale       <= 16'h8000;
-    cfg_cha_offs        <= 16'h0;
-    cfg_cha_step        <= 32'h0;
-    cfg_cha_outshift    <= 8'h0;
-    cfg_chb_scale       <= 16'h8000;
-    cfg_chb_offs        <= 16'h0;
-    cfg_chb_step        <= 32'h0;
-    cfg_chb_outshift    <= 8'h0;
+  .cfg_errs_rst_o           (cfg_errs_rst),
+  .errs_cnt_cha_i           (errs_cnt_cha),
+  .errs_cnt_chb_i           (errs_cnt_chb),
 
-    cfg_event_sts       <=  'h0;
-    cfg_event_sel       <=  'h0;
-    cfg_trig_mask       <=  'h0;
-
-    cfg_ctrl_reg_cha    <=  8'h0;
-    cfg_ctrl_reg_chb    <=  8'h0;
-
-    cfg_dma_buf_size    <= 32'h0;    
-    cfg_buf1_adr_cha    <= 32'h0;
-    cfg_buf1_adr_chb    <= 32'h0;
-    cfg_buf2_adr_cha    <= 32'h0;
-    cfg_buf2_adr_chb    <= 32'h0;
-    cfg_cha_setdec      <= 16'h1;
-    cfg_chb_setdec      <= 16'h1;
-    cfg_loopback_cha    <= 16'h0;
-    cfg_loopback_chb    <= 16'h0;
-
-  end else begin
-    if ((reg_addr[8-1:0] == DAC_CONF_REG      ) && (reg_wr_we == 1)) begin dac_chb_conf       <= reg_wr_data[31:16];         dac_cha_conf  <= reg_wr_data[15:0]; end    
-    if ((reg_addr[8-1:0] == DAC_CHA_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_cha_offs       <={reg_wr_data[29:16], 2'h0};  cfg_cha_scale <={reg_wr_data[13:0], 2'h0}; end    
-    if ((reg_addr[8-1:0] == DAC_CHA_CNT_STEP  ) && (reg_wr_we == 1)) begin cfg_cha_step       <= reg_wr_data; end    
-  
-    if ((reg_addr[8-1:0] == DAC_CHB_SCALE_OFFS) && (reg_wr_we == 1)) begin cfg_chb_offs       <={reg_wr_data[29:16], 2'h0};  cfg_chb_scale <= {reg_wr_data[13:0], 2'h0}; end    
-    if ((reg_addr[8-1:0] == DAC_CHB_CNT_STEP  ) && (reg_wr_we == 1)) begin cfg_chb_step       <= reg_wr_data; end    
-
-    if ((reg_addr[8-1:0] == EVENT_STS_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sts      <= reg_wr_data[EVENT_SRC_NUM-1:0]; end    
-    if ((reg_addr[8-1:0] == EVENT_SEL_ADDR    ) && (reg_wr_we == 1)) begin cfg_event_sel      <= reg_wr_data[EVENT_SRC_NUM-1:0]; end
-    if ((reg_addr[8-1:0] == TRIG_MASK_ADDR    ) && (reg_wr_we == 1)) begin cfg_trig_mask      <= reg_wr_data[TRIG_SRC_NUM -1:0]; end
-  
-    if ((reg_addr[8-1:0] == DMA_CTRL_ADDR     ) && (reg_wr_we == 1)) begin {cfg_ctrl_reg_chb, cfg_ctrl_reg_cha} <= reg_wr_data; end    
-    if ((reg_addr[8-1:0] == DMA_BUF_SIZE_ADDR ) && (reg_wr_we == 1)) begin cfg_dma_buf_size   <= reg_wr_data; end    
-    if ((reg_addr[8-1:0] == DMA_BUF1_ADR_CHA  ) && (reg_wr_we == 1)) begin cfg_buf1_adr_cha   <= reg_wr_data; end    
-    if ((reg_addr[8-1:0] == DMA_BUF1_ADR_CHB  ) && (reg_wr_we == 1)) begin cfg_buf1_adr_chb   <= reg_wr_data; end   
-    if ((reg_addr[8-1:0] == DMA_BUF2_ADR_CHA  ) && (reg_wr_we == 1)) begin cfg_buf2_adr_cha   <= reg_wr_data; end    
-    if ((reg_addr[8-1:0] == DMA_BUF2_ADR_CHB  ) && (reg_wr_we == 1)) begin cfg_buf2_adr_chb   <= reg_wr_data; end   
-
-    if ((reg_addr[8-1:0] == OUT_SHIFT_CH1     ) && (reg_wr_we == 1)) begin cfg_cha_outshift   <= reg_wr_data[4:0]; end
-    if ((reg_addr[8-1:0] == OUT_SHIFT_CH2     ) && (reg_wr_we == 1)) begin cfg_chb_outshift   <= reg_wr_data[4:0]; end
-
-    if ((reg_addr[8-1:0] == SETDEC_CHA        ) && (reg_wr_we == 1)) begin cfg_cha_setdec     <= reg_wr_data[15:0]; end    
-    if ((reg_addr[8-1:0] == SETDEC_CHB        ) && (reg_wr_we == 1)) begin cfg_chb_setdec     <= reg_wr_data[15:0]; end 
-    if ((reg_addr[8-1:0] == LOOPBACK_EN       ) && (reg_wr_we == 1)) begin cfg_loopback_cha   <= reg_wr_data[0];      cfg_loopback_chb <= reg_wr_data[4]; end   
-  end
-end 
-
-always @(posedge clk ) begin
-  ctrl_cha  <= (reg_addr[8-1:0] == DMA_CTRL_ADDR ) && (reg_wr_we == 1);
-  ctrl_chb  <= (reg_addr[8-1:0] == DMA_CTRL_ADDR ) && (reg_wr_we == 1);
-end
-
-
-`ifdef SIMULATION
-  assign reg_wr_we = reg_en & (reg_we == 4'h1);
-`else
-  assign reg_wr_we = reg_en & (reg_we == 4'hF);
-`endif //SIMULATION
+  .diag1_i                  (diag1_ch1),
+  .diag2_i                  (diag2_ch1),
+  .diag3_i                  (diag3_ch1),
+  .diag4_i                  (diag4_ch1)
+  );
 
 ////////////////////////////////////////////////////////////
 // Name : DAC 1
@@ -408,26 +312,28 @@ dac_top #(
   .AXI_BURST_LEN    (AXI_BURST_LEN),
   .CH_NUM           (0))
   U_dac1(
-  .clk              (clk),   
-  .rst_n            (rst_n), 
-  .axi_clk          (m_axi_dac1_aclk),   
-  .axi_rstn         (m_axi_dac1_aresetn), 
+  .clk_axi          (m_axi_dac1_aclk),   
+  .clk_adc          (clk),   
+  //.axi_rstn         (m_axi_dac1_aresetn), 
+  //.adc_rstn         (rst_n), 
+  .axi_rstn         (rstn_cfgax), 
+  .adc_rstn         (rstn_cfg), 
+
   .event_ip_trig    (event_ip_trig),  
   .event_ip_stop    (event_ip_stop),  
   .event_ip_start   (event_ip_start), 
   .event_ip_reset   (event_ip_reset),  
-  .event_op_trig    (dac1_event_op[0]),
-  .event_op_stop    (dac1_event_op[1]),
-  .event_op_start   (dac1_event_op[2]),
-  .event_op_reset   (dac1_event_op[3]),
+  // .event_op_trig    (dac1_event_op[0]),
+  // .event_op_stop    (dac1_event_op[1]),
+  // .event_op_start   (dac1_event_op[2]),
+  // .event_op_reset   (dac1_event_op[3]),
   .event_sel        (cfg_event_sel),
   .event_val        (event_val),
   .trig_ip          (trig_ip),
   .trig_op          (dac1_trig_op),  
-  .reg_ctrl         (ctrl_cha_o),
-  .ctrl_val         (ctrl_cha),
-  .reg_sts          (sts_cha_o),
-  .sts_val          (sts_cha),  
+  //.reg_ctrl         (ctrl_cha_o),
+  .reg_sts          (sts_cha),
+  //.sts_val          (sts_cha),  
   .dac_conf         (dac_cha_conf),
   .dac_scale        (cfg_cha_scale),
   .dac_offs         (cfg_cha_offs),
@@ -436,10 +342,11 @@ dac_top #(
   .dac_rp           (cfg_cha_rp),
   .dac_trig         (cfg_trig_mask),
   .dac_ctrl_reg     (cfg_ctrl_reg_cha),
+  .ctrl_val         (cfg_dma_ctrl_we),
   .dac_buf_size     (cfg_dma_buf_size),
   .dac_buf1_adr     (cfg_buf1_adr_cha),
   .dac_buf2_adr     (cfg_buf2_adr_cha),
-  .dac_data_o       (dac_data_cha_o),
+  .dac_data_o       (dac_data_cha),
   .diag_reg         (diag_reg),
   .diag_reg2        (diag_reg2),
   .loopback_en      (cfg_loopback_cha),
@@ -476,26 +383,28 @@ dac_top #(
   .AXI_BURST_LEN    (AXI_BURST_LEN),
   .CH_NUM           (1))
   U_dac2(
-  .clk              (clk),   
-  .rst_n            (rst_n), 
-  .axi_clk          (m_axi_dac1_aclk),   
-  .axi_rstn         (m_axi_dac1_aresetn), 
+  .clk_axi          (m_axi_dac2_aclk),   
+  .clk_adc          (clk),   
+  //.axi_rstn         (m_axi_dac1_aresetn), 
+  //.adc_rstn         (rst_n), 
+  .axi_rstn         (rstn_cfgax), 
+  .adc_rstn         (rstn_cfg), 
+  
   .event_ip_trig    (event_ip_trig),  
   .event_ip_stop    (event_ip_stop),  
   .event_ip_start   (event_ip_start), 
   .event_ip_reset   (event_ip_reset),  
-  .event_op_trig    (dac2_event_op[0]),
-  .event_op_stop    (dac2_event_op[1]),
-  .event_op_start   (dac2_event_op[2]),
-  .event_op_reset   (dac2_event_op[3]),
+  // .event_op_trig    (dac2_event_op[0]),
+  // .event_op_stop    (dac2_event_op[1]),
+  // .event_op_start   (dac2_event_op[2]),
+  // .event_op_reset   (dac2_event_op[3]),
   .event_sel        (cfg_event_sel),
   .event_val        (event_val),
   .trig_ip          (trig_ip),
   .trig_op          (dac2_trig_op),  
-  .reg_ctrl         (ctrl_chb_o),
-  .ctrl_val         (ctrl_chb),
-  .reg_sts          (sts_chb_o),
-  .sts_val          (sts_chb), 
+  //.reg_ctrl         (ctrl_chb_o),
+  .reg_sts          (sts_chb),
+  //.sts_val          (sts_chb), 
   .dac_conf         (dac_chb_conf),
   .dac_scale        (cfg_chb_scale),
   .dac_offs         (cfg_chb_offs),
@@ -504,10 +413,11 @@ dac_top #(
   .dac_rp           (cfg_chb_rp),
   .dac_trig         (cfg_trig_mask),
   .dac_ctrl_reg     (cfg_ctrl_reg_chb),
+  .ctrl_val         (cfg_dma_ctrl_we),
   .dac_buf_size     (cfg_dma_buf_size),
   .dac_buf1_adr     (cfg_buf1_adr_chb),
   .dac_buf2_adr     (cfg_buf2_adr_chb),
-  .dac_data_o       (dac_data_chb_o),
+  .dac_data_o       (dac_data_chb),
   .loopback_en      (cfg_loopback_chb),
   
   .m_axi_dac_arid_o     (m_axi_dac2_arid_o),

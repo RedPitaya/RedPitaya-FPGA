@@ -64,12 +64,14 @@ proc create_root_design { parentCell } {
 
   # Set parent object as current
   current_bd_instance $parentObj
-set_property verilog_define {SIMULATION} [get_filesets sim_1]
+set_property verilog_define {SIMULATION DAC} [get_filesets sim_1]
+#set_property verilog_define {DAC} [get_filesets sim_1]
+
 create_bd_intf_port -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M_AXI_OSC
 create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 S_AXI_REG
 set_property -dict [list CONFIG.HAS_REGION {0} CONFIG.MAX_BURST_LENGTH {16} CONFIG.NUM_WRITE_OUTSTANDING {8} CONFIG.NUM_READ_OUTSTANDING {8} CONFIG.NUM_READ_THREADS {4} CONFIG.NUM_WRITE_THREADS {4} CONFIG.SUPPORTS_NARROW_BURST {0} CONFIG.ID_WIDTH {4} CONFIG.DATA_WIDTH {32} CONFIG.PROTOCOL {AXI3}] [get_bd_intf_ports S_AXI_REG]
-set_property -dict [list CONFIG.HAS_QOS {1} CONFIG.HAS_REGION {0} CONFIG.NUM_WRITE_OUTSTANDING {8} CONFIG.NUM_READ_OUTSTANDING {8} CONFIG.FREQ_HZ {125000000} CONFIG.PROTOCOL {AXI3} CONFIG.DATA_WIDTH {64}] [get_bd_intf_ports M_AXI_OSC]
-delete_bd_objs [get_bd_intf_nets axi_interconnect_0_M00_AXI]
+set_property -dict [list CONFIG.HAS_QOS {1} CONFIG.HAS_REGION {0} CONFIG.NUM_WRITE_OUTSTANDING {8} CONFIG.NUM_READ_OUTSTANDING {8} CONFIG.FREQ_HZ {250000000} CONFIG.PROTOCOL {AXI3} CONFIG.DATA_WIDTH {64}] [get_bd_intf_ports M_AXI_OSC]
+delete_bd_objs [get_bd_intf_nets rp_dac_m_axi_dac1]
 
 delete_bd_objs [get_bd_intf_nets processing_system7_0_M_AXI_GP0]
 connect_bd_intf_net [get_bd_intf_ports S_AXI_REG] -boundary_type upper [get_bd_intf_pins axi_reg/S00_AXI]
@@ -80,7 +82,7 @@ connect_bd_net [get_bd_ports rstn_200] [get_bd_pins rst_gen2/peripheral_aresetn]
 create_bd_port -dir O -type clk clkout_200
 connect_bd_net [get_bd_ports clkout_200] [get_bd_pins clk_gen/clk_200]
 set_property -dict [list CONFIG.CLK_DOMAIN {clk_gen_clk_out1}] [get_bd_intf_ports M_AXI_OSC]
-connect_bd_intf_net [get_bd_intf_ports M_AXI_OSC] [get_bd_intf_pins axi_interconnect_0/M00_AXI]
+connect_bd_intf_net [get_bd_intf_ports M_AXI_OSC] [get_bd_intf_pins rp_dac/m_axi_dac1]
 
 create_bd_port -dir O -type rst rstn_axi
 connect_bd_net [get_bd_ports rstn_axi] [get_bd_pins rst_gen3/interconnect_aresetn]
@@ -91,16 +93,16 @@ connect_bd_net [get_bd_ports clkout_125] [get_bd_pins clk_gen/clk_125]
 connect_bd_net [get_bd_ports clkout_625] [get_bd_pins clk_gen/clk_62_5]
 set_property CONFIG.ASSOCIATED_BUSIF {S_AXI_REG} [get_bd_ports /FCLK_CLK2]
 
-set_property CONFIG.ASSOCIATED_BUSIF {M_AXI_OSC} [get_bd_ports /clkout_125]
+set_property CONFIG.ASSOCIATED_BUSIF {M_AXI_OSC} [get_bd_ports /clkout_200]
 delete_bd_objs [get_bd_addr_segs] [get_bd_addr_segs -excluded]
 
- assign_bd_address -target_address_space /rp_oscilloscope/m_axi_osc1 [get_bd_addr_segs M_AXI_OSC/Reg] -force
- set_property offset 0x00000000 [get_bd_addr_segs {rp_oscilloscope/m_axi_osc1/SEG_M_AXI_OSC_Reg}]
- set_property range 512M [get_bd_addr_segs {rp_oscilloscope/m_axi_osc1/SEG_M_AXI_OSC_Reg}]
+assign_bd_address -target_address_space /rp_oscilloscope/m_axi_osc1 [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] -force
+set_property offset 0x00000000 [get_bd_addr_segs {rp_oscilloscope/m_axi_osc1/SEG_processing_system7_0_HP0_DDR_LOWOCM}]
+set_property range 512M [get_bd_addr_segs {rp_oscilloscope/m_axi_osc1/SEG_processing_system7_0_HP0_DDR_LOWOCM}]
 
- assign_bd_address -target_address_space /rp_oscilloscope/m_axi_osc2 [get_bd_addr_segs M_AXI_OSC/Reg] -force
- set_property offset 0x00000000 [get_bd_addr_segs {rp_oscilloscope/m_axi_osc2/SEG_M_AXI_OSC_Reg}]
- set_property range 512M [get_bd_addr_segs {rp_oscilloscope/m_axi_osc2/SEG_M_AXI_OSC_Reg}]
+assign_bd_address -target_address_space /rp_oscilloscope/m_axi_osc2 [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] -force
+set_property offset 0x00000000 [get_bd_addr_segs {rp_oscilloscope/m_axi_osc2/SEG_processing_system7_0_HP0_DDR_LOWOCM}]
+set_property range 512M [get_bd_addr_segs {rp_oscilloscope/m_axi_osc2/SEG_processing_system7_0_HP0_DDR_LOWOCM}]
 
 assign_bd_address -target_address_space /S_AXI_REG [get_bd_addr_segs rp_oscilloscope/s_axi_reg/reg0] -force
 set_property range 1M [get_bd_addr_segs {S_AXI_REG/SEG_rp_oscilloscope_reg0}]
@@ -114,9 +116,9 @@ assign_bd_address -target_address_space /S_AXI_REG [get_bd_addr_segs rp_gpio/s_a
 set_property range 1M [get_bd_addr_segs {S_AXI_REG/SEG_rp_gpio_reg0}]
 set_property offset 0x40200000 [get_bd_addr_segs {S_AXI_REG/SEG_rp_gpio_reg0}]
 
-assign_bd_address -target_address_space /rp_dac/m_axi_dac1 [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] -force
-set_property offset 0x00000000 [get_bd_addr_segs {rp_dac/m_axi_dac1/SEG_processing_system7_0_HP2_DDR_LOWOCM}]
-set_property range 512M [get_bd_addr_segs {rp_dac/m_axi_dac1/SEG_processing_system7_0_HP2_DDR_LOWOCM}]
+assign_bd_address -target_address_space /rp_dac/m_axi_dac1 [get_bd_addr_segs rp_dac/m_axi_dac1/SEG_M_AXI_OSC_Reg] -force
+set_property offset 0x00000000 [get_bd_addr_segs {rp_dac/m_axi_dac1/SEG_M_AXI_OSC_Reg}]
+set_property range 512M [get_bd_addr_segs {rp_dac/m_axi_dac1/SEG_M_AXI_OSC_Reg}]
 
 assign_bd_address -target_address_space /rp_dac/m_axi_dac2 [get_bd_addr_segs processing_system7_0/S_AXI_HP3/HP3_DDR_LOWOCM] -force
 set_property offset 0x00000000 [get_bd_addr_segs {rp_dac/m_axi_dac2/SEG_processing_system7_0_HP3_DDR_LOWOCM}]
@@ -239,6 +241,7 @@ export_ip_user_files -of_objects  [get_files project/redpitaya.srcs/sources_1/im
 remove_files  {project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_scope.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/la.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/old_la_top.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/asg_bst.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/asg_per.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_stream_mux.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_stream_reg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/gen.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/osc.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/pid.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_pid.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/old_asg_top.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_stream_dly.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/clb.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_asg.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_scope_Z20.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/lg.sv project/redpitaya.srcs/sources_1/imports/fpga/prj/stream_app/rtl/red_pitaya_top_Z20.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_lite_slave.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_slave.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_stream_demux.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/axi_master.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/clkdiv.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/ctrg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/cts.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/debounce.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/divide.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/id.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/mgmt.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/muxctl.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/old_id.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/pdm.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/pwm.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_ams.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_hk.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_id.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/red_pitaya_pll.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_pwm.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/rp_concat.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/scope_filter.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/str2mm.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/sys_bus_interconnect.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/sys_bus_stub.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/sys_reg_array_o.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/asg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/divide.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/la_trg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/old_acq.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/osc_trg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/acq.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_stream_cnt.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/axi4_stream_pas.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/axi_wr_fifo.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/bin_and.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/lin_add.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/lin_mul.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/old_asg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/pid_block.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_asg_ch.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/red_pitaya_dfilt1.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/classic/red_pitaya_pid_block.v project/redpitaya.srcs/sources_1/imports/fpga/rtl/rle.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/scope_dec_avg.sv project/redpitaya.srcs/sources_1/imports/fpga/rtl/str_dec.sv}
 remove_files  -fileset sim_1 /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/tbn/sim_script.tcl
 remove_files  -fileset sim_1 /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/tbn/sim_script_ADC.tcl
+remove_files  -fileset sim_1 /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/tbn/sim_script_DAC.tcl
 remove_files  -fileset sim_1 /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/tbn/sim_script_4ADC.tcl
 remove_files  -fileset sim_1 /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/prj/stream_app/tbn/sim_script_GPIO.tcl
 validate_bd_design

@@ -113,10 +113,20 @@ wire clkout_125, clkout_625;
 //--------------------------------------------------------------------------------------------
 localparam MASTER = 0;
 localparam SLAVE  = 1;
-wire mode = SLAVE;
+wire mode = MASTER;
+//`define DAC
 
+`ifdef DAC
+assign interf_clk=clkout_200;
+assign interf_rst=rstn_200;
+`else
 assign interf_clk=clkout_125;
 assign interf_rst=rstn_out;
+`endif
+
+
+
+
 
 //--------------------------------------------------------------------------------------------
 
@@ -294,10 +304,12 @@ initial begin
 
    //top_tc.test_hk                 (0<<20, 32'h55);
    //top_tc.test_sata               (5<<20, 32'h55);
-   top_tc.test_osc                (32'h40000000, OSC1_EVENT);
-
+  `ifdef DAC
+     top_tc_dac.test_dac            (32'h40100000, GEN1_EVENT);
+  `else
+    top_tc.test_osc                (32'h40000000, OSC1_EVENT);
+  `endif
   //top_tc_gpio.test_gpio (32'h40100000, GPIO_OUT_CTRL_ADDR, LA_EVENT);
-   //top_tc_dac.test_dac2            (32'h40100000, GEN1_EVENT);
 
 //   top_tc.test_asg                (2<<20, 32'h40090000, 2);
 
@@ -555,7 +567,8 @@ i_clgen_model
         .FIXED_IO_ps_clk(),
         .FIXED_IO_ps_porb(),
         .FIXED_IO_ps_srstb(),
-/*
+
+//`ifdef DAC
         .M_AXI_OSC_araddr(axi_osc1.ARADDR),
         .M_AXI_OSC_arburst(axi_osc1.ARBURST),
         .M_AXI_OSC_arcache(axi_osc1.ARCACHE),
@@ -567,7 +580,14 @@ i_clgen_model
         .M_AXI_OSC_arready(axi_osc1.ARREADY),
         .M_AXI_OSC_arsize(axi_osc1.ARSIZE),
         .M_AXI_OSC_arvalid(axi_osc1.ARVALID),
-        */
+
+        .M_AXI_OSC_rdata(axi_osc1.RDATA),
+        .M_AXI_OSC_rid(axi_osc1.RID),
+        .M_AXI_OSC_rlast(axi_osc1.RLAST),
+        .M_AXI_OSC_rready(axi_osc1.RREADY),
+        .M_AXI_OSC_rresp(axi_osc1.RRESP),
+        .M_AXI_OSC_rvalid(axi_osc1.RVALID),
+//`else
         .M_AXI_OSC_awaddr(axi_osc1.AWADDR),
         .M_AXI_OSC_awburst(axi_osc1.AWBURST),
         .M_AXI_OSC_awcache(axi_osc1.AWCACHE),
@@ -583,22 +603,13 @@ i_clgen_model
         .M_AXI_OSC_bready(axi_osc1.BREADY),
         .M_AXI_OSC_bresp(axi_osc1.BRESP),
         .M_AXI_OSC_bvalid(axi_osc1.BVALID),
-        /*
-        .M_AXI_OSC_rdata(axi_osc1.RDATA),
-        .M_AXI_OSC_rid(axi_osc1.RID),
-        .M_AXI_OSC_rlast(axi_osc1.RLAST),
-        .M_AXI_OSC_rready(axi_osc1.RREADY),
-        .M_AXI_OSC_rresp(axi_osc1.RRESP),
-        .M_AXI_OSC_rvalid(axi_osc1.RVALID),
-        
-        */
         .M_AXI_OSC_wdata(axi_osc1.WDATA),
         .M_AXI_OSC_wid(axi_osc1.WID),
         .M_AXI_OSC_wlast(axi_osc1.WLAST),
         .M_AXI_OSC_wready(axi_osc1.WREADY),
         .M_AXI_OSC_wstrb(axi_osc1.WSTRB),
         .M_AXI_OSC_wvalid(axi_osc1.WVALID),
-
+//`endif
         .S_AXI_REG_araddr(axi_reg.ARADDR),
         .S_AXI_REG_arburst(axi_reg.ARBURST),
         .S_AXI_REG_arcache(axi_reg.ARCACHE),

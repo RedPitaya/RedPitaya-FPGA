@@ -287,7 +287,7 @@ begin
     // FIFO_RST - Reset the data FIFO
     FIFO_RST: begin
       if (reg_ctrl[CTRL_RESET])
-        state_ns <= IDLE;
+        state_ns = IDLE;
       else if (fifo_rst_cnt == 31) begin
         if (next_buf_full)
           state_ns = WAIT_BUF_FULL;
@@ -299,7 +299,7 @@ begin
     // WAIT_DATA_RDY - Wait for the data to be buffered before sending the request
     WAIT_DATA_RDY: begin
       if (reg_ctrl[CTRL_RESET])
-        state_ns <= IDLE;
+        state_ns = IDLE;
       else if (fifo_empty == 0) begin
         state_ns = SEND_DMA_REQ;
       end
@@ -310,7 +310,7 @@ begin
     SEND_DMA_REQ: begin
 
         if (reg_ctrl[CTRL_RESET])
-          state_ns <= IDLE;
+          state_ns = IDLE;
         else if (transf_end) begin
           if (next_buf_full) // if next transfer results in overwriting the buffer, wait until the buffer is completely read out.
            state_ns = FIFO_RST; // first reset the FIFO, then wait. That way, we don't have to wait for the FIFO to finish its reset. 
@@ -329,7 +329,7 @@ begin
     WAIT_DATA_DONE: begin
       // Test if the data control is busy
       if (reg_ctrl[CTRL_RESET])
-          state_ns <= IDLE;
+          state_ns = IDLE;
       else if (dat_ctrl_busy == 0) begin
         state_ns = IDLE;  
       end
@@ -337,7 +337,7 @@ begin
 
     WAIT_BUF_FULL: begin
       if (reg_ctrl[CTRL_RESET])
-          state_ns <= IDLE;
+          state_ns = IDLE;
       else if (~next_buf_full) begin // if next buffer is full, then wait
         state_ns = BUF_FILLING; // go back to filling FIFOs
       end
@@ -345,7 +345,7 @@ begin
 
     BUF_FILLING: begin
       if (reg_ctrl[CTRL_RESET])
-          state_ns <= IDLE;
+          state_ns = IDLE;
       else if (fifo_lvl > AXI_BURST_LEN) begin // if next buffer is full, then wait
         state_ns = WAIT_DATA_RDY; // wait for FIFO 
       end

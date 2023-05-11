@@ -1,9 +1,10 @@
 `timescale 1ns / 1ps
 
 module rp_gpio #(
-    parameter S_AXI_REG_ADDR_BITS   = 12,
+    parameter S_AXI_REG_ADDR_BITS   = 32,
     parameter M_AXI_GPIO_ADDR_BITS  = 32,
     parameter M_AXI_GPIO_DATA_BITS  = 64,
+    parameter ID_WIDTHS             = 4,
     parameter GPIO_BITS             = 8,
     parameter EVENT_SRC_NUM         = 5,
     parameter TRIG_SRC_NUM          = 6,
@@ -54,6 +55,7 @@ module rp_gpio #(
   input  wire [3:0]                             s_axi_reg_wstrb,     
   input  wire                                   s_axi_reg_wvalid,     
   output wire                                   s_axi_reg_wready,     
+  input  wire                                   s_axi_reg_wlast,     
   output wire [1:0]                             s_axi_reg_bresp,       
   output wire                                   s_axi_reg_bvalid,       
   input  wire                                   s_axi_reg_bready,   
@@ -65,6 +67,12 @@ module rp_gpio #(
   output wire [1:0]                             s_axi_reg_rresp,
   output wire                                   s_axi_reg_rvalid,
   input  wire                                   s_axi_reg_rready, 
+  output wire                                   s_axi_reg_rlast,     
+  input  wire [ID_WIDTHS-1:0]                   s_axi_reg_awid,
+  input  wire [ID_WIDTHS-1:0]                   s_axi_reg_arid,
+  input  wire [ID_WIDTHS-1:0]                   s_axi_reg_wid,
+  output wire [ID_WIDTHS-1:0]                   s_axi_reg_rid,
+  output wire [ID_WIDTHS-1:0]                   s_axi_reg_bid,
 
   input  wire                                   m_axi_gpio_out_aclk,    
   input  wire                                   m_axi_gpio_out_aresetn,  
@@ -207,7 +215,7 @@ wire [32-1:0]                    buf2_ms_cnt;
 wire [M_AXI_GPIO_ADDR_BITS-1:0]   gpio_in_wp;
 wire [M_AXI_GPIO_ADDR_BITS-1:0]   gpio_out_rp;
 
-
+assign s_axi_reg_rlast = s_axi_reg_rvalid;
 // direction
 DT              dir_p;
 DT              dir_n;
@@ -227,6 +235,8 @@ assign gpion_o = gpio_outdat[ 7:0] ;
 
 assign dirp = dir_p;
 assign dirn = dir_n;
+assign gpio_trig_o = gpiop_i[0];
+
 `else
 IOBUF iobuf_gpio_p [8-1:0] (.O (gpio_p_i), .IO(exp_p_io), .I(gpio_p_o), .T(dir_p));
 IOBUF iobuf_gpio_n [8-1:0] (.O (gpio_n_i), .IO(exp_n_io), .I(gpio_n_o), .T(dir_n));
@@ -236,6 +246,7 @@ assign sti.TDATA[1] = gpio_n_i ;
 
 assign gpio_p_o = sto.TDATA[0][15:8] ;
 assign gpio_n_o = sto.TDATA[0][ 7:0] ;
+assign gpio_trig_o = gpio_p_i[0];
 
 `endif
 
@@ -245,7 +256,10 @@ assign sto.TREADY = 1'b1;
 assign sti.TVALID = 1'b1;
 assign sti.TKEEP  = 1'b1;
 assign sti.TLAST  = 1'b0;
-assign gpio_trig_o = sti.TDATA[0][0];
+
+assign s_axi_reg_rid = s_axi_reg_arid;
+assign s_axi_reg_bid = s_axi_reg_wid;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //  System bus connection
@@ -580,8 +594,8 @@ gpio_out_top #(
   .gpio_buf_size    (cfg_dma_buf_size),
   .gpio_buf1_adr    (cfg_buf1_adr_out),
   .gpio_buf2_adr    (cfg_buf2_adr_out),
-  .buf1_ms_cnt      (buf1_ms_cnt),
-  .buf2_ms_cnt      (buf2_ms_cnt),
+  //.buf1_ms_cnt      (buf1_ms_cnt),
+  //.buf2_ms_cnt      (buf2_ms_cnt),
   .gpio_wp          (gpio_out_wp),
 
   // AXI

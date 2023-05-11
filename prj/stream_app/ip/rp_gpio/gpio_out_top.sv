@@ -33,8 +33,8 @@ module gpio_out_top   #(
   input [M_AXI_GPIO_ADDR_BITS-1:0]      gpio_buf_size,
   input [M_AXI_GPIO_ADDR_BITS-1:0]      gpio_buf1_adr,
   input [M_AXI_GPIO_ADDR_BITS-1:0]      gpio_buf2_adr,
-  input [32-1:0]                        buf1_ms_cnt,
-  input [32-1:0]                        buf2_ms_cnt,
+  output [32-1:0]                       buf1_ms_cnt,
+  output [32-1:0]                       buf2_ms_cnt,
   output [M_AXI_GPIO_ADDR_BITS-1:0]     gpio_wp,
   input  [ 8-1:0]                       gpio_ctrl_reg,
 
