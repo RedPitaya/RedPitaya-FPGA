@@ -114,13 +114,21 @@ reg  [ 25-1: 0] set_b_filt_bb  ;
 reg  [ 25-1: 0] set_b_filt_kk  ;
 reg  [ 25-1: 0] set_b_filt_pp  ;
 
+reg             filt_a_coef_wr;
+reg             filt_b_coef_wr;
+wire            filt_a_rstn;
+wire            filt_b_rstn;
+
 assign adc_a_filt_in = adc_a_i ;
 assign adc_b_filt_in = adc_b_i ;
+
+assign filt_a_rstn = adc_rstn_i && filt_a_coef_wr;
+assign filt_b_rstn = adc_rstn_i && filt_b_coef_wr;
 
 red_pitaya_dfilt1 i_dfilt1_cha (
    // ADC
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
-  .adc_rstn_i  ( adc_rstn_i      ),  // ADC reset - active low
+  .adc_rstn_i  ( filt_a_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_a_filt_in   ),  // ADC data
   .adc_dat_o   ( adc_a_filt_out  ),  // ADC data
    // configuration
@@ -133,7 +141,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
 red_pitaya_dfilt1 i_dfilt1_chb (
    // ADC
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
-  .adc_rstn_i  ( adc_rstn_i      ),  // ADC reset - active low
+  .adc_rstn_i  ( filt_b_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_b_filt_in   ),  // ADC data
   .adc_dat_o   ( adc_b_filt_out  ),  // ADC data
    // configuration
@@ -643,7 +651,6 @@ reg  [  2-1: 0] axi_b_dat_fifo_lvl ;
 wire            axi_b_fifo_rd ;
 reg             axi_b_fifo_rdr;
 
-reg  [  2-1: 0] axi_b_dat_sel      ;
 reg  [  3-1: 0] axi_b_md           ;
 
 reg             axi_b_dv           ;
@@ -1028,6 +1035,15 @@ end else begin
 
       if (sys_addr[19:0]==20'h90)   set_deb_len <= sys_wdata[20-1:0] ;
    end
+end
+
+always @(posedge adc_clk_i)
+if (adc_rstn_i == 1'b0) begin
+   filt_a_coef_wr <= 1'b1;
+   filt_b_coef_wr <= 1'b1;
+end else begin
+   filt_a_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h3);
+   filt_b_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h4);
 end
 
 wire sys_en;
