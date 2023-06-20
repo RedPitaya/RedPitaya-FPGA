@@ -75,6 +75,8 @@ wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt;
 wire [7:0]                req_data;
 wire                      req_we;
 wire                      fifo_dis;
+reg                       fifo_dis_r;
+
 wire [1:0]                upsize_lvl;
 reg                       ctl_start_r;
 reg                       use_8bit_r;
@@ -98,6 +100,9 @@ always @(posedge m_axi_aclk) begin
   ctl_start_r <= ctl_start_o;
   use_8bit_r  <= use_8bit;
 end
+
+always @(posedge s_axis_aclk)
+  fifo_dis_r <= fifo_dis;
 
 rp_dma_s2mm_ctrl #(
   .AXI_ADDR_BITS  (AXI_ADDR_BITS),

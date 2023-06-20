@@ -127,8 +127,27 @@ DT gpio_n_i;
 DT gpio_p_o;
 DT gpio_n_o;
 
-axi4_stream_if #(.DN (2), .DT (DT )) sti            (.ACLK (clk), .ARESETn (rst_n));
-axi4_stream_if #(.DN (1), .DT (DTO)) sto            (.ACLK (clk), .ARESETn (rst_n));
+////////////////////////////////////////////////////////////////////////////////
+// reducing reset fanout
+reg rstn_r;
+always @(posedge clk)
+  rstn_r <= rst_n;
+
+reg axi_gpio_out_rstn;
+always @(posedge m_axi_gpio_out_aclk)
+  axi_gpio_out_rstn <= m_axi_gpio_out_aresetn;
+
+reg axi_gpio_in_rstn;
+always @(posedge m_axi_gpio_in_aclk)
+  axi_gpio_in_rstn <= m_axi_gpio_in_aresetn;
+
+reg axi_reg_rstn;
+always @(posedge s_axi_reg_aclk)
+  axi_reg_rstn <= s_axi_reg_aresetn;
+////////////////////////////////////////////////////////////////////////////////
+
+axi4_stream_if #(.DN (2), .DT (DT )) sti            (.ACLK (clk), .ARESETn (rstn_r));
+axi4_stream_if #(.DN (1), .DT (DTO)) sto            (.ACLK (clk), .ARESETn (rstn_r));
 
 
 
@@ -287,7 +306,7 @@ reg  [31:0]                     reg_rd_data;
 // probably stays the same as ADC stream //  
 reg_ctrl U_reg_ctrl(
   .s_axi_aclk     (s_axi_reg_aclk),       
-  .s_axi_aresetn  (s_axi_reg_aresetn), 
+  .s_axi_aresetn  (axi_reg_rstn), 
   .s_axi_awaddr   (s_axi_reg_awaddr),   
   .s_axi_awprot   (s_axi_reg_awprot),   
   .s_axi_awvalid  (s_axi_reg_awvalid), 
@@ -317,7 +336,7 @@ reg_ctrl U_reg_ctrl(
   
 // write access
 always @(posedge clk)
-if (~rst_n) begin
+if (~rstn_r) begin
   // acquire regset
   cfg_con <= 1'b0;
   cfg_aut <= 1'b0;
@@ -482,7 +501,7 @@ gpio_in_top #(
   .CW (8)
 ) gpio_in_top (
   .clk(m_axi_gpio_in_aclk),
-  .rst_n(m_axi_gpio_in_aresetn),
+  .rst_n(axi_gpio_in_rstn),
 
   // input data stream
   .sti(sti),
@@ -572,7 +591,7 @@ gpio_out_top #(
   .CW (8)
 ) gpio_out_top (
   .clk              (m_axi_gpio_out_aclk),
-  .rst_n            (m_axi_gpio_out_aresetn),
+  .rst_n            (axi_gpio_out_rstn),
 
   // output data stream
   .sto              (sto),
@@ -620,7 +639,7 @@ gpio_out_top #(
 
 always @(posedge clk)
 begin
-  if (rst_n == 0) begin
+  if (rstn_r == 0) begin
     event_num_trig  <= 0;    
     event_num_start <= 0;   
     event_num_stop  <= 0;    
@@ -644,7 +663,7 @@ wire event_val = (reg_addr[8-1:0] == 8'h88) && (reg_wr_we == 1);
 
 always @(posedge clk)
 begin
-  if (rst_n == 0) begin
+  if (rstn_r == 0) begin
     la_event_op <= 'h0;
   end else begin
     if (event_val) begin

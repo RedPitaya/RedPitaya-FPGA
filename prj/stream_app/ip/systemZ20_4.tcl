@@ -287,6 +287,10 @@ proc create_root_design { parentCell } {
    set_property -dict [ list \
     CONFIG.NUM_MI {3} \
     CONFIG.NUM_SI {1} \
+    CONFIG.M00_HAS_REGSLICE {3} \
+    CONFIG.M01_HAS_REGSLICE {3} \
+    CONFIG.M02_HAS_REGSLICE {3} \
+    CONFIG.S00_HAS_REGSLICE {3} \
   ] $axi_reg
 
   # Create instance: clk_gen0, and set properties
