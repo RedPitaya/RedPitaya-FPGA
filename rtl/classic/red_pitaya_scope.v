@@ -184,6 +184,10 @@ reg             sign_curr_a   ;
 reg  [ 34-1: 0] sign_sr_b     ;
 reg             sign_curr_b   ;
 
+reg  [ 14-1: 0] adc_a_fifo [3:0]   ;
+reg  [ 14-1: 0] adc_b_fifo [3:0]   ;
+reg  [ 14-1: 0] adc_a_bram_in ;
+reg  [ 14-1: 0] adc_b_bram_in ;
 
 divide #(
 
@@ -333,6 +337,18 @@ end else begin
    endcase
 end
 
+always @(posedge adc_clk_i) begin
+   adc_a_fifo[0] <= adc_a_dat;
+   adc_a_fifo[1] <= adc_a_fifo[0];
+   adc_a_fifo[2] <= adc_a_fifo[1];
+   adc_a_fifo[3] <= adc_a_fifo[2];
+
+   adc_b_fifo[0] <= adc_b_dat;
+   adc_b_fifo[1] <= adc_b_fifo[0];
+   adc_b_fifo[2] <= adc_b_fifo[1];
+   adc_b_fifo[3] <= adc_b_fifo[2];
+end
+
 //---------------------------------------------------------------------------------
 //  ADC buffer RAM
 
@@ -436,8 +452,8 @@ end
 
 always @(posedge adc_clk_i) begin
    if (adc_we && adc_dv) begin
-      adc_a_buf[adc_wp] <= adc_a_dat ;
-      adc_b_buf[adc_wp] <= adc_b_dat ;
+      adc_a_buf[adc_wp] <= adc_a_bram_in ;
+      adc_b_buf[adc_wp] <= adc_b_bram_in ;
    end
 end
 
@@ -837,6 +853,24 @@ end else begin
        4'd12: adc_trig <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
        4'd13: adc_trig <= CHN == 1 ? adc_trig_bn : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
     default : adc_trig <= 1'b0          ; 
+   endcase
+end
+
+always @(*) begin //delay to trigger
+   case (set_trig_src)
+       4'd2,
+       4'd3,
+       4'd4,
+       4'd5,
+       4'd10,
+       4'd11,
+       4'd12,
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; end // level trigger
+       4'd6,
+       4'd7,
+       4'd8,
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; end // external and ASG trigger
+      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     end // manual trigger
    endcase
 end
 

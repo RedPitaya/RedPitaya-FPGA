@@ -138,6 +138,10 @@ reg             sign_curr_a   ;
 reg  [ 34-1: 0] sign_sr_b     ;
 reg             sign_curr_b   ;
 
+reg  [ 16-1: 0] adc_a_fifo [3:0]   ;
+reg  [ 16-1: 0] adc_b_fifo [3:0]   ;
+reg  [ 16-1: 0] adc_a_bram_in ;
+reg  [ 16-1: 0] adc_b_bram_in ;
 
 divide #(
 
@@ -264,7 +268,7 @@ end else begin
       adc_a_sum   <= $signed(adc_a_sum) + $signed(adc_a_i) ;
       adc_b_sum   <= $signed(adc_b_sum) + $signed(adc_b_i) ;
    end
-
+   adc_dv_r <= {adc_dv_r[3-1:0], adc_dv};
 
    case (set_dec & {17{set_avg_en}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
       17'h0     : begin adc_a_dat <= adc_a_i;              adc_b_dat <= adc_b_i;              adc_dv <= dec_valid;  end // if averaging is disabled
@@ -285,6 +289,18 @@ end else begin
       17'd15    : begin adc_a_dat <= adc_a_i;              adc_b_dat <= adc_b_i;              adc_dv <= dec_valid;  end // no division for any other decimation factor
       default   : begin adc_a_dat <= a_dat_div;            adc_b_dat <= b_dat_div;            adc_dv <= adc_dv_div; end
    endcase
+end
+
+always @(posedge adc_clk_i) begin
+   adc_a_fifo[0] <= adc_a_dat;
+   adc_a_fifo[1] <= adc_a_fifo[0];
+   adc_a_fifo[2] <= adc_a_fifo[1];
+   adc_a_fifo[3] <= adc_a_fifo[2];
+
+   adc_b_fifo[0] <= adc_b_dat;
+   adc_b_fifo[1] <= adc_b_fifo[0];
+   adc_b_fifo[2] <= adc_b_fifo[1];
+   adc_b_fifo[3] <= adc_b_fifo[2];
 end
 
 //---------------------------------------------------------------------------------
@@ -390,8 +406,8 @@ end
 
 always @(posedge adc_clk_i) begin
    if (adc_we && adc_dv) begin
-      adc_a_buf[adc_wp] <= adc_a_dat ;
-      adc_b_buf[adc_wp] <= adc_b_dat ;
+      adc_a_buf[adc_wp] <= adc_a_bram_in ;
+      adc_b_buf[adc_wp] <= adc_b_bram_in ;
    end
 end
 
@@ -605,7 +621,6 @@ reg  [  2-1: 0] axi_b_dat_fifo_lvl ;
 wire            axi_b_fifo_rd ;
 reg             axi_b_fifo_rdr;
 
-reg  [  2-1: 0] axi_b_dat_sel      ;
 reg  [  3-1: 0] axi_b_md           ;
 
 reg             axi_b_dv           ;
@@ -792,6 +807,24 @@ end else begin
        4'd12: adc_trig <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
        4'd13: adc_trig <= CHN == 1 ? adc_trig_bn : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
     default : adc_trig <= 1'b0          ; 
+   endcase
+end
+
+always @(*) begin //delay to trigger
+   case (set_trig_src)
+       4'd2,
+       4'd3,
+       4'd4,
+       4'd5,
+       4'd10,
+       4'd11,
+       4'd12,
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; end // level trigger
+       4'd6,
+       4'd7,
+       4'd8,
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; end // external and ASG trigger
+      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     end // manual trigger
    endcase
 end
 

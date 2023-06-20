@@ -135,6 +135,10 @@ reg             sign_curr_a   ;
 reg  [ 34-1: 0] sign_sr_b     ;
 reg             sign_curr_b   ;
 
+reg  [ 12-1: 0] adc_a_fifo [3:0]   ;
+reg  [ 12-1: 0] adc_b_fifo [3:0]   ;
+reg  [ 12-1: 0] adc_a_bram_in ;
+reg  [ 12-1: 0] adc_b_bram_in ;
 
 divide #(
 
@@ -282,6 +286,18 @@ end else begin
       17'd15    : begin adc_a_dat <= adc_a_i;              adc_b_dat <= adc_b_i;              adc_dv <= dec_valid;  end // no division for any other decimation factor
       default   : begin adc_a_dat <= a_dat_div;            adc_b_dat <= b_dat_div;            adc_dv <= adc_dv_div; end
    endcase
+end
+
+always @(posedge adc_clk_i) begin
+   adc_a_fifo[0] <= adc_a_dat;
+   adc_a_fifo[1] <= adc_a_fifo[0];
+   adc_a_fifo[2] <= adc_a_fifo[1];
+   adc_a_fifo[3] <= adc_a_fifo[2];
+
+   adc_b_fifo[0] <= adc_b_dat;
+   adc_b_fifo[1] <= adc_b_fifo[0];
+   adc_b_fifo[2] <= adc_b_fifo[1];
+   adc_b_fifo[3] <= adc_b_fifo[2];
 end
 
 //---------------------------------------------------------------------------------
@@ -821,6 +837,25 @@ end else begin
    endcase
 end
 
+always @(*) begin //delay to trigger
+   case (set_trig_src)
+       4'd2,
+       4'd3,
+       4'd4,
+       4'd5,
+       4'd10,
+       4'd11,
+       4'd12,
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; end // level trigger
+       4'd6,
+       4'd7,
+       4'd8,
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; end // external and ASG trigger
+      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     end // manual trigger
+   endcase
+end
+
+assign trig_ch_o = {adc_trig_bn, adc_trig_bp, adc_trig_an, adc_trig_ap};
 assign daisy_trig_o = adc_trig;
 //---------------------------------------------------------------------------------
 //  Trigger created from input signal
