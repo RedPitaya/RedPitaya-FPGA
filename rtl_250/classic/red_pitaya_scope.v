@@ -837,8 +837,14 @@ end else begin
    endcase
 end
 
+reg [4-1:0] last_src = 4'h0;
+always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
+  if (sys_wen && (sys_addr[19:0]==20'h4))
+   last_src <= sys_wdata[3:0] ;
+end
+
 always @(*) begin //delay to trigger
-   case (set_trig_src)
+   case (last_src)
        4'd2,
        4'd3,
        4'd4,
