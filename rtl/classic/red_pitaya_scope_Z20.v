@@ -142,6 +142,7 @@ reg  [ 16-1: 0] adc_a_fifo [3:0]   ;
 reg  [ 16-1: 0] adc_b_fifo [3:0]   ;
 reg  [ 16-1: 0] adc_a_bram_in ;
 reg  [ 16-1: 0] adc_b_bram_in ;
+reg             adc_dv_del    ;
 
 divide #(
 
@@ -359,12 +360,12 @@ always @(posedge adc_clk_i) begin
       // count how much data was written into the buffer before trigger
       if (adc_rst_do | adc_arm_do)
          adc_we_cnt <= 32'h0;
-      if (adc_we & ~adc_dly_do & adc_dv & ~&adc_we_cnt)
+      if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
 
       if (adc_rst_do)
          adc_wp <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp <= adc_wp + 1;
 
       if (adc_rst_do)
@@ -374,7 +375,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_rst_do)
          adc_wp_cur <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp_cur <= adc_wp; // save current write pointer
 
 
@@ -396,7 +397,7 @@ always @(posedge adc_clk_i) begin
       else if (adc_rst_do || adc_arm_do)
          adc_trg_rd<=1'b0;
 
-      if ((adc_dly_do || adc_trig) && adc_we && adc_dv)
+      if ((adc_dly_do || adc_trig) && adc_we && adc_dv_del)
          adc_dly_cnt <= adc_dly_cnt - 1;
       else if (!adc_dly_do)
          adc_dly_cnt <= set_dly ;
@@ -405,7 +406,7 @@ always @(posedge adc_clk_i) begin
 end
 
 always @(posedge adc_clk_i) begin
-   if (adc_we && adc_dv) begin
+   if (adc_we && adc_dv_del) begin
       adc_a_buf[adc_wp] <= adc_a_bram_in ;
       adc_b_buf[adc_wp] <= adc_b_bram_in ;
    end
@@ -825,12 +826,12 @@ always @(*) begin //delay to trigger
        4'd10,
        4'd11,
        4'd12,
-       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; end // level trigger
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; adc_dv_del <= adc_dv_r[1]; end // level trigger
        4'd6,
        4'd7,
        4'd8,
-       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; end // external and ASG trigger
-      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     end // manual trigger
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // external and ASG trigger
+      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     adc_dv_del <= adc_dv; end // manual trigger
    endcase
 end
 
