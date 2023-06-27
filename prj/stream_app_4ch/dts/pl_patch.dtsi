@@ -1,0 +1,13 @@
+&rp_oscilloscope {
+        compatible = "generic-uio";
+        reg = <0x40000000 0x100000>,<0x1000000 0x80000>;
+        reg-names = "regset", "buffer";
+};
+
+&rp_gpio {
+        compatible = "generic-uio";
+        reg = <0x40200000 0x100000>,<0x1100000 0x80000>;
+        reg-names = "regset", "buffer";
+};
+
+
