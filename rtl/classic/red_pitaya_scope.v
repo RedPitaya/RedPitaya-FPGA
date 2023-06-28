@@ -114,13 +114,21 @@ reg  [ 25-1: 0] set_b_filt_bb  ;
 reg  [ 25-1: 0] set_b_filt_kk  ;
 reg  [ 25-1: 0] set_b_filt_pp  ;
 
+reg             filt_a_coef_wr;
+reg             filt_b_coef_wr;
+wire            filt_a_rstn;
+wire            filt_b_rstn;
+
 assign adc_a_filt_in = adc_a_i ;
 assign adc_b_filt_in = adc_b_i ;
+
+assign filt_a_rstn = adc_rstn_i && filt_a_coef_wr;
+assign filt_b_rstn = adc_rstn_i && filt_b_coef_wr;
 
 red_pitaya_dfilt1 i_dfilt1_cha (
    // ADC
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
-  .adc_rstn_i  ( adc_rstn_i      ),  // ADC reset - active low
+  .adc_rstn_i  ( filt_a_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_a_filt_in   ),  // ADC data
   .adc_dat_o   ( adc_a_filt_out  ),  // ADC data
    // configuration
@@ -133,7 +141,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
 red_pitaya_dfilt1 i_dfilt1_chb (
    // ADC
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
-  .adc_rstn_i  ( adc_rstn_i      ),  // ADC reset - active low
+  .adc_rstn_i  ( filt_b_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_b_filt_in   ),  // ADC data
   .adc_dat_o   ( adc_b_filt_out  ),  // ADC data
    // configuration
@@ -176,6 +184,11 @@ reg             sign_curr_a   ;
 reg  [ 34-1: 0] sign_sr_b     ;
 reg             sign_curr_b   ;
 
+reg  [ 14-1: 0] adc_a_fifo [3:0]   ;
+reg  [ 14-1: 0] adc_b_fifo [3:0]   ;
+reg  [ 14-1: 0] adc_a_bram_in ;
+reg  [ 14-1: 0] adc_b_bram_in ;
+reg             adc_dv_del    ;
 
 divide #(
 
@@ -325,6 +338,18 @@ end else begin
    endcase
 end
 
+always @(posedge adc_clk_i) begin
+   adc_a_fifo[0] <= adc_a_dat;
+   adc_a_fifo[1] <= adc_a_fifo[0];
+   adc_a_fifo[2] <= adc_a_fifo[1];
+   adc_a_fifo[3] <= adc_a_fifo[2];
+
+   adc_b_fifo[0] <= adc_b_dat;
+   adc_b_fifo[1] <= adc_b_fifo[0];
+   adc_b_fifo[2] <= adc_b_fifo[1];
+   adc_b_fifo[3] <= adc_b_fifo[2];
+end
+
 //---------------------------------------------------------------------------------
 //  ADC buffer RAM
 
@@ -381,12 +406,12 @@ always @(posedge adc_clk_i) begin
       // count how much data was written into the buffer before trigger
       if (adc_rst_do | adc_arm_do)
          adc_we_cnt <= 32'h0;
-      if (adc_we & ~adc_dly_do & adc_dv & ~&adc_we_cnt)
+      if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
 
       if (adc_rst_do)
          adc_wp <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp <= adc_wp + 1;
 
       if (adc_rst_do)
@@ -396,7 +421,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_rst_do)
          adc_wp_cur <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp_cur <= adc_wp; // save current write pointer
 
 
@@ -418,7 +443,7 @@ always @(posedge adc_clk_i) begin
       else if (adc_rst_do || adc_arm_do)
          adc_trg_rd<=1'b0;
 
-      if ((adc_dly_do || adc_trig) && adc_we && adc_dv)
+      if ((adc_dly_do || adc_trig) && adc_we && adc_dv_del)
          adc_dly_cnt <= adc_dly_cnt - 1;
       else if (!adc_dly_do)
          adc_dly_cnt <= set_dly ;
@@ -427,9 +452,9 @@ always @(posedge adc_clk_i) begin
 end
 
 always @(posedge adc_clk_i) begin
-   if (adc_we && adc_dv) begin
-      adc_a_buf[adc_wp] <= adc_a_dat ;
-      adc_b_buf[adc_wp] <= adc_b_dat ;
+   if (adc_we && adc_dv_del) begin
+      adc_a_buf[adc_wp] <= adc_a_bram_in ;
+      adc_b_buf[adc_wp] <= adc_b_bram_in ;
    end
 end
 
@@ -643,7 +668,6 @@ reg  [  2-1: 0] axi_b_dat_fifo_lvl ;
 wire            axi_b_fifo_rd ;
 reg             axi_b_fifo_rdr;
 
-reg  [  2-1: 0] axi_b_dat_sel      ;
 reg  [  3-1: 0] axi_b_md           ;
 
 reg             axi_b_dv           ;
@@ -830,6 +854,30 @@ end else begin
        4'd12: adc_trig <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
        4'd13: adc_trig <= CHN == 1 ? adc_trig_bn : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
     default : adc_trig <= 1'b0          ; 
+   endcase
+end
+
+reg [4-1:0] last_src = 4'h0;
+always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
+  if (sys_wen && (sys_addr[19:0]==20'h4))
+   last_src <= sys_wdata[3:0] ;
+end
+
+always @(*) begin //delay to trigger
+   case (last_src)
+       4'd2,
+       4'd3,
+       4'd4,
+       4'd5,
+       4'd10,
+       4'd11,
+       4'd12,
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; adc_dv_del <= adc_dv_r[1]; end // level trigger
+       4'd6,
+       4'd7,
+       4'd8,
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // external and ASG trigger
+      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     adc_dv_del <= adc_dv; end // manual trigger
    endcase
 end
 
@@ -1028,6 +1076,15 @@ end else begin
 
       if (sys_addr[19:0]==20'h90)   set_deb_len <= sys_wdata[20-1:0] ;
    end
+end
+
+always @(posedge adc_clk_i)
+if (adc_rstn_i == 1'b0) begin
+   filt_a_coef_wr <= 1'b1;
+   filt_b_coef_wr <= 1'b1;
+end else begin
+   filt_a_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h3);
+   filt_b_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h4);
 end
 
 wire sys_en;

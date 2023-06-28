@@ -267,7 +267,6 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h80)   adc_reg_comm <= sys_wdata[32-1:0];
   if (sys_addr[19:0]==20'h80)   adc_reg_commv <= 1'b1; else adc_reg_commv <= 1'b0;
 
-
   if (sys_addr[19:0]==20'h1000) daisy_mode_o <= sys_wdata[  3-1:0];
 
   if (sys_addr[19:0]==20'h40)   pll_cfg_en   <= sys_wdata[0];
