@@ -273,7 +273,7 @@ end
 assign led_o = {5'h0,clk_rec_blnk2,~rstn_125_0,clk_rec_blnk};
 wire adc_clk_out = clk_125_0;
 
-reg [10-1:0] daisy_cnt      =  'h0;
+/*reg [10-1:0] daisy_cnt      =  'h0;
 reg          daisy_slave    = 1'b0;
 
 always @(posedge clk_125_0) begin // if there is a clock present on the daisy chain connector, the board will be treated as a slave
@@ -285,7 +285,7 @@ always @(posedge clk_125_0) begin // if there is a clock present on the daisy ch
     if (&daisy_cnt)
       daisy_slave <= 1'b1;
   end
-end
+end*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // ADC IO
@@ -511,7 +511,8 @@ red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
         .rstn_out_1     (rstn_125_1),
         .rstn_saxi      (rstn_saxi),
         .clksel         (clksel),
-        .daisy_slave    (daisy_slave),        
+        //.daisy_slave    (daisy_slave),
+        .daisy_slave    (1'b0),
         .gpio_p         (exp_p_io),
         .gpio_n         (exp_n_io),
         .spi_done       (spi_done),
