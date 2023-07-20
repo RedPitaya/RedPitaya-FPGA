@@ -185,7 +185,7 @@ fifo_axi_data
   .rd_clk         (m_axi_aclk),               
   .rst            (fifo_rst),     
   .din            (fifo_wr_data),                     
-  .wr_en          (fifo_wr_we && ~fifo_dis),               
+  .wr_en          (fifo_wr_we && ~fifo_dis_r),
   .full           (),   
   .dout           (fifo_rd_data),    
   .rd_en          (fifo_rd_re),                                 
