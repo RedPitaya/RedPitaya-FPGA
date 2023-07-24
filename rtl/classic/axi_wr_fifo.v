@@ -14,6 +14,7 @@ module axi_wr_fifo #(
   parameter   DW  =  64      , // data width (8,16,...,1024)
   parameter   AW  =  32      , // address width
   parameter   FW  =   5      , // address width of FIFO pointers
+  parameter   BYTE_SEL = 0   ,
   parameter   SW  = DW >> 3    // strobe width - 1 bit for every data byte
 )
 (
@@ -33,6 +34,7 @@ module axi_wr_fifo #(
 
    // data and configuration
    input       [ DW-1: 0] wr_data_i          , // write data
+   input       [ SW-1: 0] wr_byte_val_i      ,
    input                  wr_val_i           , // write data valid
    input       [ AW-1: 0] ctrl_start_addr_i  , // range start address
    input       [ AW-1: 0] ctrl_stop_addr_i   , // range stop address
@@ -54,7 +56,6 @@ module axi_wr_fifo #(
 reg  [ FW-1: 0] wr_pt              ;
 reg  [ FW-1: 0] rd_pt              ;
 reg  [ FW  : 0] fill_lvl           ;
-reg  [ DW-1: 0] fifo[(1<<FW)-1:0]  ;
 reg             data_in_reg        ;
 reg             clear              ;
 reg  [  4-1: 0] dat_cnt            ;
@@ -67,6 +68,10 @@ reg  [  4-1: 0] sys_trig_size_r    ;
 wire push = wr_val_i && !fill_lvl[FW] ;
 wire pop ;
 wire new_burst ;
+wire [    SW-1: 0] byte_selector ;
+wire [ DW+SW-1: 0] fifo_rdr      ;
+reg  [ DW+SW-1: 0] fifo[(1<<FW)-1:0]  ;
+
 
 // overflow detection & indication
 always @ (posedge axi_clk_i)
@@ -97,7 +102,8 @@ begin
 end
 
 
-
+assign byte_selector = (BYTE_SEL == 1) ? wr_byte_val_i : {SW{1'b1}};
+assign fifo_rdr      = fifo[rd_pt];
 always @ (posedge axi_clk_i)
 begin
    if (clear) begin
@@ -106,12 +112,13 @@ begin
    end
    else begin
       if (push) begin
-         fifo[wr_pt] <= wr_data_i                  ;
-         wr_pt       <= wr_pt + {{FW-1{1'b0}},1'b1} ;
+         fifo[wr_pt]      <= {byte_selector, wr_data_i} ;
+         wr_pt            <= wr_pt + {{FW-1{1'b0}},1'b1} ;
       end
 
       if (pop) begin
-         axi_wdata_o <= fifo[rd_pt]                 ;
+         axi_wdata_o <= fifo_rdr[   DW-1: 0] ;
+         axi_wsel_o  <= fifo_rdr[SW+DW-1:DW] ;
          rd_pt       <= rd_pt + {{FW-1{1'b0}},1'b1} ;
       end
    end
@@ -198,7 +205,6 @@ always @(posedge axi_clk_i)
 begin
    if (clear) begin
       dat_cnt      <= 4'h0 ;
-      axi_wsel_o   <= {SW{1'b1}} ;
       axi_wfixed_o <= 1'b0 ;
       axi_wlen_o   <= 4'h0 ;
    end
@@ -293,7 +299,7 @@ begin
    end
 end
 
-assign stat_cur_addr_o = next_address ; // current address
+assign stat_cur_addr_o = (ctrl_wrap_i && (axi_waddr_o==sys_stop_addr_r)) ? sys_start_addr_r : next_address ; // current address
 
 
 

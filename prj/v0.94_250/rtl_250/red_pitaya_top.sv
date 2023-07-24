@@ -54,7 +54,8 @@ module red_pitaya_top #(
   bit [0:5*32-1] GITH = '0,
   // module numbers
   int unsigned MNA = 2,  // number of acquisition modules
-  int unsigned MNG = 2   // number of generator   modules
+  int unsigned MNG = 2,  // number of generator   modules
+  int unsigned DWE = 9
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -123,8 +124,8 @@ module red_pitaya_top #(
 // local signals
 ////////////////////////////////////////////////////////////////////////////////
 
-// GPIO parameter
-localparam int unsigned GDW = 8+8;
+// GPIO input data width
+localparam int unsigned GDW = 8;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -197,7 +198,7 @@ sys_bus_if   ps_sys      (.clk (adc_clk2d), .rstn (adc_rstn));
 sys_bus_if   sys [8-1:0] (.clk (adc_clk2d), .rstn (adc_rstn));
 
 // GPIO interface
-gpio_if #(.DW (24)) gpio ();
+gpio_if #(.DW (3*GDW)) gpio ();
 
 // SPI0
 spi_if #(.DW (2)) spi0 ();
@@ -397,7 +398,7 @@ red_pitaya_ams i_ams (
 
 red_pitaya_pdm pdm (
   // system signals
-  .clk   (adc_clk ),
+  .clk   (adc_clk2d),
   .rstn  (adc_rstn),
   // configuration
   .cfg   (pdm_cfg),
@@ -565,15 +566,15 @@ end
 //  House Keeping
 ////////////////////////////////////////////////////////////////////////////////
 
-logic [  9-1: 0] exp_p_in , exp_n_in ;
-logic [  9-1: 0] exp_p_out, exp_n_out;
-logic [  9-1: 0] exp_p_dir, exp_n_dir;
-logic [  9-1: 0] exp_p_otr, exp_n_otr;
-logic [  9-1: 0] exp_p_dtr, exp_n_dtr;
+logic [DWE-1: 0] exp_p_in , exp_n_in ;
+logic [DWE-1: 0] exp_p_out, exp_n_out;
+logic [DWE-1: 0] exp_p_dir, exp_n_dir;
+logic [DWE-1: 0] exp_p_otr, exp_n_otr;
+logic [DWE-1: 0] exp_p_dtr, exp_n_dtr;
 logic            exp_9_in,  exp_9_out, exp_9_dir;
 logic [  8-1: 0] led_hk;
 
-red_pitaya_hk #(.DWE(10))
+red_pitaya_hk #(.DWE(DWE+1))
 
 i_hk (
   // system signals
@@ -631,17 +632,17 @@ assign led_o = led_hk[7:0];
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
 assign exp_p_otr = exp_p_out;
-assign exp_n_otr = exp_n_out | ({9{daisy_mode[1]}} & {8'h0,trig_output_sel});
+assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},trig_output_sel});
 
 assign exp_p_dtr = exp_p_dir;
-assign exp_n_dtr = exp_n_dir | ({9{daisy_mode[1]}} & {9'h1});
+assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
 
-IOBUF i_iobufp [ 9-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
-IOBUF i_iobufn [ 9-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
-IOBUF i_iobuf9          (.O(exp_9_in), .IO(exp_9_io), .I(exp_9_out), .T(~exp_9_dir) );
+IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
+IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
+IOBUF i_iobuf9           (.O(exp_9_in), .IO(exp_9_io), .I(exp_9_out), .T(~exp_9_dir) );
 
-assign gpio.i[15: 8] = exp_p_in[7:0];
-assign gpio.i[23:16] = exp_n_in[7:0];
+assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
+assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope

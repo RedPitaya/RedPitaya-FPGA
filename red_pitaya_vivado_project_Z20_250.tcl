@@ -61,6 +61,11 @@ add_files                         $path_rtl
 add_files                         $path_bd
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
 ## search for HWID parameter to select xdc
 foreach item $argv {
   puts "Input arfguments: $argv"

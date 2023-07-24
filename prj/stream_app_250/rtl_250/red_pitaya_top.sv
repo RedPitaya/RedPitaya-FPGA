@@ -247,19 +247,6 @@ endgenerate
 
 // system bus
 sys_bus_if   ps_sys      (.clk (clk_125), .rstn (rstn_hk));
-sys_bus_if   sys [8-1:0] (.clk (clk_125), .rstn (rstn_hk));
-
-// silence unused busses
-generate
-for (genvar i=4; i<8; i++) begin: for_sys
-  sys_bus_stub sys_bus_stub_4_7 (sys[i]);
-end: for_sys
-endgenerate
-  sys_bus_stub sys_bus_stub_0 (sys[0]);
-  sys_bus_stub sys_bus_stub_1 (sys[1]);
-  sys_bus_stub sys_bus_stub_2 (sys[2]);
-
-
 axi4_if #(.DW (32), .AW (32), .IW (12), .LW (4)) axi_gp (.ACLK (ps_sys.clk), .ARESETn (ps_sys.rstn));
 
 axi4_slave #(
@@ -273,13 +260,6 @@ axi4_slave #(
   .bus       (ps_sys)
 );
 
-sys_bus_interconnect #(
-  .SN (8),
-  .SW (20)
-) sys_bus_interconnect (
-  .bus_m (ps_sys),
-  .bus_s (sys)
-);
 // data loopback
 always @(posedge clk_250)
 begin
@@ -336,13 +316,13 @@ i_hk (
   .exp_n_dat_o     (           exp_n_out ),
   .exp_n_dir_o     (           exp_n_dir ),
    // System bus
-  .sys_addr        (sys[3].addr ),
-  .sys_wdata       (sys[3].wdata),
-  .sys_wen         (sys[3].wen  ),
-  .sys_ren         (sys[3].ren  ),
-  .sys_rdata       (sys[3].rdata),
-  .sys_err         (sys[3].err  ),
-  .sys_ack         (sys[3].ack  )
+  .sys_addr        (ps_sys.addr ),
+  .sys_wdata       (ps_sys.wdata),
+  .sys_wen         (ps_sys.wen  ),
+  .sys_ren         (ps_sys.ren  ),
+  .sys_rdata       (ps_sys.rdata),
+  .sys_err         (ps_sys.err  ),
+  .sys_ack         (ps_sys.ack  )
 );
 
 ////////////////////////////////////////////////////////////////////////////////

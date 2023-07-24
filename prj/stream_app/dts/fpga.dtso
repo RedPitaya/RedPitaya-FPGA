@@ -8,8 +8,8 @@
                         rp_oscilloscope: rp_oscilloscope@40000000 {
                      		#address-cells = <1>;
                 		#size-cells = <1>;
-                                clock-names = "clk", "s_axi_reg_aclk", "m_axi_osc1_aclk", "m_axi_osc2_aclk";
-                                clocks = <0x9 0x9 0x9 0x9>;
+                                clock-names = "clk", "s_axi_reg_aclk", "m_axi_osc1_aclk", "m_axi_osc2_aclk", "m_axi_osc3_aclk", "m_axi_osc4_aclk";
+                                clocks = <0x9 0x9 0x9 0x9 0x9 0x9>;
                                 compatible = "generic-uio";
                                 interrupt-parent = <&intc>;
 			        interrupts = <0 59 4>;
