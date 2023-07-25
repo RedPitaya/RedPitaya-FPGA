@@ -77,7 +77,7 @@ ODDR #(
   .CE   (  1'b1         ), // 1-bit clock enable input
   .D1   (  1'b1         ), // 1-bit data input (positive edge)
   .D2   (  1'b0         ), // 1-bit data input (negative edge)
-  .R    ( !par_rstn_i   ), // 1-bit reset
+  .R    (  1'b0         ), // 1-bit reset
   .S    (  1'b0         )  // 1-bit set
 );
 

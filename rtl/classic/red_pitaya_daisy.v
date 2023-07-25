@@ -115,14 +115,14 @@ reg            txp_dv        ;
 reg  [16-1: 0] txp_dat       ;
 
 
-OBUFDS #(.IOSTANDARD ("DIFF_SSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_clk
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
   .I  ( txs_clk       )
 );
 
-OBUFDS #(.IOSTANDARD ("DIFF_SSTL18_I"), .SLEW ("FAST")) i_OBUF_dat
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_dat
 (
   .O  ( daisy_p_o[0]  ),
   .OB ( daisy_n_o[0]  ),
@@ -174,14 +174,14 @@ reg            rxp_dvr          ;
 reg  [16-1: 0] rxp_datr         ;
 
 
-IBUFDS #(.IOSTANDARD ("DIFF_SSTL18_I")) i_IBUFGDS_clk
+IBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18")) i_IBUFGDS_clk
 (
   .I  ( daisy_p_i[1]  ),
   .IB ( daisy_n_i[1]  ),
   .O  ( rxs_clk     )
 );
 
-IBUFDS #(.DIFF_TERM ("FALSE"), .IOSTANDARD ("DIFF_SSTL18_I")) i_IBUFDS_dat
+IBUFDS #(.DIFF_TERM ("FALSE"), .IOSTANDARD ("DIFF_HSTL_I_18")) i_IBUFDS_dat
 (
   .I  ( daisy_p_i[0]  ),
   .IB ( daisy_n_i[0]  ),

@@ -78,6 +78,11 @@ add_files                         ../../$path_rtl
 add_files                               $path_rtl
 add_files                               $path_bd
 
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
 add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 

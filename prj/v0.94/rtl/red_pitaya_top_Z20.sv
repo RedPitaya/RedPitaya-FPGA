@@ -54,7 +54,8 @@ module red_pitaya_top_Z20 #(
   bit [0:5*32-1] GITH = '0,
   // module numbers
   int unsigned MNA = 2,  // number of acquisition modules
-  int unsigned MNG = 2   // number of generator   modules
+  int unsigned MNG = 2,  // number of generator   modules
+  int unsigned DWE = 8
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -114,8 +115,8 @@ module red_pitaya_top_Z20 #(
 // local signals
 ////////////////////////////////////////////////////////////////////////////////
 
-// GPIO parameter
-localparam int unsigned GDW = 8+8;
+// GPIO input data width
+localparam int unsigned GDW = 8;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -192,7 +193,7 @@ sys_bus_if   ps_sys      (.clk (adc_clk), .rstn (adc_rstn));
 sys_bus_if   sys [8-1:0] (.clk (adc_clk), .rstn (adc_rstn));
 
 // GPIO interface
-gpio_if #(.DW (24)) gpio ();
+gpio_if #(.DW (3*GDW)) gpio ();
 
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
@@ -250,7 +251,7 @@ pwm_rstn <=  frstn[0] &  pll_locked;
 
 
 assign daisy_trig = |par_dat;
-assign trig_ext   = gpio.i[8] & ~(daisy_mode[0] & daisy_trig);
+assign trig_ext   = gpio.i[GDW] & ~(daisy_mode[0] & daisy_trig);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
@@ -413,11 +414,11 @@ ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b), .D2(dac_dat_a), .C(da
 //  House Keeping
 ////////////////////////////////////////////////////////////////////////////////
 
-logic [  8-1: 0] exp_p_in , exp_n_in ;
-logic [  8-1: 0] exp_p_out, exp_n_out;
-logic [  8-1: 0] exp_p_dir, exp_n_dir;
-logic [  8-1: 0] exp_p_otr, exp_n_otr;
-logic [  8-1: 0] exp_p_dtr, exp_n_dtr;
+logic [DWE-1: 0] exp_p_in , exp_n_in ;
+logic [DWE-1: 0] exp_p_out, exp_n_out;
+logic [DWE-1: 0] exp_p_dir, exp_n_dir;
+logic [DWE-1: 0] exp_p_otr, exp_n_otr;
+logic [DWE-1: 0] exp_p_dtr, exp_n_dtr;
 
 red_pitaya_hk i_hk (
   // system signals
@@ -456,16 +457,16 @@ red_pitaya_hk i_hk (
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
 assign exp_p_otr = exp_p_out;
-assign exp_n_otr = exp_n_out | ({8{daisy_mode[1]}} & {7'h0,trig_output_sel});
+assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},trig_output_sel});
 
 assign exp_p_dtr = exp_p_dir;
-assign exp_n_dtr = exp_n_dir | ({8{daisy_mode[1]}} & {8'h1});
+assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
 
-IOBUF i_iobufp [8-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
-IOBUF i_iobufn [8-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
+IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
+IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
 
-assign gpio.i[15: 8] = exp_p_in;
-assign gpio.i[23:16] = exp_n_in;
+assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
+assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope

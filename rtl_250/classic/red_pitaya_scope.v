@@ -119,6 +119,7 @@ reg  [ 17-1: 0] set_dec       ;
 reg  [ 17-1: 0] adc_dec_cnt   ;
 reg             set_avg_en    ;
 reg             adc_dv        ;
+reg  [  4-1: 0] adc_dv_r      ;
 reg             div_go        ;
 wire            div_ok_a      ;
 wire            div_ok_b      ;
@@ -134,6 +135,11 @@ reg             sign_curr_a   ;
 reg  [ 34-1: 0] sign_sr_b     ;
 reg             sign_curr_b   ;
 
+reg  [ 12-1: 0] adc_a_fifo [3:0]   ;
+reg  [ 12-1: 0] adc_b_fifo [3:0]   ;
+reg  [ 12-1: 0] adc_a_bram_in ;
+reg  [ 12-1: 0] adc_b_bram_in ;
+reg             adc_dv_del    ;
 
 divide #(
 
@@ -260,7 +266,7 @@ end else begin
       adc_a_sum   <= $signed(adc_a_sum) + $signed(adc_a_i) ;
       adc_b_sum   <= $signed(adc_b_sum) + $signed(adc_b_i) ;
    end
-
+   adc_dv_r <= {adc_dv_r[3-1:0], adc_dv};
 
    case (set_dec & {17{set_avg_en}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
       17'h0     : begin adc_a_dat <= adc_a_i;              adc_b_dat <= adc_b_i;              adc_dv <= dec_valid;  end // if averaging is disabled
@@ -281,6 +287,18 @@ end else begin
       17'd15    : begin adc_a_dat <= adc_a_i;              adc_b_dat <= adc_b_i;              adc_dv <= dec_valid;  end // no division for any other decimation factor
       default   : begin adc_a_dat <= a_dat_div;            adc_b_dat <= b_dat_div;            adc_dv <= adc_dv_div; end
    endcase
+end
+
+always @(posedge adc_clk_i) begin
+   adc_a_fifo[0] <= adc_a_dat;
+   adc_a_fifo[1] <= adc_a_fifo[0];
+   adc_a_fifo[2] <= adc_a_fifo[1];
+   adc_a_fifo[3] <= adc_a_fifo[2];
+
+   adc_b_fifo[0] <= adc_b_dat;
+   adc_b_fifo[1] <= adc_b_fifo[0];
+   adc_b_fifo[2] <= adc_b_fifo[1];
+   adc_b_fifo[3] <= adc_b_fifo[2];
 end
 
 //---------------------------------------------------------------------------------
@@ -342,12 +360,12 @@ always @(posedge adc_clk_i) begin
       // count how much data was written into the buffer before trigger
       if (adc_rst_do | adc_arm_do)
          adc_we_cnt <= 32'h0;
-      if (adc_we & ~adc_dly_do & adc_dv & ~&adc_we_cnt)
+      if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
 
       if (adc_rst_do)
          adc_wp <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp <= adc_wp + 1;
 
       if (adc_rst_do)
@@ -357,7 +375,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_rst_do)
          adc_wp_cur <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp_cur <= adc_wp; // save current write pointer
 
 
@@ -380,7 +398,7 @@ always @(posedge adc_clk_i) begin
       else if (adc_rst_do || adc_arm_do)
          adc_trg_rd<=1'b0;
 
-      if ((adc_dly_do || adc_trig) && adc_we && adc_dv)
+      if ((adc_dly_do || adc_trig) && adc_we && adc_dv_del)
          adc_dly_cnt <= adc_dly_cnt - 1;
       else if (!adc_dly_do)
          adc_dly_cnt <= set_dly ;
@@ -389,7 +407,7 @@ always @(posedge adc_clk_i) begin
 end
 
 always @(posedge adc_clk_i) begin
-   if (adc_we && adc_dv) begin
+   if (adc_we && adc_dv_del) begin
       adc_a_buf[adc_wp] <= adc_a_dat ;
       adc_b_buf[adc_wp] <= adc_b_dat ;
    end
@@ -431,8 +449,19 @@ reg  [ 32-1: 0] set_a_axi_trig     ;
 reg  [ 32-1: 0] set_a_axi_cur      ;
 reg             axi_a_we           ;
 reg  [ 64-1: 0] axi_a_dat          ;
-reg  [ 64-1: 0] axi_a_dat_l        ;
+wire            axi_a_trig    ;
+reg  [  4-1: 0] axi_a_trig_r  ;
+wire [  2-1: 0] axi_a_sel     ;
+reg  [ 12-1: 0] axi_a_dat_align [0:2];
+wire [128-1: 0] axi_a_fifo_dat     ;
+reg  [128-1: 0] axi_a_fifo_o       ;
+wire            axi_a_fifo_rd ;
+reg             axi_a_fifo_rdr;
+
 reg  [  2-1: 0] axi_a_dat_sel      ;
+reg  [ 64-1: 0] axi_a_md           ;
+
+reg             axi_a_dv           ;
 reg  [  1-1: 0] axi_a_dat_dv       ;
 reg  [ 32-1: 0] axi_a_dly_cnt      ;
 reg             axi_a_dly_do       ;
@@ -441,11 +470,14 @@ reg             axi_a_dly_end_reg  ;
 wire            axi_a_clr          ;
 wire [ 32-1: 0] axi_a_cur_addr     ;
 wire [  5-1: 0] axi_a_state        ;
+wire            fifo_a_empty       ;
 
-assign axi_a_clr = adc_rst_do ;
+assign axi_a_clr = adc_rst_do || (sys_wen && (sys_addr[19:0]==20'h5C) && sys_wdata[0]) ; // when AXI A is enabled
 assign axi_a_state = {axi_a_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_a_we};
 
-
+assign axi_a_fifo_rd = ~fifo_a_empty && ~(axi_a_trig || |axi_a_trig_r); // disable FIFO reads when there is a trigger
+assign axi_a_trig = axi_a_fifo_o[64] && axi_a_fifo_rdr;
+assign axi_a_sel  = axi_a_fifo_o[66:65];
 
 always @(posedge adc_clk_i) begin
    if (adc_rstn_i == 1'b0) begin
@@ -455,6 +487,7 @@ always @(posedge adc_clk_i) begin
       axi_a_dly_do  <=  1'b0 ;
       axi_a_dly_end <=  1'b0      ;
       axi_a_dly_end_reg <= 1'b0   ;
+      axi_a_md           <= 64'h0;
    end
    else begin
       if (adc_arm_do && set_a_axi_en)
@@ -467,7 +500,7 @@ always @(posedge adc_clk_i) begin
       else if ((axi_a_dly_do && (axi_a_dly_cnt == {31'h0,dec1})) || axi_a_clr || adc_arm_do) //delayed reached or reset
          axi_a_dly_do  <= 1'b0 ;
 
-      if (axi_a_dly_do && axi_a_we && adc_dv)
+      if ((axi_a_dly_do || adc_trig) && axi_a_we && axi_a_dv)
          axi_a_dly_cnt <= axi_a_dly_cnt - 1;
       else if (!axi_a_dly_do)
          axi_a_dly_cnt <= set_a_axi_dly ;
@@ -481,28 +514,30 @@ always @(posedge adc_clk_i) begin
 
       if (axi_a_clr)
          axi_a_dat_sel <= 2'h0 ;
-      else if (axi_a_we && adc_dv)
+      else if (axi_a_we && axi_a_dv)
          axi_a_dat_sel <= axi_a_dat_sel + 2'h1 ;
 
-      if (axi_a_we && (axi_a_dat_sel == 2'b11) && adc_dv)
-         axi_a_dat_dv <= !axi_a_dat_dv ;
+      axi_a_dv     <= adc_dv_r[1];
+
+      axi_a_dat_align[0] <= adc_a_dat; //align data to trigger
+      axi_a_dat_align[1] <= axi_a_dat_align[0];
+      axi_a_dat_align[2] <= axi_a_dat_align[1];
+
+      axi_a_dat_dv <= axi_a_we && (axi_a_dat_sel == 2'b11) && axi_a_dv ;
    end
 
-   if (axi_a_we && adc_dv) begin
-      if (axi_a_dat_sel == 2'b00) axi_a_dat[ 16-1:  0] <= $signed(adc_a_dat);
-      if (axi_a_dat_sel == 2'b01) axi_a_dat[ 32-1: 16] <= $signed(adc_a_dat);
-      if (axi_a_dat_sel == 2'b10) axi_a_dat[ 48-1: 32] <= $signed(adc_a_dat);
-      if (axi_a_dat_sel == 2'b11) axi_a_dat[ 64-1: 48] <= $signed(adc_a_dat);
+   if (axi_a_we && axi_a_dv) begin
+      if (axi_a_dat_sel == 2'b00) axi_a_dat[ 16-1:  0] <= $signed(axi_a_dat_align[2]);
+      if (axi_a_dat_sel == 2'b01) axi_a_dat[ 32-1: 16] <= $signed(axi_a_dat_align[2]);
+      if (axi_a_dat_sel == 2'b10) axi_a_dat[ 48-1: 32] <= $signed(axi_a_dat_align[2]);
+      if (axi_a_dat_sel == 2'b11) axi_a_dat[ 64-1: 48] <= $signed(axi_a_dat_align[2]);
    end
 
 
-   if (axi_a_we && (axi_a_dat_sel == 2'b11) && adc_dv)
-      axi_a_dat_l <= { {4{adc_a_dat[12-1]}},adc_a_dat,  axi_a_dat[48-1:0]} ;
-
-   if (axi_a_clr)
-      set_a_axi_trig <= {RSZ{1'b0}};
-   else if (adc_trig && !axi_a_dly_do && axi_a_we)
-      set_a_axi_trig <= {axi_a_cur_addr[32-1:3],axi_a_dat_sel,1'b0} ; // save write pointer at trigger arrival
+   if (adc_trig)
+      axi_a_md <= {61'h0,axi_a_dat_sel,(!axi_a_dly_do && axi_a_we)}; //valid trig
+   else if (axi_a_dat_dv)
+      axi_a_md <= 64'h0;
 
    if (axi_a_clr)
       set_a_axi_cur <= set_a_axi_start ;
@@ -510,26 +545,33 @@ always @(posedge adc_clk_i) begin
       set_a_axi_cur <= axi_a_cur_addr ;
 end
 
-
-//  Synchronize to slower clock
-reg  [ 64-1: 0] axi_a_2d        ;
-reg             axi_a_dat_dv2d  ;
-reg  [  1-1: 0] axi_a_2d_dv     ;
+sync_fifo 
+  U_sync_fifo_a(
+  .wr_clk         (adc_clk_i),               
+  .rd_clk         (axi0_clk_o),               
+  .rst            (~adc_rstn_i || axi_a_clr),     
+  .din            ({axi_a_md, axi_a_dat}),                     
+  .wr_en          (axi_a_dat_dv),               
+  .full           (),   
+  .dout           (axi_a_fifo_dat),    
+  .rd_en          (axi_a_fifo_rd),                                 
+  .empty          (fifo_a_empty),                 
+  .wr_rst_busy    (),     
+  .rd_rst_busy    ());
 
 always @(posedge axi0_clk_o) begin
-   if (axi0_rstn_o == 1'b0) begin
-      axi_a_dat_dv2d  <=  1'b0 ;
-      axi_a_2d_dv     <=  1'b0 ;
-   end
-   else begin
-      axi_a_dat_dv2d  <= axi_a_dat_dv ;
-      axi_a_2d_dv     <= axi_a_dat_dv ^ axi_a_dat_dv2d ;
+   axi_a_trig_r <= {axi_a_trig_r[3-1:0],axi_a_trig}; //axi_trig fifod
+   axi_a_fifo_rdr <= axi_a_fifo_rd;
+   
+   if (axi_a_fifo_rd) begin
+      axi_a_fifo_o <= axi_a_fifo_dat;
    end
 
-   if (axi_a_dat_dv ^ axi_a_dat_dv2d)
-      axi_a_2d <= axi_a_dat_l ;
+   if (axi_a_clr)
+      set_a_axi_trig <= {RSZ{1'b0}};
+   else if (axi_a_trig_r[1]) // wait for the address to update from last write to AXI FIFO
+      set_a_axi_trig <= {axi_a_cur_addr[32-1:3],axi_a_sel, 1'b0}; // save write pointer at trigger arrival
 end
-
 
 axi_wr_fifo #(
   .DW  (  64    ), // data width (8,16,...,1024)
@@ -551,8 +593,8 @@ axi_wr_fifo #(
   .axi_wrdy_i         (  axi0_wrdy_i       ), // write ready
 
    // data and configuration
-  .wr_data_i          (  axi_a_2d          ), // write data
-  .wr_val_i           (  axi_a_2d_dv       ), // write data valid
+  .wr_data_i          (  axi_a_fifo_o[63:0]), // write data
+  .wr_val_i           (  axi_a_fifo_rdr    ), // write data valid
   .ctrl_start_addr_i  (  set_a_axi_start   ), // range start address
   .ctrl_stop_addr_i   (  set_a_axi_stop    ), // range stop address
   .ctrl_trig_size_i   (  4'hF              ), // trigger level
@@ -578,8 +620,19 @@ reg  [ 32-1: 0] set_b_axi_trig     ;
 reg  [ 32-1: 0] set_b_axi_cur      ;
 reg             axi_b_we           ;
 reg  [ 64-1: 0] axi_b_dat          ;
-reg  [ 64-1: 0] axi_b_dat_l        ;
+wire            axi_b_trig    ;
+reg  [  4-1: 0] axi_b_trig_r  ;
+wire [  2-1: 0] axi_b_sel     ;
+reg  [ 12-1: 0] axi_b_dat_align [0:2];
+wire [128-1: 0] axi_b_fifo_dat     ;
+reg  [128-1: 0] axi_b_fifo_o       ;
+wire            axi_b_fifo_rd ;
+reg             axi_b_fifo_rdr;
+
 reg  [  2-1: 0] axi_b_dat_sel      ;
+reg  [ 64-1: 0] axi_b_md           ;
+
+reg             axi_b_dv           ;
 reg  [  1-1: 0] axi_b_dat_dv       ;
 reg  [ 32-1: 0] axi_b_dly_cnt      ;
 reg             axi_b_dly_do       ;
@@ -588,19 +641,24 @@ reg             axi_b_dly_end_reg  ;
 wire            axi_b_clr          ;
 wire [ 32-1: 0] axi_b_cur_addr     ;
 wire [  5-1: 0] axi_b_state        ;
+wire            fifo_b_empty       ;
 
-assign axi_b_clr = adc_rst_do ;
+assign axi_b_clr = adc_rst_do || (sys_wen && (sys_addr[19:0]==20'h7C) && sys_wdata[0]) ; // when AXI A is enabled
 assign axi_b_state = {axi_b_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_b_we};
+
+assign axi_b_fifo_rd = ~fifo_b_empty && ~(axi_b_trig || |axi_b_trig_r); // disable FIFO reads when there is a trigger
+assign axi_b_trig = axi_b_fifo_o[64] && axi_b_fifo_rdr;
+assign axi_b_sel  = axi_b_fifo_o[66:65];
 
 always @(posedge adc_clk_i) begin
    if (adc_rstn_i == 1'b0) begin
-      axi_b_we      <=  1'b0 ;
       axi_b_dat_sel <=  2'h0 ;
       axi_b_dat_dv  <=  1'b0 ;
       axi_b_dly_cnt <= 32'h0 ;
       axi_b_dly_do  <=  1'b0 ;
       axi_b_dly_end <=  1'b0      ;
       axi_b_dly_end_reg <= 1'b0   ;
+      axi_b_md           <= 64'h0;
    end
    else begin
       if (adc_arm_do && set_b_axi_en)
@@ -613,7 +671,7 @@ always @(posedge adc_clk_i) begin
       else if ((axi_b_dly_do && (axi_b_dly_cnt == {31'h0,dec1})) || axi_b_clr || adc_arm_do) //delayed reached or reset
          axi_b_dly_do  <= 1'b0 ;
 
-      if ((axi_b_dly_do || adc_trig) && axi_b_we && adc_dv)
+      if ((axi_b_dly_do || adc_trig) && axi_b_we && axi_b_dv)
          axi_b_dly_cnt <= axi_b_dly_cnt - 1;
       else if (!axi_b_dly_do)
          axi_b_dly_cnt <= set_b_axi_dly ;
@@ -627,55 +685,64 @@ always @(posedge adc_clk_i) begin
 
       if (axi_b_clr)
          axi_b_dat_sel <= 2'h0 ;
-      else if (axi_b_we && adc_dv)
+      else if (axi_b_we && axi_b_dv)
          axi_b_dat_sel <= axi_b_dat_sel + 2'h1 ;
 
-      if (axi_b_we && (axi_b_dat_sel == 2'b11) && adc_dv)
-         axi_b_dat_dv <= !axi_b_dat_dv ;
+      axi_b_dv     <= adc_dv_r[1];
+
+      axi_b_dat_align[0] <= adc_b_dat; //align data to trigger
+      axi_b_dat_align[1] <= axi_b_dat_align[0];
+      axi_b_dat_align[2] <= axi_b_dat_align[1];
+
+      axi_b_dat_dv <= axi_b_we && (axi_b_dat_sel == 2'b11) && axi_b_dv ;
    end
 
-   if (axi_b_we && adc_dv) begin
-      if (axi_b_dat_sel == 2'b00) axi_b_dat[ 16-1:  0] <= $signed(adc_b_dat);
-      if (axi_b_dat_sel == 2'b01) axi_b_dat[ 32-1: 16] <= $signed(adc_b_dat);
-      if (axi_b_dat_sel == 2'b10) axi_b_dat[ 48-1: 32] <= $signed(adc_b_dat);
-      if (axi_b_dat_sel == 2'b11) axi_b_dat[ 64-1: 48] <= $signed(adc_b_dat);
+   if (axi_b_we && axi_b_dv) begin
+      if (axi_b_dat_sel == 2'b00) axi_b_dat[ 16-1:  0] <= $signed(axi_b_dat_align[2]);
+      if (axi_b_dat_sel == 2'b01) axi_b_dat[ 32-1: 16] <= $signed(axi_b_dat_align[2]);
+      if (axi_b_dat_sel == 2'b10) axi_b_dat[ 48-1: 32] <= $signed(axi_b_dat_align[2]);
+      if (axi_b_dat_sel == 2'b11) axi_b_dat[ 64-1: 48] <= $signed(axi_b_dat_align[2]);
    end
 
 
-   if (axi_b_we && (axi_b_dat_sel == 2'b11) && adc_dv)
-      axi_b_dat_l <= { {4{adc_b_dat[12-1]}},adc_b_dat,  axi_b_dat[48-1:0]} ;
-
-   if (axi_b_clr)
-      set_b_axi_trig <= {RSZ{1'b0}};
-   else if (adc_trig && !axi_b_dly_do && axi_b_we)
-      set_b_axi_trig <= {axi_b_cur_addr[32-1:3],axi_b_dat_sel,1'b0} ; // save write pointer at trigger arrival
+   if (adc_trig)
+      axi_b_md <= {61'h0,axi_b_dat_sel,(!axi_b_dly_do && axi_b_we)}; //valid trig
+   else if (axi_b_dat_dv)
+      axi_b_md <= 64'h0;
 
    if (axi_b_clr)
       set_b_axi_cur <= set_b_axi_start ;
-   else if (axi1_wvalid_o)
+   else if (axi0_wvalid_o)
       set_b_axi_cur <= axi_b_cur_addr ;
 end
 
-
-//  Synchronize to slower clock
-reg  [ 64-1: 0] axi_b_2d        ;
-reg             axi_b_dat_dv2d  ;
-reg  [  1-1: 0] axi_b_2d_dv     ;
+sync_fifo 
+  U_sync_fifo_b(
+  .wr_clk         (adc_clk_i),               
+  .rd_clk         (axi1_clk_o),               
+  .rst            (~adc_rstn_i || axi_b_clr),     
+  .din            ({axi_b_md, axi_b_dat}),                     
+  .wr_en          (axi_b_dat_dv),               
+  .full           (),   
+  .dout           (axi_b_fifo_dat),    
+  .rd_en          (axi_b_fifo_rd),                                 
+  .empty          (fifo_b_empty),                 
+  .wr_rst_busy    (),     
+  .rd_rst_busy    ());
 
 always @(posedge axi1_clk_o) begin
-   if (axi1_rstn_o == 1'b0) begin
-      axi_b_dat_dv2d  <=  1'b0 ;
-      axi_b_2d_dv     <=  1'b0 ;
-   end
-   else begin
-      axi_b_dat_dv2d  <= axi_b_dat_dv ;
-      axi_b_2d_dv     <= axi_b_dat_dv ^ axi_b_dat_dv2d ;
+   axi_b_trig_r <= {axi_b_trig_r[3-1:0],axi_b_trig}; //axi_trig fifod
+   axi_b_fifo_rdr <= axi_b_fifo_rd;
+   
+   if (axi_b_fifo_rd) begin
+      axi_b_fifo_o <= axi_b_fifo_dat;
    end
 
-   if (axi_b_dat_dv ^ axi_b_dat_dv2d)
-      axi_b_2d <= axi_b_dat_l ;
+   if (axi_b_clr)
+      set_b_axi_trig <= {RSZ{1'b0}};
+   else if (axi_b_trig_r[1]) // wait for the address to update from last write to AXI FIFO
+      set_b_axi_trig <= {axi_b_cur_addr[32-1:3],axi_b_sel, 1'b0}; // save write pointer at trigger arrival
 end
-
 
 axi_wr_fifo #(
   .DW  (  64    ), // data width (8,16,...,1024)
@@ -697,8 +764,8 @@ axi_wr_fifo #(
   .axi_wrdy_i         (  axi1_wrdy_i       ), // write ready
 
    // data and configuration
-  .wr_data_i          (  axi_b_2d          ), // write data
-  .wr_val_i           (  axi_b_2d_dv       ), // write data valid
+  .wr_data_i          (  axi_b_fifo_o[63:0]), // write data
+  .wr_val_i           (  axi_b_fifo_rdr    ), // write data valid
   .ctrl_start_addr_i  (  set_b_axi_start   ), // range start address
   .ctrl_stop_addr_i   (  set_b_axi_stop    ), // range stop address
   .ctrl_trig_size_i   (  4'hF              ), // trigger level
@@ -771,6 +838,31 @@ end else begin
    endcase
 end
 
+reg [4-1:0] last_src = 4'h0;
+always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
+  if (sys_wen && (sys_addr[19:0]==20'h4))
+   last_src <= sys_wdata[3:0] ;
+end
+
+always @(*) begin //delay to trigger
+   case (last_src)
+       4'd2,
+       4'd3,
+       4'd4,
+       4'd5,
+       4'd10,
+       4'd11,
+       4'd12,
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; adc_dv_del <= adc_dv_r[1]; end // level trigger
+       4'd6,
+       4'd7,
+       4'd8,
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // external and ASG trigger
+      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     adc_dv_del <= adc_dv;      end // manual trigger
+   endcase
+end
+
+assign trig_ch_o = {adc_trig_bn, adc_trig_bp, adc_trig_an, adc_trig_ap};
 assign daisy_trig_o = adc_trig;
 //---------------------------------------------------------------------------------
 //  Trigger created from input signal

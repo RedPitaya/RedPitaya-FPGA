@@ -75,6 +75,12 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 add_files                         ../../$path_rtl
 add_files                         $path_rtl
 add_files                         $path_bd
+
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ## search for HWID parameter to select xdc

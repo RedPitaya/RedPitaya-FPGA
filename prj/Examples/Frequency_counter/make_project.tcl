@@ -1,4 +1,5 @@
 
+
 # ==================================================================================================
 # block_design.tcl - Create Vivado Project - 4_frequency_counter
 #
@@ -70,7 +71,7 @@ create_bd_cell -type module -reference frequency_counter frequency_counter_0
 
 
 # ====================================================================================
-# Connections 
+# Connections
 
 # signal_split
 connect_bd_intf_net [get_bd_intf_pins signal_split_0/S_AXIS] [get_bd_intf_pins axis_red_pitaya_adc_0/M_AXIS]

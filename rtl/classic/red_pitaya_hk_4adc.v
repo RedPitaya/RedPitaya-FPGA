@@ -239,6 +239,8 @@ end
 //---------------------------------------------------------------------------------
 //
 //  System bus connection
+reg [32-1:0] adc_reg_comm;
+reg          adc_reg_commv;
 
 always @(posedge clk_i)
 if (rstn_i == 1'b0) begin
@@ -250,6 +252,8 @@ if (rstn_i == 1'b0) begin
   pll_cfg_en   <= 1'b1 ;
   digital_loop <= 1'b0;
   daisy_mode_o <= 3'h0;
+  adc_reg_comm <= 'h0;
+  adc_reg_commv <= 1'b0;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
 
@@ -259,6 +263,10 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h1C)   exp_n_dat_o  <= sys_wdata[DWE-1:0];
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
+
+  if (sys_addr[19:0]==20'h80)   adc_reg_comm <= sys_wdata[32-1:0];
+  if (sys_addr[19:0]==20'h80)   adc_reg_commv <= 1'b1; else adc_reg_commv <= 1'b0;
+
   if (sys_addr[19:0]==20'h1000) daisy_mode_o <= sys_wdata[  3-1:0];
 
   if (sys_addr[19:0]==20'h40)   pll_cfg_en   <= sys_wdata[0];
@@ -313,7 +321,7 @@ end else begin
     20'h0004C: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[ 9: 5]}   ; end
     20'h00050: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[14:10]}   ; end
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[19:15]}   ; end
-
+    
     20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
     20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end
     
@@ -351,7 +359,7 @@ localparam MODE_ADR = 16'h3;
 localparam FORM_ADR = 16'h4;
 
 localparam PDWN_DAT = 16'h0; // write mode, normal operation
-localparam TIM_DAT  = 16'h1; // write mode, normal clock polarity, CLKOUT delayed by 135 degrees, clock duty cycle stabilizer ON
+localparam TIM_DAT  = 16'hD; // write mode, normal clock polarity, CLKOUT delayed by 270 degrees, clock duty cycle stabilizer ON
 localparam MODE_DAT = 16'h2; // write mode, default LVDS config, no LVDS termination, digital out enabled, DDR CMOS output mode
 localparam FORM_DAT = 16'h0; // write mode, default values
 
@@ -425,9 +433,9 @@ always @(posedge fclk_i) begin
     end
 
     default: begin
-      spi_start <= 'h0;
-      spi_adr   <= 'h0;
-      spi_dat   <= 'h0;
+      spi_start <= ~spi_busy && adc_reg_commv;
+      spi_adr   <= adc_reg_comm[31:16];
+      spi_dat   <= adc_reg_comm[15:0];
       spi_done_o <= 'h1;
     end
   endcase

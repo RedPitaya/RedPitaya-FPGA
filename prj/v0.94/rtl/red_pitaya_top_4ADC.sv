@@ -117,8 +117,8 @@ module red_pitaya_top_4ADC #(
 // local signals
 ////////////////////////////////////////////////////////////////////////////////
 
-// GPIO parameter
-localparam int unsigned GDW = 8+8;
+// GPIO input data width
+localparam int unsigned GDW = 11;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -193,7 +193,7 @@ sys_bus_if   sys [8-1:0] (.clk (adc_clk_01), .rstn (adc_rstn_01));
 sys_bus_if   sys_adc_23  (.clk (adc_clk_23), .rstn (adc_rstn_23));
 
 // GPIO interface
-gpio_if #(.DW (3*DWE)) gpio ();
+gpio_if #(.DW (3*GDW)) gpio ();
 
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
@@ -262,7 +262,7 @@ pwm_rstn <=  frstn[0] & spi_done & pll_locked[0];
 
 
 assign daisy_trig = |par_dat;
-assign trig_ext   = gpio.i[8] & ~(daisy_mode[0] & daisy_trig);
+assign trig_ext   = gpio.i[GDW] & ~(daisy_mode[0] & daisy_trig);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
@@ -428,7 +428,6 @@ always @(posedge adc_clk_01) begin
 end
 
 always @(posedge adc_clk_01) begin
-
   adc_dat_r[2] <= {adc_dat_raw[2][14-1], ~adc_dat_raw[2][14-2:0]};
   adc_dat_r[3] <= {adc_dat_raw[3][14-1], ~adc_dat_raw[3][14-2:0]};
 
@@ -543,8 +542,8 @@ assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
 IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
 IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
 
-assign gpio.i[2*DWE-1:  DWE] = exp_p_in;
-assign gpio.i[3*DWE-1:2*DWE] = exp_n_in;
+assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
+assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH0 and CH1

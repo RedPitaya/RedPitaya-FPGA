@@ -43,7 +43,11 @@ create_project -part $part -force redpitaya ./project
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
 set ::gpio_width 33
+if {$prj_name == "stream_app_4ch"} {
+source                            $path_ip/systemZ20_4.tcl
+} else {
 source                            $path_ip/systemZ20_14.tcl
+}
 
 # generate SDK files
 generate_target all [get_files    system.bd]
@@ -58,6 +62,11 @@ generate_target all [get_files    system.bd]
 add_files                         ../../$path_rtl
 add_files                         $path_rtl
 add_files                         $path_bd
+
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_4ADC.xdc
 

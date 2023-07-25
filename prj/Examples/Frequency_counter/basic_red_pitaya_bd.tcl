@@ -12,6 +12,7 @@ set project_name freq
 
 
 #set project_name 4_averager
+
 set part_name xc7z010clg400-1
 set bd_path tmp/$project_name/$project_name.srcs/sources_1/bd/system
 
@@ -92,7 +93,7 @@ endgroup
 
 
 # ====================================================================================
-# Connections 
+# Connections
 
 connect_bd_net [get_bd_ports daisy_p_i] [get_bd_pins util_ds_buf_1/IBUF_DS_P]
 connect_bd_net [get_bd_ports daisy_n_i] [get_bd_pins util_ds_buf_1/IBUF_DS_N]
@@ -139,7 +140,7 @@ set_property offset 0x42000000 [get_bd_addr_segs {processing_system7_0/Data/SEG_
 set_property range 4K [get_bd_addr_segs {processing_system7_0/Data/SEG_axi_gpio_0_Reg}]
 
 # ====================================================================================
-# Generate output products and wrapper, add constraint 
+# Generate output products and wrapper, add constraint
 
 generate_target all [get_files  $bd_path/system.bd]
 
@@ -158,4 +159,3 @@ if {[llength $files] > 0} {
 set_property VERILOG_DEFINE {TOOL_VIVADO} [current_fileset]
 set_property STRATEGY Flow_PerfOptimized_High [get_runs synth_1]
 set_property STRATEGY Performance_NetDelay_high [get_runs impl_1]
-
