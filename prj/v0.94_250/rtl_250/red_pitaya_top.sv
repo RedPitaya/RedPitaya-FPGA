@@ -171,6 +171,8 @@ logic                 adc_clk2d;
 logic                 adc_10mhz;
 logic                 adc_rstn;
 
+logic                 can_on;
+
 // stream bus type
 localparam type SBA_T = logic signed [14-1:0];  // acquire
 localparam type SBG_T = logic signed [14-1:0];  // generate
@@ -294,6 +296,9 @@ red_pitaya_ps ps (
   .gpio          (gpio),
   // SPI0
   .spi0          (spi0),
+  // CAN0
+  .CAN0_rx       (CAN0_rx     ),
+  .CAN0_tx       (CAN0_tx     ),
   // system read/write channel
   .bus           (ps_sys      ),
   // AXI masters
@@ -523,7 +528,7 @@ endgenerate
 
 
 
-    
+
 // data loopback
 always @(posedge adc_clk)
 begin
@@ -595,7 +600,7 @@ i_hk (
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
   .diag_i          (locked_pll_cnt_r2),
-
+  .can_on_o        (can_on   ),
   // SPI
   .spi_cs_o        (hk_spi_cs   ),
   .spi_clk_o       (hk_spi_clk  ),
@@ -631,11 +636,13 @@ assign led_o = led_hk[7:0];
 ////////////////////////////////////////////////////////////////////////////////
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
-assign exp_p_otr = exp_p_out;
-assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},trig_output_sel});
 
-assign exp_p_dtr = exp_p_dir;
-assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
+assign exp_p_otr = exp_p_out | ({DWE{can_on}}        & {{DWE-8{1'b0}}, CAN0_tx, {DWE-1{1'b0}}   });
+assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, trig_output_sel });
+
+assign exp_p_dtr = exp_p_dir | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b1   , {DWE-1{1'b0}}   });
+assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, 1'b1            })
+                             | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b0   , {DWE-1{1'b0}}   });
 
 IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
 IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
@@ -643,6 +650,9 @@ IOBUF i_iobuf9           (.O(exp_9_in), .IO(exp_9_io), .I(exp_9_out), .T(~exp_9_
 
 assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
+
+assign CAN0_rx = can_on & exp_n_in[7];
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope

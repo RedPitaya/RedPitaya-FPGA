@@ -52,6 +52,9 @@ module red_pitaya_ps (
   // system signals
   output logic [  4-1:0] fclk_clk_o         ,
   output logic [  4-1:0] fclk_rstn_o        ,
+
+  input                  CAN0_rx,
+  output                 CAN0_tx,
   // XADC
   input  logic  [ 5-1:0] vinp_i             ,  // voltages p
   input  logic  [ 5-1:0] vinn_i             ,  // voltages n
@@ -327,6 +330,9 @@ system system_i
   .SPI0_ss_i  (spi0.ss_i   ),  .SPI0_ss_o  (spi0.ss_o   ),  .SPI0_ss_t  (spi0.ss_t   ),
                                .SPI0_ss1_o (spi0.ss1_o  ),
                                .SPI0_ss2_o (spi0.ss2_o  ),
+  // CAN0
+  .CAN0_rx (CAN0_rx),
+  .CAN0_tx (CAN0_tx),
   // HP0                                  // HP1
   .S_AXI_HP0_arready (hp0_saxi_arready),  .S_AXI_HP1_arready (hp1_saxi_arready), // out
   .S_AXI_HP0_awready (hp0_saxi_awready),  .S_AXI_HP1_awready (hp1_saxi_awready), // out

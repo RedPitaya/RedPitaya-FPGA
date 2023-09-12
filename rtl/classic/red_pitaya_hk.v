@@ -47,6 +47,7 @@ module red_pitaya_hk #(
   output reg [DWE-1:0] exp_n_dat_o,  //
   output reg [DWE-1:0] exp_n_dir_o,  //
   input      [ 32-1:0] diag_i     ,
+  output reg           can_on_o   ,
   // System bus
   input      [ 32-1:0] sys_addr   ,  // bus address
   input      [ 32-1:0] sys_wdata  ,  // bus write data
@@ -136,6 +137,7 @@ if (rstn_i == 1'b0) begin
   exp_p_dir_o  <= {DWE{1'b0}};
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
+  can_on_o     <= 1'b0;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
 
@@ -145,6 +147,8 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h1C)   exp_n_dat_o  <= sys_wdata[DWE-1:0];
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
+  if (sys_addr[19:0]==20'h34)   can_on_o     <= sys_wdata[      0];
+
   if (sys_addr[19:0]==20'h1000) daisy_mode_o <= sys_wdata[  3-1:0];
 end
 
@@ -173,6 +177,7 @@ end else begin
     20'h0002C: begin sys_ack <= sys_en;  sys_rdata <= {                diag_i     }       ; end
 
     20'h00030: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWL{1'b0}}, led_o}             ; end
+    20'h00034: begin sys_ack <= sys_en;  sys_rdata <= {{32-1{1'b0}},   can_on_o}          ; end
 
     20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
     20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end

@@ -161,6 +161,7 @@ logic                 adc_clk;
 logic                 adc_rstn;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
+logic                 can_on;
 
 // stream bus type
 localparam type SBA_T = logic signed [14-1:0];  // acquire
@@ -284,6 +285,10 @@ red_pitaya_ps ps (
   // ADC analog inputs
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
+
+  .CAN0_rx       (CAN0_rx     ),
+  .CAN0_tx       (CAN0_tx     ),
+  
   // GPIO
   .gpio          (gpio),
   // system read/write channel
@@ -433,6 +438,7 @@ red_pitaya_hk i_hk (
   .exp_n_dat_o     (exp_n_out),
   .exp_n_dir_o     (exp_n_dir),
   .diag_i          (locked_pll_cnt_r2),
+  .can_on_o        (can_on   ),
    // System bus
   .sys_addr        (sys[0].addr ),
   .sys_wdata       (sys[0].wdata),
@@ -452,11 +458,13 @@ red_pitaya_hk i_hk (
 ////////////////////////////////////////////////////////////////////////////////
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
-assign exp_p_otr = exp_p_out;
-assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},trig_output_sel});
 
-assign exp_p_dtr = exp_p_dir;
-assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
+assign exp_p_otr = exp_p_out | ({DWE{can_on}}        & {{DWE-8{1'b0}}, CAN0_tx, {DWE-1{1'b0}}   });
+assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, trig_output_sel });
+
+assign exp_p_dtr = exp_p_dir | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b1   , {DWE-1{1'b0}}   });
+assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, 1'b1            })
+                             | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b0   , {DWE-1{1'b0}}   });
 
 IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
 IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
@@ -464,6 +472,7 @@ IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_
 assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
+assign CAN0_rx = can_on & exp_n_in[7];
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope
 ////////////////////////////////////////////////////////////////////////////////
