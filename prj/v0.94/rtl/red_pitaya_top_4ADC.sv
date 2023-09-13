@@ -176,6 +176,7 @@ assign spi_csb_o    = spi_cs;
 
 // ADC clock/reset
 logic       adc_clk_01 , adc_clk_23 ;
+logic       adc_rstn_01, adc_rstn_23;
 
 // stream bus type
 localparam type SBA_T = logic signed [14-1:0];
