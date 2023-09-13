@@ -472,7 +472,10 @@ IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_
 assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
-assign CAN0_rx = can_on & exp_n_in[7];
+
+//assign CAN0_rx = can_on & exp_n_in[7];
+assign CAN0_rx = can_on && (exp_p_otr[7] && exp_p_dtr[7]);
+
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope
 ////////////////////////////////////////////////////////////////////////////////
