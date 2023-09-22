@@ -155,7 +155,7 @@ import_files -force
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
 
-set_property top top_tb [current_fileset]
+set_property top top_tb [get_filesets sim_1]
 update_compile_order -fileset sim_1
 
 launch_simulation
