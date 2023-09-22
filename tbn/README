@@ -1,0 +1,13 @@
+Add you own .bin files into this directory. These files are used to drive data to inputs/outputs.
+Up to 4 ADC sources, 2 DAC sources and 1 GPIO source are accepted. 
+
+accepted names:
+adc_src_ch0.bin
+adc_src_ch1.bin
+adc_src_ch2.bin
+adc_src_ch3.bin
+
+dac_src_ch0.bin
+dac_src_ch1.bin
+
+gpio_src_out.bin

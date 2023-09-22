@@ -277,7 +277,6 @@ begin:main
       $display("%m Received ERROR response! @ %t", $time) ;
 
    if( (rresp_i === 0) && (rid_i === id) ) begin
-      $display("%m Received data  = 0x%h @ %t", rdata_i, $time) ;
       dat_o <= rdata_i ;
    end
 
