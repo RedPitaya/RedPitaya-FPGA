@@ -219,7 +219,7 @@ always @(posedge dac_clk_i) begin
          cyc_cnt <= cyc_cnt - 16'h1 ;
 
       // trigger arrived
-      case (trig_src_i)
+      case (trig_src_i & {3{!set_rst_i}})
           3'd1 : trig_in <= trig_sw_i   ; // sw
           3'd2 : trig_in <= ext_trig_p  ; // external positive edge
           3'd3 : trig_in <= ext_trig_n  ; // external negative edge
