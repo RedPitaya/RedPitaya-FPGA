@@ -169,8 +169,6 @@ reg  [ 17-1: 0] adc_dec_cnt   ;
 reg             set_avg_en    ;
 reg             adc_dv        ;
 reg  [  4-1: 0] adc_dv_r      ;
-reg  [  4-1: 0] adc_trig_r    ;
-
 reg             div_go        ;
 wire            div_ok_a      ;
 wire            div_ok_b      ;
@@ -191,7 +189,6 @@ reg  [ 14-1: 0] adc_b_fifo [3:0]   ;
 reg  [ 14-1: 0] adc_a_bram_in ;
 reg  [ 14-1: 0] adc_b_bram_in ;
 reg             adc_dv_del    ;
-reg             adc_trig_del  ;
 
 divide #(
 
@@ -409,22 +406,22 @@ always @(posedge adc_clk_i) begin
       // count how much data was written into the buffer before trigger
       if (adc_rst_do | adc_arm_do)
          adc_we_cnt <= 32'h0;
-      if (adc_we & ~adc_dly_do & adc_dv & ~&adc_we_cnt)
+      if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
 
       if (adc_rst_do)
          adc_wp <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp <= adc_wp + 1;
 
       if (adc_rst_do)
          adc_wp_trig <= {RSZ{1'b0}};
       else if (adc_trig && !adc_dly_do)
-         adc_wp_trig <= adc_wp_cur; // save write pointer at trigger arrival
+         adc_wp_trig <= adc_wp; // save write pointer at trigger arrival
 
       if (adc_rst_do)
          adc_wp_cur <= {RSZ{1'b0}};
-      else if (adc_we && adc_dv)
+      else if (adc_we && adc_dv_del)
          adc_wp_cur <= adc_wp; // save current write pointer
 
 
@@ -892,11 +889,11 @@ always @(*) begin //delay to trigger
        4'd10,
        4'd11,
        4'd12,
-       4'd13  : begin adc_a_bram_in <= adc_a_fifo[1]; adc_b_bram_in <= adc_b_fifo[1]; adc_dv_del <= adc_dv_r[1]; end // level trigger
+       4'd13  : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // level trigger
        4'd6,
        4'd7,
        4'd8,
-       4'd9   : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // external and ASG trigger
+       4'd9   : begin adc_a_bram_in <= adc_a_fifo[3]; adc_b_bram_in <= adc_b_fifo[3]; adc_dv_del <= adc_dv_r[3]; end // external and ASG trigger
       default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     adc_dv_del <= adc_dv;      end // manual trigger
    endcase
 end
