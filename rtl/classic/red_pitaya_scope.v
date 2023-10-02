@@ -875,8 +875,8 @@ end else begin
 end
 
 reg [4-1:0] last_src = 4'h0;
-always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
-  if (sys_wen && (sys_addr[19:0]==20'h4))
+always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed outside of active acquisition
+  if (sys_wen && (sys_addr[19:0]==20'h4) && ~(adc_we || adc_arm_do))
    last_src <= sys_wdata[3:0] ;
 end
 
