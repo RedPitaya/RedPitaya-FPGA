@@ -27,3 +27,12 @@
 };
 
 
+/ {
+         fragment@9 {
+                target = <&can0>;
+                overlay9: __overlay__ {
+                        status = "okay";
+                };
+        };
+
+};
