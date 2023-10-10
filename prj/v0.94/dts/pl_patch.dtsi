@@ -34,6 +34,12 @@
                 };
         };
 
+        fragment@10 {
+                target = <&can1>;
+                overlay10: __overlay__ {
+                        status = "okay";
+                };
+        };
 };
 
 
