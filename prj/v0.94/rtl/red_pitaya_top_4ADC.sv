@@ -186,6 +186,10 @@ SBA_T [MNA-1:0]          adc_dat, adc_dat_r;
 logic                 digital_loop;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
+
+//CAN
+logic                 CAN0_rx, CAN0_tx;
+logic                 CAN1_rx, CAN1_tx;
 logic                 can_on;
 
 
@@ -299,10 +303,12 @@ red_pitaya_ps ps (
   // ADC analog inputs
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
-
+  // CAN0
   .CAN0_rx       (CAN0_rx     ),
   .CAN0_tx       (CAN0_tx     ),
-  
+  // CAN1
+  .CAN1_rx       (CAN1_rx     ),
+  .CAN1_tx       (CAN1_tx     ),
   // GPIO
   .gpio          (gpio),
   // system read/write channel
@@ -541,12 +547,12 @@ red_pitaya_pdm pdm (
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
 
-assign exp_p_otr = exp_p_out | ({DWE{can_on}}        & {{DWE-8{1'b0}}, CAN0_tx, {DWE-1{1'b0}}   });
+assign exp_p_otr = exp_p_out | ({DWE{can_on}}        & {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, {6{1'b0}}   });
 assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, trig_output_sel });
 
-assign exp_p_dtr = exp_p_dir | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b1   , {DWE-1{1'b0}}   });
+assign exp_p_dtr = exp_p_dir | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b1   , 1'b1   , {6{1'b0}}   });
 assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, 1'b1            })
-                             | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b0   , {DWE-1{1'b0}}   });
+                             | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b0   , 1'b0   , {6{1'b0}}   });
 
 IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
 IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
@@ -555,6 +561,8 @@ assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
 assign CAN0_rx = can_on & exp_n_in[7];
+assign CAN1_rx = can_on & exp_n_in[6];
+
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH0 and CH1
 ////////////////////////////////////////////////////////////////////////////////
