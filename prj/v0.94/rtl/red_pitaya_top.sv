@@ -480,10 +480,10 @@ assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
 
-//assign CAN0_rx = can_on & exp_n_in[7];
-//assign CAN1_rx = can_on & exp_n_in[6];
-assign CAN0_rx = can_on && (exp_p_otr[7] && exp_p_dtr[7]); // test only!
-assign CAN1_rx = can_on && (exp_p_otr[6] && exp_p_dtr[6]); // test only!
+assign CAN0_rx = can_on & exp_n_in[7];
+assign CAN1_rx = can_on & exp_n_in[6];
+//assign CAN0_rx = can_on && (exp_p_otr[7] && exp_p_dtr[7]); // test only!
+//assign CAN1_rx = can_on && (exp_p_otr[6] && exp_p_dtr[6]); // test only!
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope
