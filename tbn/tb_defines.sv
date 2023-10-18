@@ -13,7 +13,7 @@
 `define MASTER        1
 `define LOCALM        1
 `define FILERD        0
-`define SINE          0
+`define SINE          1
 `define DAC_SAMPS     100000
 
 `define AXI_MON       1
@@ -120,6 +120,7 @@
 `define MODE_NORMAL   0
 `define MODE_AXI0     1
 `define MODE_AXI1     2
+`define MODE_FAST     3
 
 // IN events
 `define GEN1_EVENT    0

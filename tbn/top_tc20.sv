@@ -36,7 +36,7 @@ task init_adc_01(
 localparam CHA_THR      = 32'd100;
 localparam CHB_THR      = 32'd100;
 localparam TRG_SRC      =  3'h2;
-localparam TRG_DLY      = 32'h800;
+localparam TRG_DLY      = 32'h1000;
 localparam TRG_DEB      = 32'd100;
 localparam DEC          = 32'd1;
 localparam DEC_AVG      =  1'b1;
@@ -51,11 +51,11 @@ localparam CHB_BB       = 32'h497C7;
 localparam CHB_KK       = 32'hD9999A;
 localparam CHB_PP       = 32'h2666;
 localparam CHA_AXI_LADR = 32'h100000;
-localparam CHA_AXI_HADR = 32'h101000;
+localparam CHA_AXI_HADR = 32'h110000;
 localparam CHA_AXI_TDLY = 32'hFF8;
 localparam CHA_AXI_EN   =  1'b1;
-localparam CHB_AXI_LADR = 32'h100000;
-localparam CHB_AXI_HADR = 32'h101000;
+localparam CHB_AXI_LADR = 32'h200000;
+localparam CHB_AXI_HADR = 32'h210000;
 localparam CHB_AXI_TDLY = 32'hFF8;
 localparam CHB_AXI_EN   =  1'b1;
 
@@ -118,7 +118,7 @@ task init_dac(
   int unsigned offset
 );
 localparam CHA_TRIG_SRC =  3'h1;
-localparam CHA_WRAP     =  1'b1;
+localparam CHA_WRAP     =  1'b0;
 localparam CHA_ONCE     =  1'b0;
 localparam CHA_RST      =  1'b0;
 localparam CHA_ZERO     =  1'b0;
@@ -137,8 +137,8 @@ localparam CHA_SIZE     = 32'h800;
 localparam CHA_OFFS     = 32'h0;
 localparam CHA_STEP     = 32'h3610;
 localparam CHA_STEP_LO  = 32'h0;
-localparam CHA_NCYC     = 16'd3;
-localparam CHA_RNUM     = 16'd999;
+localparam CHA_NCYC     = 16'd0;
+localparam CHA_RNUM     = 16'd0;
 localparam CHA_RDLY     = 32'd20;
 localparam CHA_LAST     = 14'h0;
 localparam CHA_FIRST    = 14'h10;
@@ -152,7 +152,7 @@ localparam CHB_RDLY     = 32'd20;
 localparam CHB_LAST     = 14'h0;
 localparam CHB_FIRST    = 14'h10;
 localparam DEB_LEN      = 20'h1;
-localparam NUM_SAMP     = 32'h100;
+localparam NUM_SAMP     = 32'h200;
 localparam SET_BUF      =  1'b1;
 
 set_asg_init( .offset(offset),
@@ -160,7 +160,9 @@ set_asg_init( .offset(offset),
               .chb_trig_src(CHB_TRIG_SRC), .chb_wrap(CHB_WRAP),   .chb_once(CHB_ONCE),   .chb_rst(CHB_RST), .chb_zero(CHB_ZERO), 
               .cha_rgate(CHA_RGATE),       .chb_rgate(CHB_RGATE),
               .cha_amp(CHA_AMP),           .cha_dc(CHA_DC),       .chb_amp(CHB_AMP),     .chb_dc(CHB_DC),
-              .cha_size(CHA_SIZE),         .cha_offs(CHA_OFFS),   .chb_size(CHB_SIZE),   .chb_offs(CHB_OFFS),
+              //.cha_size(CHA_SIZE),         .chb_size(CHB_SIZE),
+              .cha_size(NUM_SAMP<<14),     .chb_size(NUM_SAMP<<14),
+              .cha_offs(CHA_OFFS),         .chb_offs(CHB_OFFS),
               .cha_step(CHA_STEP),         .cha_step_lo(CHA_STEP_LO),
               .chb_step(CHB_STEP),         .chb_step_lo(CHB_STEP_LO),
               .cha_rnum(CHA_RNUM),         .cha_rdly(CHA_RDLY),   .cha_ncyc(CHA_NCYC),
@@ -220,14 +222,52 @@ task test_dac (
   int unsigned offset
 );
   int init_ctrl;
+  #5000;
+  init_ctrl = ({29'h0, `SW_TRIG_ADC}  );
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = (1<<`CTRL_DAC_ZERO      ) +
+              ({29'h0, `SW_TRIG_ADC}  );  
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = (0<<`CTRL_DAC_ZERO      ) +
+              ({29'h0, `SW_TRIG_ADC}  );  
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = (1<<`CTRL_DAC_RST      ) +
+              ({29'h0, `SW_TRIG_ADC}  );  
+  axi_write(offset+'h00, init_ctrl);
+
+  #2000;
+  init_ctrl = (0<<`CTRL_DAC_RST      ) +
+              ({29'h0, `SW_TRIG_ADC}  );  
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = 32'h0;
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = ({29'h0, `SW_TRIG_ADC}  );
+  axi_write(offset+'h00, init_ctrl);
+/*
+  init_ctrl = ({29'h0, `SW_TRIG_ADC}  );
+  axi_write(offset+'h00, init_ctrl); // write trigger and reset at the same time
+
+
   init_ctrl = (1<<`CTRL_DAC_RST       ) +
+            //  (1<<`CTRL_DAC_WRAP      ) +
               ({29'h0, `SW_TRIG_ADC}  );
-  axi_write(offset+'h00, 32'h0); // write trigger and reset at the same time
 
   axi_write(offset+'h00, init_ctrl); // write trigger and reset at the same time
   ##1000;
-  init_ctrl =({29'h0, `SW_TRIG_ADC}  );
-  axi_write(offset+'h00, init_ctrl); // write trigger
+  axi_write(offset+'h00, (1<<`CTRL_DAC_WRAP)); // write trigger and reset at the same time
+  init_ctrl =((1<<`CTRL_DAC_WRAP      ) +
+              {29'h0, `SW_TRIG_ADC}   );
+  axi_write(offset+'h00, init_ctrl); // write trigger*/
 endtask: test_dac
 
 
@@ -338,6 +378,7 @@ task test_osc(
   int trig_src,
   int cycles,
   int dec,
+  int del,
   logic read_trig,
   int mode
 );
@@ -345,25 +386,61 @@ task test_osc(
 int i;
   ##5000;
 
-for (i=0; i<cycles; i++) begin: triggering
-  axi_write(offset+'h14,  dec);  // decimation
-  axi_write(offset+'h0 ,  'd1  );  // ARM trigger
-  axi_write(offset+'h4 , trig_src);  // manual trigger
+// MODE 0 regular BRAM mode, wait for the end of trigger
+// MODE 1 AXI0 mode, wait for the end of trigger
+// MODE 2 AXI1 mode, wait for the end of trigger
+// MODE 3 trigger before end of delay
 
+for (i=0; i<cycles; i++) begin: triggering
+  if (mode != 3) begin
+    axi_write(offset+'h14,  dec);  // decimation
+    axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+
+    wait_clks(del);
+
+    axi_write(offset+'h4 , trig_src);  // manual trigger
+  end
   if (mode == 0)
     reg_wait_bit(32'h40100000,4);
   else if (mode == 1)
     reg_wait_bit(32'h40100088,4);  
   else if (mode == 2)
     reg_wait_bit(32'h40100088,20);  
-
+  else if (mode == 3) begin
+    #2000;
+    axi_write(offset+'h4 , trig_src);  // manual trigger
+  end
   if (read_trig)
     trig_samps(offset);
 end
 
 endtask: test_osc
 
+task wait_clks(
+  int unsigned del
+);
+  logic [32-1:0] cnt;
+  cnt = 0;
+  do begin
+    @(posedge top_tb.clk0);
+    cnt <= cnt + 1;
+  end while (cnt < del);
+endtask: wait_clks
 
+task custom_test(
+);
+  logic [32-1:0] cnt;
+  cnt = 0;
+  axi_write(32'h40000000+'h34,  1);  // decimation
+  do begin
+    @(posedge top_tb.clk0);
+    top_tb.red_pitaya_top.ps.system_i.CAN0_tx_r <= $random();
+    top_tb.red_pitaya_top.ps.system_i.CAN1_tx_r <= $random();
+
+    wait_clks(32);
+    cnt <= cnt + 1;
+  end while (cnt < 10000);
+endtask: custom_test
 
 task reg_wait_bit(
   int unsigned offset,

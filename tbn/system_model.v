@@ -311,7 +311,10 @@ input               S_AXI_HP3_wvalid,
 
 input         CAN0_rx,
 output        CAN0_tx,
-  
+
+input         CAN1_rx,
+output        CAN1_tx,
+
 input         IRQ_LG,
 input         IRQ_LA,
 input         IRQ_GEN0,
@@ -455,6 +458,9 @@ end
 
 reg CAN0_tx_r = 1'b0;
 assign CAN0_tx = CAN0_tx_r;
+
+reg CAN1_tx_r = 1'b0;
+assign CAN1_tx = CAN1_tx_r;
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------

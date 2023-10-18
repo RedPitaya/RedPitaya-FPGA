@@ -54,10 +54,10 @@ wire  [4*1 -1:0] axi_clk   = {top_tb.red_pitaya_top.ps.system_i.i_s_axi_hp3.axi_
 
 
 `ifdef Z20_4ADC
-wire  [  12-1:0] adc_adr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_wp[12-1:0],
-                              top_tb.red_pitaya_top.i_scope_2_3.adc_wp[12-1:0],
-                              top_tb.red_pitaya_top.i_scope_0_1.adc_wp[12-1:0],
-                              top_tb.red_pitaya_top.i_scope_0_1.adc_wp[12-1:0]};
+wire  [  14-1:0] adc_adr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_wp[14-1:0],
+                              top_tb.red_pitaya_top.i_scope_2_3.adc_wp[14-1:0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_wp[14-1:0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_wp[14-1:0]};
 
 wire  [  14-1:0] adc_datr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_b_bram_in,
                               top_tb.red_pitaya_top.i_scope_2_3.adc_a_bram_in,
@@ -83,15 +83,15 @@ wire [ 4-1:0]  trig_src  = top_tb.red_pitaya_top.i_scope_0_1.set_trig_src;
 wire           adc_trig  = top_tb.red_pitaya_top.i_scope_0_1.adc_trig;
 wire           axi_trig  = top_tb.red_pitaya_top.i_scope_0_1.axi_a_trig;
 wire [32-1:0]  axi_triga = top_tb.red_pitaya_top.i_scope_0_1.set_a_axi_trig;
-wire [12-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope_0_1.adc_wp_trig[12-1:0];
+wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope_0_1.adc_wp_trig[14-1:0];
 wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope_0_1.set_a_tresh;
 
 `else
-wire  [  12-1:0] adc_adr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_wp[12-1:0],
-                                  top_tb.red_pitaya_top.i_scope.adc_wp[12-1:0]};
+wire  [  14-1:0] adc_adr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_wp[14-1:0],
+                                  top_tb.red_pitaya_top.i_scope.adc_wp[14-1:0]};
 
-wire  [  14-1:0] adc_datr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_a_bram_in,
-                                   top_tb.red_pitaya_top.i_scope.adc_b_bram_in};
+wire  [  14-1:0] adc_datr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_b_bram_in,
+                                   top_tb.red_pitaya_top.i_scope.adc_a_bram_in};
 
 wire  [2*1 -1:0] adc_we    = {top_tb.red_pitaya_top.i_scope.adc_we,
                               top_tb.red_pitaya_top.i_scope.adc_we};
@@ -104,7 +104,7 @@ wire  [2*1 -1:0] adc_clk   = {top_tb.red_pitaya_top.i_scope.adc_clk_i,
 
 wire [ 4-1:0]  trig_src  = top_tb.red_pitaya_top.i_scope.set_trig_src;
 wire [32-1:0]  axi_triga = top_tb.red_pitaya_top.i_scope.set_a_axi_trig;
-wire [12-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope.adc_wp_trig[12-1:0];
+wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope.adc_wp_trig[14-1:0];
 wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope.set_a_tresh;
 wire           adc_trig  = top_tb.red_pitaya_top.i_scope.adc_trig;
 wire           axi_trig  = top_tb.red_pitaya_top.i_scope.axi_a_trig;
@@ -249,7 +249,7 @@ task axi_monitor_ch0  (
   logic enable
 );
   int i = ch0;
-    $display("AXI enable: %d, i: %d, %t", enable, i, $time);
+    //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
         $display("writing AXI file %d,%t",i,$time);
@@ -271,7 +271,7 @@ task axi_monitor_ch1  (
   logic enable
 );
   int i = ch1;
-    $display("AXI enable: %d, i: %d, %t", enable, i, $time);
+    //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
         $display("writing AXI file %d,%t",i,$time);
@@ -293,7 +293,7 @@ task axi_monitor_ch2  (
   logic enable
 );
   int i = ch2;
-    $display("AXI enable: %d, i: %d, %t", enable, i, $time);
+    //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
         $display("writing AXI file %d,%t",i,$time);
@@ -315,7 +315,7 @@ task axi_monitor_ch3  (
   logic enable
 );
   int i = ch3;
-    $display("AXI enable: %d, i: %d, %t", enable, i, $time);
+    //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
         $display("writing AXI file %d,%t",i,$time);

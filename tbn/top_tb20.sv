@@ -55,13 +55,14 @@ module top_tb #(
 
   parameter N_SAMP        = 102401-1, // size of ADC buffer file
 
-  parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
+  parameter ADC_TRIG      = `SW_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 1000,            // how many ADC cycles (triggers) are handles
+  parameter CYCLES        = 1000,           // how many ADC cycles (triggers) are handles
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
-  parameter ADC_MODE      = `MODE_NORMAL,   // normal, axi0, axi1
-  parameter ACK_DELAY     = 500,           // delay in ack after interrupt (DMA streaming)
+  parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
+  parameter ACK_DELAY     = 500,            // delay in ack after interrupt (DMA streaming)
+  parameter ARM_DELAY     = 5000,           // delay in sending SW trigger after arming
 
   parameter MON_LEN       = 100000,         // how many samples are acquired before monitor file is closed
 
@@ -130,6 +131,8 @@ wire  [DWE-1:0] gpio_n;
 wire            gpio_9;
 logic [DWE-1:0] gpio_p_drv;
 logic [DWE-1:0] gpio_n_drv;
+logic [DWE-1:0] gpio_p_dir;
+logic [DWE-1:0] gpio_n_dir;
 logic           gpio_9_drv;
 logic [DWE-1:0] gpio_p_driver;
 logic [DWE-1:0] gpio_n_driver;
@@ -228,14 +231,15 @@ initial begin
 
     end    
 `else
-    ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
+    ADR = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
-     // top_tc20.init_adc_01(ADR);
-     // top_tc20.test_osc   (ADR, ADC_TRIG, CYCLES, DEC, R_TRIG, ADC_MODE);
-      top_tc20.init_dac(ADR);
-      #10000;
-      top_tc20.test_dac(ADR);
+      top_tc20.init_adc_01(ADR);
+      top_tc20.custom_test();
+      //top_tc20.test_osc   (ADR, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      //top_tc20.init_dac(ADR);
+      //#10000;
+      //top_tc20.test_dac(ADR);
     end
 `endif
 
@@ -355,6 +359,13 @@ tb_dac_drv
 );
 
 
+assign gpio_p_dir =  top_tb.red_pitaya_top.exp_p_dtr;
+assign gpio_n_dir =  top_tb.red_pitaya_top.exp_n_dtr;
+
+always @(posedge clk0) begin
+  gpio_p_driver[7:6] <= gpio_n_rec[7:6];
+end
+
 assign gpio_p_drv = {gpio_p_driver[DWE-1:1], trig_ext};
 assign gpio_n_drv =  gpio_n_driver;
 assign gpio_9_drv =  gpio_9_driver;
@@ -366,6 +377,9 @@ assign gpio_9 = gpio_9_drv;
 assign gpio_p_rec = gpio_p;
 assign gpio_n_rec = gpio_n;
 assign gpio_9_rec = gpio_9;
+
+IOBUF i_iobufp [DWE-1:0] (.O(gpio_p_rec), .IO(gpio_p), .I(gpio_p_drv), .T(gpio_p_dir) );
+IOBUF i_iobufn [DWE-1:0] (.O(gpio_n_rec), .IO(gpio_n), .I(gpio_n_drv), .T(gpio_n_dir) );
 
 wire adc_clk0, adc_clk1;
 wire daisy_250;
