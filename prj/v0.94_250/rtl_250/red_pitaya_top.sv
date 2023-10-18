@@ -577,11 +577,14 @@ end
 //  House Keeping
 ////////////////////////////////////////////////////////////////////////////////
 
-logic [DWE-1: 0] exp_p_in , exp_n_in ;
-logic [DWE-1: 0] exp_p_out, exp_n_out;
-logic [DWE-1: 0] exp_p_dir, exp_n_dir;
-logic [DWE-1: 0] exp_p_otr, exp_n_otr;
-logic [DWE-1: 0] exp_p_dtr, exp_n_dtr;
+logic [DWE-1: 0] exp_p_in ,  exp_n_in ;
+logic [DWE-1: 0] exp_p_out,  exp_n_out;
+logic [DWE-1: 0] exp_p_dir,  exp_n_dir;
+logic [DWE-1: 0] exp_p_otr,  exp_n_otr;
+logic [DWE-1: 0] exp_p_dtr,  exp_n_dtr;
+logic [DWE-1: 0] exp_p_alt,  exp_n_alt;
+logic [DWE-1: 0] exp_p_altr, exp_n_altr;
+logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 logic            exp_9_in,  exp_9_out, exp_9_dir;
 logic [  8-1: 0] led_hk;
 
@@ -643,12 +646,25 @@ assign led_o = led_hk[7:0];
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
 
-assign exp_p_otr = exp_p_out | ({DWE{can_on}}        & {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, {6{1'b0}}   });
-assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, trig_output_sel });
+assign exp_p_alt  = {DWE{1'b0}};
+assign exp_n_alt  = {{DWE-8{1'b0}},  can_on,  can_on, 5'h0, daisy_mode[1]  };
 
-assign exp_p_dtr = exp_p_dir | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b1   , 1'b1   , {6{1'b0}}   });
-assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}}, 1'b1            })
-                             | ({DWE{can_on}}        & {{DWE-8{1'b0}}, 1'b0   , 1'b0   , {6{1'b0}}   });
+assign exp_p_altr = {DWE{1'b0}};
+assign exp_n_altr = {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, 5'h0, trig_output_sel};
+
+assign exp_p_altd = {DWE{1'b0}};
+assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b0};
+
+genvar GM;
+generate
+for(GM = 0 ; GM < DWE ; GM = GM + 1) begin : gpios
+  assign exp_p_otr[GM] = exp_p_alt[GM] ? exp_p_altr[GM] : exp_p_out[GM];
+  assign exp_n_otr[GM] = exp_n_alt[GM] ? exp_n_altr[GM] : exp_n_out[GM];
+
+  assign exp_p_dtr[GM] = exp_p_alt[GM] ? exp_p_altd[GM] : exp_p_dir[GM];
+  assign exp_n_dtr[GM] = exp_n_alt[GM] ? exp_n_altd[GM] : exp_n_dir[GM];
+end
+endgenerate
 
 IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
 IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
@@ -657,9 +673,8 @@ IOBUF i_iobuf9           (.O(exp_9_in), .IO(exp_9_io), .I(exp_9_out), .T(~exp_9_
 assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
 
-assign CAN0_rx = can_on & exp_n_in[7];
-assign CAN1_rx = can_on & exp_n_in[6];
-
+assign CAN0_rx = can_on & exp_p_in[7];
+assign CAN1_rx = can_on & exp_p_in[6];
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope
