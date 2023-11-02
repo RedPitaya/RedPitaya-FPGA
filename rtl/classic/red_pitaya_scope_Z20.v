@@ -809,7 +809,7 @@ end else begin
       else if (adc_dly_do || adc_trig || adc_rst_do) //delay reached or reset
          set_trig_src <= 4'h0 ;
 
-   case (set_trig_src)
+   case (set_trig_src & {4{adc_we}}) // no valid triggers if trigger is not armed
        4'd1 : adc_trig <= adc_trig_sw   ; // manual
        4'd2 : adc_trig <= CHN == 0 ? adc_trig_ap : trig_ch_i[0] ; // A ch rising edge
        4'd3 : adc_trig <= CHN == 0 ? adc_trig_an : trig_ch_i[1] ; // A ch falling edge

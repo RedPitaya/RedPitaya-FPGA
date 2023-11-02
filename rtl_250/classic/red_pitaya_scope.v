@@ -842,7 +842,7 @@ always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
    adc_trig      <= 1'b0 ;
 end else begin
-   case (set_trig_src)
+   case (set_trig_src & {4{adc_we}}) // no valid triggers if trigger is not armed
        4'd1 : adc_trig <= adc_trig_sw   ; // manual
        4'd2 : adc_trig <= adc_trig_ap   ; // A ch rising edge
        4'd3 : adc_trig <= adc_trig_an   ; // A ch falling edge
