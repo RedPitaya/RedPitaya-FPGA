@@ -316,7 +316,8 @@ reg   [   4-1: 0] adc_rval      ;
 wire              adc_rd_dv     ;
 reg               adc_we        ;
 reg               adc_we_keep   ;
-reg               adc_trig      ;
+reg               adc_trig_pre  ;
+wire              adc_trig      ;
 
 reg   [ RSZ-1: 0] adc_wp_trig   ;
 reg   [ RSZ-1: 0] adc_wp_cur_rd ;
@@ -812,6 +813,7 @@ wire              asg_trig_p       ;
 wire              asg_trig_n       ;
 wire              adc_trig_clr     ;
 wire              adc_trig_clr2d   ;
+reg               adc_trg_dis= 1'b0;
 
 assign adc_trig_clr = (adc_dly_do || adc_trig);
 
@@ -831,30 +833,37 @@ end else begin
    adc_rst_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ;
    adc_trig_sw <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h1); // SW trigger
 
-      if (sys_wen && (sys_addr[19:0]==20'h4))
-         set_trig_src <= sys_wdata[3:0] ;
-      else if (adc_trig_clr2d || adc_rst_do) //delayed reached or reset
-         set_trig_src <= 4'h0 ;
+   if (sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h0))
+      adc_trg_dis <= 1'b1;
+   else if(adc_arm_do)
+      adc_trg_dis <= 1'b0;
+
+   if (sys_wen && (sys_addr[19:0]==20'h4))
+      set_trig_src <= sys_wdata[3:0] ;
+   else if (adc_trig_clr2d || adc_rst_do) //delayed reached or reset
+      set_trig_src <= 4'h0 ;
 end
 
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
-   adc_trig      <= 1'b0 ;
+   adc_trig_pre  <= 1'b0 ;
 end else begin
-   case (set_trig_src & {4{adc_we}}) // no valid triggers if trigger is not armed
-       4'd1 : adc_trig <= adc_trig_sw   ; // manual
-       4'd2 : adc_trig <= adc_trig_ap   ; // A ch rising edge
-       4'd3 : adc_trig <= adc_trig_an   ; // A ch falling edge
-       4'd4 : adc_trig <= adc_trig_bp   ; // B ch rising edge
-       4'd5 : adc_trig <= adc_trig_bn   ; // B ch falling edge
-       4'd6 : adc_trig <= ext_trig_p    ; // external - rising edge
-       4'd7 : adc_trig <= ext_trig_n    ; // external - falling edge
-       4'd8 : adc_trig <= asg_trig_p    ; // ASG - rising edge
-       4'd9 : adc_trig <= asg_trig_n    ; // ASG - falling edge
-    default : adc_trig <= 1'b0          ;
+   case (set_trig_src)
+       4'd1 : adc_trig_pre <= adc_trig_sw   ; // manual
+       4'd2 : adc_trig_pre <= adc_trig_ap   ; // A ch rising edge
+       4'd3 : adc_trig_pre <= adc_trig_an   ; // A ch falling edge
+       4'd4 : adc_trig_pre <= adc_trig_bp   ; // B ch rising edge
+       4'd5 : adc_trig_pre <= adc_trig_bn   ; // B ch falling edge
+       4'd6 : adc_trig_pre <= ext_trig_p    ; // external - rising edge
+       4'd7 : adc_trig_pre <= ext_trig_n    ; // external - falling edge
+       4'd8 : adc_trig_pre <= asg_trig_p    ; // ASG - rising edge
+       4'd9 : adc_trig_pre <= asg_trig_n    ; // ASG - falling edge
+    default : adc_trig_pre <= 1'b0          ;
    endcase
 end
+
+assign adc_trig = adc_trig_pre & !adc_trg_dis;
 
 reg [4-1:0] last_src = 4'h0;
 always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
@@ -1078,7 +1087,7 @@ end else begin
                                                                               , 1'b0                      // reset
                                                                               , adc_we}             ; end // arm
 
-     20'h00004 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 4{1'b0}}, set_trig_src}       ; end 
+     20'h00004 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 5{1'b0}}, adc_trg_dis, set_trig_src}; end 
 
      20'h00008 : begin sys_ack <= sys_en;          sys_rdata <= {{32-12{1'b0}}, set_a_tresh}        ; end
      20'h0000C : begin sys_ack <= sys_en;          sys_rdata <= {{32-12{1'b0}}, set_b_tresh}        ; end
