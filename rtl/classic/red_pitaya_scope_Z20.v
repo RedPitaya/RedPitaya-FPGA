@@ -806,7 +806,7 @@ end else begin
    adc_rst_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ;
    adc_trig_sw <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h1); // SW trigger
 
-   if (sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h0))
+   if (adc_trig && !adc_dly_do)
       adc_trg_dis <= 1'b1;
    else if(adc_arm_do)
       adc_trg_dis <= 1'b0;
