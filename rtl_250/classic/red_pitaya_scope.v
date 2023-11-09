@@ -359,9 +359,9 @@ always @(posedge adc_clk_i) begin
          adc_we <= 1'b0 ;
 
       // count how much data was written into the buffer before trigger
-      if (adc_rst_do | adc_arm_do)
+      if (adc_rst_do || adc_arm_do)
          adc_we_cnt <= 32'h0;
-      if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
+      else if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
 
       if (adc_rst_do)
@@ -830,7 +830,7 @@ if (adc_rstn_i == 1'b0) begin
    set_trig_src  <= 4'h0 ;
 end else begin
    adc_arm_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0] ; // SW ARM
-   adc_rst_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ;
+   adc_rst_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ; // reset
    adc_trig_sw <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h1); // SW trigger
 
    if (adc_trig && !adc_dly_do)
@@ -866,11 +866,14 @@ end
 assign adc_trig = adc_trig_pre & !adc_trg_dis;
 
 reg [4-1:0] last_src = 4'h0;
-always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
-  if (sys_wen && (sys_addr[19:0]==20'h4) && ~(adc_we || adc_arm_do))
+always @(posedge adc_clk_i) begin
+  if (sys_wen && (sys_addr[19:0]==20'h4))
    last_src <= sys_wdata[3:0] ;
 end
 
+
+reg [2-1:0] dat_dly  = 2'h0;
+reg [2-1:0] prev_dly = 2'h0;
 always @(*) begin //delay to trigger
    case (last_src)
        4'd2,
@@ -880,13 +883,17 @@ always @(*) begin //delay to trigger
        4'd10,
        4'd11,
        4'd12,
-       4'd13  : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // level trigger
+       4'd13  : begin dat_dly = 2'h2; prev_dly = 2'h2; end // level trigger
        4'd6,
        4'd7,
        4'd8,
-       4'd9   : begin adc_a_bram_in <= adc_a_fifo[3]; adc_b_bram_in <= adc_b_fifo[3]; adc_dv_del <= adc_dv_r[3]; end // external and ASG trigger
-      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     adc_dv_del <= adc_dv;      end // manual trigger
+       4'd9   : begin dat_dly = 2'h3; prev_dly = 2'h3; end // external and ASG trigger
+      default : begin dat_dly = prev_dly;              end // manual trigger
    endcase
+
+   adc_a_bram_in <= adc_a_fifo[dat_dly]; 
+   adc_b_bram_in <= adc_b_fifo[dat_dly]; 
+   adc_dv_del    <= adc_dv_r[dat_dly];
 end
 
 assign trig_ch_o = {adc_trig_bn, adc_trig_bp, adc_trig_an, adc_trig_ap};
