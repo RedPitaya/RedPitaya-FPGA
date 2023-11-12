@@ -401,7 +401,7 @@ always @(posedge adc_clk_i) begin
    else begin
       if (adc_arm_do)
          adc_we <= 1'b1 ;
-      else if (((adc_dly_do || adc_trig) && (adc_dly_cnt == {31'h0,dec1}) && ~adc_we_keep) || adc_rst_do) //delayed reached or reset
+      else if (((adc_dly_do || adc_trig) && (adc_dly_cnt == 32'h1) && ~adc_we_keep) || adc_rst_do) //delayed reached or reset
          adc_we <= 1'b0 ;
 
       // count how much data was written into the buffer before trigger
@@ -428,7 +428,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_trig)
          adc_dly_do  <= 1'b1;
-      else if ((adc_dly_do && (adc_dly_cnt == {31'h0,dec1})) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
+      else if ((adc_dly_do && (adc_dly_cnt <= 32'h1)) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
          adc_dly_do  <= 1'b0;
       
       adc_dly_end_reg <= adc_dly_do; 
@@ -542,12 +542,12 @@ always @(posedge axi0_clk_o) begin
    else begin
       if (adc_arm_do && set_a_axi_en)
          axi_a_we <= 1'b1 ;
-      else if (((axi_a_dly_do || adc_trig) && (axi_a_dly_cnt == {31'h0,dec1})) || adc_rst_do) //delayed reached or reset
+      else if (((axi_a_dly_do || adc_trig) && (axi_a_dly_cnt == 32'h1)) || adc_rst_do) //delayed reached or reset
          axi_a_we <= 1'b0 ;
 
       if (adc_trig && axi_a_we)
          axi_a_dly_do  <= 1'b1 ;
-      else if ((axi_a_dly_do && (axi_a_dly_cnt == {31'h0,dec1})) || axi_a_clr || adc_arm_do) //delayed reached or reset
+      else if ((axi_a_dly_do && (axi_a_dly_cnt <= 32'h1)) || axi_a_clr || adc_arm_do) //delayed reached or reset
          axi_a_dly_do  <= 1'b0 ;
 
       if (axi_a_dly_do && axi_a_we && axi_a_dv)
@@ -716,12 +716,12 @@ always @(posedge axi1_clk_o) begin
    else begin
       if (adc_arm_do && set_b_axi_en)
          axi_b_we <= 1'b1 ;
-      else if (((axi_b_dly_do || adc_trig) && (axi_b_dly_cnt == {31'h0,dec1})) || adc_rst_do) //delayed reached or reset
+      else if (((axi_b_dly_do || adc_trig) && (axi_b_dly_cnt == 32'h1)) || adc_rst_do) //delayed reached or reset
          axi_b_we <= 1'b0 ;
 
       if (adc_trig && axi_b_we)
          axi_b_dly_do  <= 1'b1 ;
-      else if ((axi_b_dly_do && (axi_b_dly_cnt == {31'h0,dec1})) || axi_b_clr || adc_arm_do) //delayed reached or reset
+      else if ((axi_b_dly_do && (axi_b_dly_cnt <= 32'h1)) || axi_b_clr || adc_arm_do) //delayed reached or reset
          axi_b_dly_do  <= 1'b0 ;
 
       if (axi_b_dly_do && axi_b_we && axi_b_dv)
@@ -881,7 +881,7 @@ end else begin
    endcase
 end
 
-assign adc_trig = adc_trig_pre && !adc_trg_dis;
+assign adc_trig = adc_trig_pre && !adc_trg_dis && adc_we;
 
 
 reg [4-1:0] last_src = 4'h0;
@@ -893,7 +893,7 @@ end
 
 reg [2-1:0] dat_dly  = 2'h0;
 reg [2-1:0] prev_dly = 2'h0;
-always @(*) begin //delay to trigger
+always @(posedge adc_clk_i) begin //delay to trigger
    case (last_src)
        4'd2,
        4'd3,
@@ -902,12 +902,12 @@ always @(*) begin //delay to trigger
        4'd10,
        4'd11,
        4'd12,
-       4'd13  : begin dat_dly = 2'h2; prev_dly = 2'h2; end // level trigger
+       4'd13  : begin dat_dly <= 2'h1; prev_dly <= 2'h1; end // level trigger
        4'd6,
        4'd7,
        4'd8,
-       4'd9   : begin dat_dly = 2'h3; prev_dly = 2'h3; end // external and ASG trigger
-      default : begin dat_dly = prev_dly;              end // manual trigger
+       4'd9   : begin dat_dly <= 2'h2; prev_dly <= 2'h2; end // external and ASG trigger
+      default : begin dat_dly <= prev_dly;              end // manual trigger
    endcase
 
    adc_a_bram_in <= adc_a_fifo[dat_dly]; 
