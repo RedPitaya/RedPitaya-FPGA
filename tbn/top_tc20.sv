@@ -38,6 +38,7 @@ localparam CHB_THR      = 32'd100;
 localparam TRG_SRC      =  3'h2;
 localparam TRG_DLY      = 32'h1000;
 localparam TRG_DEB      = 32'd100;
+localparam ADCTRG_DEB   = 32'd1000;
 localparam DEC          = 32'd1;
 localparam DEC_AVG      =  1'b1;
 localparam CHA_HYST     = 32'd10;
@@ -61,7 +62,7 @@ localparam CHB_AXI_EN   =  1'b1;
 
 set_osc(.offset(offset),    
         .cha_thr(CHA_THR),             .chb_thr(CHB_THR),  
-        .trig_src(TRG_SRC),            .trig_dly(TRG_DLY),           .trig_deb(TRG_DEB),
+        .trig_src(TRG_SRC),            .trig_dly(TRG_DLY),           .trig_deb(TRG_DEB),  .adctrig_deb(ADCTRG_DEB),
         .dec(DEC),                     .dec_avg(DEC_AVG),
         .cha_hyst(CHA_HYST),           .chb_hyst(CHB_HYST),
         .cha_aa(CHA_AA),               .cha_bb(CHA_BB),              .cha_kk(CHA_KK),     .cha_pp(CHA_PP),
@@ -80,6 +81,7 @@ localparam CHB_THR      = 32'd100;
 localparam TRG_SRC      =  3'h2;
 localparam TRG_DLY      = 32'h800;
 localparam TRG_DEB      = 32'd100;
+localparam ADCTRG_DEB   = 32'd100;
 localparam DEC          = 32'd1;
 localparam DEC_AVG      =  1'b1;
 localparam CHA_HYST     = 32'd10;
@@ -103,7 +105,7 @@ localparam CHB_AXI_EN   =  1'b1;
 
 set_osc(.offset(offset),    
         .cha_thr(CHA_THR),             .chb_thr(CHB_THR),  
-        .trig_src(TRG_SRC),            .trig_dly(TRG_DLY),           .trig_deb(TRG_DEB),
+        .trig_src(TRG_SRC),            .trig_dly(TRG_DLY),           .trig_deb(TRG_DEB),  .adctrig_deb(ADCTRG_DEB),
         .dec(DEC),                     .dec_avg(DEC_AVG),
         .cha_hyst(CHA_HYST),           .chb_hyst(CHB_HYST),
         .cha_aa(CHA_AA),               .cha_bb(CHA_BB),              .cha_kk(CHA_KK),     .cha_pp(CHA_PP),
@@ -316,6 +318,7 @@ task set_osc(
   int trig_src,
   int trig_dly,
   int trig_deb,
+  int adctrig_deb,
   int dec,
   int dec_avg,
   int cha_hyst,
@@ -344,6 +347,7 @@ task set_osc(
   axi_write(offset+'h4 ,  trig_src);  // manual trigger
   axi_write(offset+'h10,  trig_dly);  // delay after trigger
   axi_write(offset+'h90,  trig_deb);  // trig debounce
+  axi_write(offset+'h94,  adctrig_deb);  // ADC trig debounce
 
   axi_write(offset+'h14,  dec);  // decimation
   axi_write(offset+'h20,  cha_hyst);  // chA hysteresis
