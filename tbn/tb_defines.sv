@@ -1,14 +1,5 @@
 `timescale 1ns / 1ps
 
-//`define SIMULATION
-//`define STREAMING
-
-//`define Z10_14
-//`define Z20_16
-//`define Z20_14
-//`define Z20_4ADC
-//`define Z20_250
-
 `define TRIG_ACT_LVL  0
 `define MASTER        1
 `define LOCALM        1

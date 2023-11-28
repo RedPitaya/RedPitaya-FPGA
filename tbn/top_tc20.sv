@@ -403,6 +403,8 @@ for (i=0; i<cycles; i++) begin: triggering
     wait_clks(del);
 
     axi_write(offset+'h4 , trig_src);  // manual trigger
+    #500;
+    axi_write(offset+'h4 , 32'h1);  // manual trigger
   end
   if (mode == 0)
     reg_wait_bit(32'h40100000,4);

@@ -56,7 +56,11 @@ if {($prj_name == "stream_app") || ($prj_name == "stream_app_250") || ($prj_name
 set def_name "STREAMING"
 }
 
-switch $def_model {
+if {($model == "Z20_250")} {
+set path_rtl rtl_250
+}
+
+switch $model {
 "Z20" {
     set def_model "Z20_16"
 }

@@ -14,6 +14,7 @@ module top_tb #(
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
   parameter DWE           = 8,
+  parameter CLKA_PER      = 8138,
   realtime  TP            = 8.138ns,  // 122.88 MHz
   `endif
 
@@ -23,6 +24,7 @@ module top_tb #(
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
   parameter DWE           = 8,
+  parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
   `endif
 
@@ -32,6 +34,7 @@ module top_tb #(
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
   parameter DWE           = 8,
+  parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
   `endif
 
@@ -41,6 +44,7 @@ module top_tb #(
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 4,
   parameter DWE           = 11,
+  parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
   `endif
 
@@ -50,14 +54,15 @@ module top_tb #(
   parameter TRIG_ACT_LVL  = 1,
   parameter NUM_ADC       = 2,
   parameter DWE           = 9,
-  realtime  TP            = 4.0ns,  // 125 MHz
+  parameter CLKA_PER      = 4000,
+  realtime  TP            = 4.0ns,  // 250 MHz
   `endif
 
   parameter N_SAMP        = 102401-1, // size of ADC buffer file
 
-  parameter ADC_TRIG      = `SW_TRIG_ADC,   // which trigger source for ADC
+  parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 1000,           // how many ADC cycles (triggers) are handles
+  parameter CYCLES        = 1000,           // how many ADC cycles (triggers) are handled
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
@@ -235,8 +240,8 @@ initial begin
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
       top_tc20.init_adc_01(ADR);
-      top_tc20.custom_test();
-      //top_tc20.test_osc   (ADR, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      //top_tc20.custom_test();
+      top_tc20.test_osc   (ADR, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       //top_tc20.init_dac(ADR);
       //#10000;
       //top_tc20.test_dac(ADR);
@@ -406,7 +411,7 @@ assign strm_adc_en = {NUM_ADC{1'b0}};
 
 
 clk_gen #(
-  .CLKA_PERIOD  (  8000   ),
+  .CLKA_PERIOD  (  CLKA_PER ),
   .CLKA_JIT     (  0     ),
   .DEL          (  25     ) // in percent
 )
@@ -417,8 +422,8 @@ i_clgen_model
 );
 
 clk_gen #(
-  .CLKA_PERIOD  (  8000   ),
-  .CLKA_JIT     (  5      ),
+  .CLKA_PERIOD  (  CLKA_PER   ),
+  .CLKA_JIT     (  0      ),
   .DEL          (  25      ) // in percent
 )
 i_clgen_model2

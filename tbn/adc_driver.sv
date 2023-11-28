@@ -67,12 +67,31 @@ end
 genvar GV;
 generate
 for (GV = 0; GV < 7; GV = GV + 1) begin : adc_encode
-  assign adc_drv_ddr_o[GV] = adc_clk_i[0] ? adc_data1_inv[2*GV] : adc_data1_inv[2*GV+1]; 
-  assign adc_drv_ddr_o[GV] = adc_clk_i[0] ? adc_data2_inv[2*GV] : adc_data2_inv[2*GV+1]; 
-  assign adc_drv_ddr_o[GV] = adc_clk_i[1] ? adc_data3_inv[2*GV] : adc_data3_inv[2*GV+1]; 
-  assign adc_drv_ddr_o[GV] = adc_clk_i[1] ? adc_data4_inv[2*GV] : adc_data4_inv[2*GV+1]; 
-  assign adc_drv_p_o[GV]   =  adc_drv_ddr_o[GV];
-  assign adc_drv_n_o[GV]   = ~adc_drv_ddr_o[GV];
+always @(adc_clk_i) begin
+  if (adc_clk_i[0]) begin
+    adc_drv_ddr_o[0][GV] <= adc_data1[2*GV+1];
+    adc_drv_ddr_o[1][GV] <= adc_data2[2*GV+1];
+  end else begin
+    adc_drv_ddr_o[0][GV] <= adc_data1[2*GV];
+    adc_drv_ddr_o[1][GV] <= adc_data2[2*GV];
+  end
+  if (adc_clk_i[1]) begin
+    adc_drv_ddr_o[2][GV] <= adc_data3[2*GV];
+    adc_drv_ddr_o[3][GV] <= adc_data4[2*GV];
+  end else begin
+    adc_drv_ddr_o[2][GV] <= adc_data3[2*GV+1];
+    adc_drv_ddr_o[3][GV] <= adc_data4[2*GV+1];
+  end
+end
+
+  assign adc_drv_p_o[0][GV]   =  adc_drv_ddr_o[0][GV];
+  assign adc_drv_p_o[1][GV]   =  adc_drv_ddr_o[1][GV];
+  assign adc_drv_p_o[2][GV]   =  adc_drv_ddr_o[2][GV];
+  assign adc_drv_p_o[3][GV]   =  adc_drv_ddr_o[3][GV];
+  assign adc_drv_n_o[0][GV]   = ~adc_drv_ddr_o[0][GV];
+  assign adc_drv_n_o[1][GV]   = ~adc_drv_ddr_o[1][GV];
+  assign adc_drv_n_o[2][GV]   = ~adc_drv_ddr_o[2][GV];
+  assign adc_drv_n_o[3][GV]   = ~adc_drv_ddr_o[3][GV];
 
   always @(*) begin
     if (adc_clk_i[0]) begin

@@ -318,8 +318,7 @@ reg   [   4-1: 0] adc_rval      ;
 wire              adc_rd_dv     ;
 reg               adc_we        ;
 reg               adc_we_keep   ;
-reg               adc_trig_pre  ;
-wire              adc_trig      ;
+reg               adc_trig      ;
 
 reg   [ RSZ-1: 0] adc_wp_trig   ;
 reg   [ RSZ-1: 0] adc_wp_cur    ;
@@ -332,6 +331,7 @@ reg               adc_dly_end_reg;
 reg               adc_trg_rd    ;
 reg               adc_trg_rd_reg;
 reg    [ 20-1: 0] set_deb_len   ; // debouncing length (glitch free time after a posedge)
+reg    [ 32-1: 0] set_trig_deb  ; 
 wire              dec1    ;
 
 assign dec1  = (set_dec==17'h1);
@@ -792,7 +792,7 @@ wire              ext_trig_p       ;
 wire              ext_trig_n       ;
 wire              asg_trig_p       ;
 wire              asg_trig_n       ;
-reg               adc_trg_dis= 1'b0;
+wire              adc_trg_dis      ;
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
@@ -800,41 +800,34 @@ if (adc_rstn_i == 1'b0) begin
    adc_rst_do    <= 1'b0 ;
    adc_trig_sw   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
-   adc_trig_pre  <= 1'b0 ;
-end else begin
+   end else begin
    adc_arm_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0] ; // SW ARM
    adc_rst_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ; // reset
    adc_trig_sw <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h1); // SW trigger
 
-   if (adc_trig && !adc_dly_do)
-      adc_trg_dis <= 1'b1;
-   else if(adc_arm_do)
-      adc_trg_dis <= 1'b0;
-
-   if (sys_wen && (sys_addr[19:0]==20'h4))
+      if (sys_wen && (sys_addr[19:0]==20'h4))
       set_trig_src <= sys_wdata[3:0] ;
    else if (adc_dly_do || adc_trig || adc_rst_do) //delay reached or reset
       set_trig_src <= 4'h0 ;
 
-   case (set_trig_src)
-       4'd1 : adc_trig_pre <= adc_trig_sw   ; // manual
-       4'd2 : adc_trig_pre <= CHN == 0 ? adc_trig_ap : trig_ch_i[0] ; // A ch rising edge
-       4'd3 : adc_trig_pre <= CHN == 0 ? adc_trig_an : trig_ch_i[1] ; // A ch falling edge
-       4'd4 : adc_trig_pre <= CHN == 0 ? adc_trig_bp : trig_ch_i[2] ; // B ch rising edge
-       4'd5 : adc_trig_pre <= CHN == 0 ? adc_trig_bn : trig_ch_i[3] ; // B ch falling edge
-       4'd6 : adc_trig_pre <= ext_trig_p    ; // external - rising edge
-       4'd7 : adc_trig_pre <= ext_trig_n    ; // external - falling edge
-       4'd8 : adc_trig_pre <= asg_trig_p    ; // ASG - rising edge
-       4'd9 : adc_trig_pre <= asg_trig_n    ; // ASG - falling edge
-       4'd10: adc_trig_pre <= CHN == 1 ? adc_trig_ap : trig_ch_i[0] ; // from the other two ADC channels: C ch rising edge
-       4'd11: adc_trig_pre <= CHN == 1 ? adc_trig_an : trig_ch_i[1] ; // from the other two ADC channels: C ch falling edge
-       4'd12: adc_trig_pre <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
-       4'd13: adc_trig_pre <= CHN == 1 ? adc_trig_bn : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
-    default : adc_trig_pre <= 1'b0          ; 
+   case (set_trig_src & ({4{!adc_trg_dis}}))
+       4'd1 : adc_trig <= adc_trig_sw   ; // manual
+       4'd2 : adc_trig <= CHN == 0 ? adc_trig_ap : trig_ch_i[0] ; // A ch rising edge
+       4'd3 : adc_trig <= CHN == 0 ? adc_trig_an : trig_ch_i[1] ; // A ch falling edge
+       4'd4 : adc_trig <= CHN == 0 ? adc_trig_bp : trig_ch_i[2] ; // B ch rising edge
+       4'd5 : adc_trig <= CHN == 0 ? adc_trig_bn : trig_ch_i[3] ; // B ch falling edge
+       4'd6 : adc_trig <= ext_trig_p    ; // external - rising edge
+       4'd7 : adc_trig <= ext_trig_n    ; // external - falling edge
+       4'd8 : adc_trig <= asg_trig_p    ; // ASG - rising edge
+       4'd9 : adc_trig <= asg_trig_n    ; // ASG - falling edge
+       4'd10: adc_trig <= CHN == 1 ? adc_trig_ap : trig_ch_i[0] ; // from the other two ADC channels: C ch rising edge
+       4'd11: adc_trig <= CHN == 1 ? adc_trig_an : trig_ch_i[1] ; // from the other two ADC channels: C ch falling edge
+       4'd12: adc_trig <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
+       4'd13: adc_trig <= CHN == 1 ? adc_trig_bn : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
+    default : adc_trig <= 1'b0          ; 
    endcase
 end
 
-assign adc_trig = adc_trig_pre && !adc_trg_dis && adc_we;
 
 
 reg [4-1:0] last_src = 4'h0;
@@ -842,6 +835,15 @@ always @(posedge adc_clk_i) begin
   if (sys_wen && (sys_addr[19:0]==20'h4))
    last_src <= sys_wdata[3:0] ;
 end
+
+reg [32-1:0] adc_trig_deb = 32'h0;
+always @(posedge adc_clk_i) begin
+   if (adc_trig_deb > 'd0)
+      adc_trig_deb <= adc_trig_deb -1 ;
+   else if (adc_trig)
+      adc_trig_deb <= set_trig_deb ;
+end
+assign adc_trg_dis = |adc_trig_deb;
 
 
 reg [2-1:0] dat_dly  = 2'h0;
@@ -1020,6 +1022,7 @@ if (adc_rstn_i == 1'b0) begin
    set_b_hyst    <=  16'd20     ;
    set_avg_en    <=   1'b1      ;
    set_deb_len   <=  20'd62500  ;
+   set_trig_deb  <=  32'h0      ;
    set_a_axi_en  <=   1'b0      ;
    set_b_axi_en  <=   1'b0      ;
 end else begin
@@ -1044,7 +1047,9 @@ end else begin
       if (sys_addr[19:0]==20'h78)   set_b_axi_dly   <= sys_wdata[32-1:0] ;
       if (sys_addr[19:0]==20'h7C)   set_b_axi_en    <= sys_wdata[     0] ;
 
-      if (sys_addr[19:0]==20'h90)   set_deb_len <= sys_wdata[20-1:0] ;
+      if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
+      if (sys_addr[19:0]==20'h94)   set_trig_deb    <= sys_wdata[32-1:0] ;
+
    end
 end
 
@@ -1109,6 +1114,7 @@ end else begin
                                                                  {16- 5{1'b0}}, axi_a_state }       ; end
                                                                  
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
+     20'h00094 : begin sys_ack <= sys_en;          sys_rdata <=                 set_trig_deb        ; end
 
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, adc_a_rd}                   ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, adc_b_rd}                   ; end
