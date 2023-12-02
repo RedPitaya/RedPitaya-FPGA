@@ -35,7 +35,7 @@ task init_adc_01(
 );
 localparam CHA_THR      = 32'd100;
 localparam CHB_THR      = 32'd100;
-localparam TRG_SRC      =  3'h2;
+localparam TRG_SRC      =  3'h0;
 localparam TRG_DLY      = 32'h1000;
 localparam TRG_DEB      = 32'd100;
 localparam ADCTRG_DEB   = 32'd1000;
@@ -78,7 +78,7 @@ task init_adc_23(
 );
 localparam CHA_THR      = 32'd100;
 localparam CHB_THR      = 32'd100;
-localparam TRG_SRC      =  3'h2;
+localparam TRG_SRC      =  3'h0;
 localparam TRG_DLY      = 32'h800;
 localparam TRG_DEB      = 32'd100;
 localparam ADCTRG_DEB   = 32'd100;
@@ -402,8 +402,8 @@ for (i=0; i<cycles; i++) begin: triggering
 
     wait_clks(del);
 
-    axi_write(offset+'h4 , trig_src);  // manual trigger
-    #500;
+    axi_write(offset+'h4 , trig_src);  // level trigger
+    #1000;
     axi_write(offset+'h4 , 32'h1);  // manual trigger
   end
   if (mode == 0)
@@ -416,6 +416,8 @@ for (i=0; i<cycles; i++) begin: triggering
     #2000;
     axi_write(offset+'h4 , trig_src);  // manual trigger
   end
+  axi_write(offset+'h4 , 32'h1<<4);    // clear trigger protect
+
   if (read_trig)
     trig_samps(offset);
 end
