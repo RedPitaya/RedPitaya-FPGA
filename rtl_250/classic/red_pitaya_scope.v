@@ -814,6 +814,7 @@ wire              asg_trig_n       ;
 wire              adc_trig_clr     ;
 wire              adc_trig_clr2d   ;
 reg               adc_trg_dis      ;
+reg   [   4-1:0]  trig_dis_clr_r   ;
 
 assign adc_trig_clr = (adc_dly_do || adc_trig);
 
@@ -842,10 +843,13 @@ end else begin
       set_trig_src <= 4'h0 ;
 end
 
-   if (trig_dis_clr)
+always @(posedge adc_clk_i) begin
+   trig_dis_clr_r <= {trig_dis_clr_r[2:0],trig_dis_clr};
+   if (trig_dis_clr_r[3] && !trig_dis_clr_r[2])
       adc_trg_dis <= 1'b0 ;
    else if (adc_trig)
       adc_trg_dis <= 1'b1 ;
+end
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
