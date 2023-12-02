@@ -799,6 +799,8 @@ if (adc_rstn_i == 1'b0) begin
    adc_arm_do    <= 1'b0 ;
    adc_rst_do    <= 1'b0 ;
    adc_trig_sw   <= 1'b0 ;
+   trig_dis_clr  <= 1'b0 ;
+   adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
    end else begin
    adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0] ; // SW ARM
