@@ -850,10 +850,10 @@ if (adc_rstn_i == 1'b0) begin
    adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
 end else begin
-   adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0] ; // SW ARM
-   adc_rst_do   <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ; // reset
-   adc_trig_sw  <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h1); // SW trigger
-   trig_dis_clr <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[4]==1'b1);   // clear trigger protect/disable
+   adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[0] ; // SW ARM
+   adc_rst_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[1] ; // reset
+   adc_trig_sw  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // SW trigger
+   trig_dis_clr <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_wdata[0]==1'b1);   // clear trigger protect/disable
 
    if (sys_wen && (sys_addr[19:0]==20'h4))
       set_trig_src <= sys_wdata[3:0] ;
@@ -1109,6 +1109,8 @@ end else begin
       if (sys_addr[19:0]==20'h7C)   set_b_axi_en    <= sys_wdata[     0] ;
 
       if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
+      // Offset 0x94 reserved for trigger unlock bit
+
    end
 end
 
