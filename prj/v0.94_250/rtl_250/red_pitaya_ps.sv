@@ -129,72 +129,145 @@ wire [  8-1: 0] hp1_saxi_wstrb  , hp0_saxi_wstrb  ;
 axi_master #(
   .DW   (  64    ), // data width (8,16,...,1024)
   .AW   (  32    ), // address width
-  .ID   (   0    ), // master ID // TODO, it is not OK to have two masters with same ID
+  .ID   (   1    ), // master ID
   .IW   (   6    ), // master ID width
   .LW   (   4    )  // length width
-) axi_master [1:0] (
+) axi_master_0 (
    // global signals
-  .axi_clk_i      ({hp1_saxi_clk_i  , hp0_saxi_clk_i  }), // global clock
-  .axi_rstn_i     ({hp1_saxi_rstn_i , hp0_saxi_rstn_i }), // global reset
+  .axi_clk_i      ( hp0_saxi_clk_i  ), // global clock
+  .axi_rstn_i     ( hp0_saxi_rstn_i ), // global reset
    // axi write address channel
-  .axi_awid_o     ({hp1_saxi_awid   , hp0_saxi_awid   }), // write address ID
-  .axi_awaddr_o   ({hp1_saxi_awaddr , hp0_saxi_awaddr }), // write address
-  .axi_awlen_o    ({hp1_saxi_awlen  , hp0_saxi_awlen  }), // write burst length
-  .axi_awsize_o   ({hp1_saxi_awsize , hp0_saxi_awsize }), // write burst size
-  .axi_awburst_o  ({hp1_saxi_awburst, hp0_saxi_awburst}), // write burst type
-  .axi_awlock_o   ({hp1_saxi_awlock , hp0_saxi_awlock }), // write lock type
-  .axi_awcache_o  ({hp1_saxi_awcache, hp0_saxi_awcache}), // write cache type
-  .axi_awprot_o   ({hp1_saxi_awprot , hp0_saxi_awprot }), // write protection type
-  .axi_awvalid_o  ({hp1_saxi_awvalid, hp0_saxi_awvalid}), // write address valid
-  .axi_awready_i  ({hp1_saxi_awready, hp0_saxi_awready}), // write ready
+  .axi_awid_o     ( hp0_saxi_awid   ), // write address ID
+  .axi_awaddr_o   ( hp0_saxi_awaddr ), // write address
+  .axi_awlen_o    ( hp0_saxi_awlen  ), // write burst length
+  .axi_awsize_o   ( hp0_saxi_awsize ), // write burst size
+  .axi_awburst_o  ( hp0_saxi_awburst), // write burst type
+  .axi_awlock_o   ( hp0_saxi_awlock ), // write lock type
+  .axi_awcache_o  ( hp0_saxi_awcache), // write cache type
+  .axi_awprot_o   ( hp0_saxi_awprot ), // write protection type
+  .axi_awvalid_o  ( hp0_saxi_awvalid), // write address valid
+  .axi_awready_i  ( hp0_saxi_awready), // write ready
    // axi write data channel
-  .axi_wid_o      ({hp1_saxi_wid    , hp0_saxi_wid    }), // write data ID
-  .axi_wdata_o    ({hp1_saxi_wdata  , hp0_saxi_wdata  }), // write data
-  .axi_wstrb_o    ({hp1_saxi_wstrb  , hp0_saxi_wstrb  }), // write strobes
-  .axi_wlast_o    ({hp1_saxi_wlast  , hp0_saxi_wlast  }), // write last
-  .axi_wvalid_o   ({hp1_saxi_wvalid , hp0_saxi_wvalid }), // write valid
-  .axi_wready_i   ({hp1_saxi_wready , hp0_saxi_wready }), // write ready
+  .axi_wid_o      ( hp0_saxi_wid    ), // write data ID
+  .axi_wdata_o    ( hp0_saxi_wdata  ), // write data
+  .axi_wstrb_o    ( hp0_saxi_wstrb  ), // write strobes
+  .axi_wlast_o    ( hp0_saxi_wlast  ), // write last
+  .axi_wvalid_o   ( hp0_saxi_wvalid ), // write valid
+  .axi_wready_i   ( hp0_saxi_wready ), // write ready
    // axi write response channel
-  .axi_bid_i      ({hp1_saxi_bid    , hp0_saxi_bid    }), // write response ID
-  .axi_bresp_i    ({hp1_saxi_bresp  , hp0_saxi_bresp  }), // write response
-  .axi_bvalid_i   ({hp1_saxi_bvalid , hp0_saxi_bvalid }), // write response valid
-  .axi_bready_o   ({hp1_saxi_bready , hp0_saxi_bready }), // write response ready
+  .axi_bid_i      ( hp0_saxi_bid    ), // write response ID
+  .axi_bresp_i    ( hp0_saxi_bresp  ), // write response
+  .axi_bvalid_i   ( hp0_saxi_bvalid ), // write response valid
+  .axi_bready_o   ( hp0_saxi_bready ), // write response ready
    // axi read address channel
-  .axi_arid_o     ({hp1_saxi_arid   , hp0_saxi_arid   }), // read address ID
-  .axi_araddr_o   ({hp1_saxi_araddr , hp0_saxi_araddr }), // read address
-  .axi_arlen_o    ({hp1_saxi_arlen  , hp0_saxi_arlen  }), // read burst length
-  .axi_arsize_o   ({hp1_saxi_arsize , hp0_saxi_arsize }), // read burst size
-  .axi_arburst_o  ({hp1_saxi_arburst, hp0_saxi_arburst}), // read burst type
-  .axi_arlock_o   ({hp1_saxi_arlock , hp0_saxi_arlock }), // read lock type
-  .axi_arcache_o  ({hp1_saxi_arcache, hp0_saxi_arcache}), // read cache type
-  .axi_arprot_o   ({hp1_saxi_arprot , hp0_saxi_arprot }), // read protection type
-  .axi_arvalid_o  ({hp1_saxi_arvalid, hp0_saxi_arvalid}), // read address valid
-  .axi_arready_i  ({hp1_saxi_arready, hp0_saxi_arready}), // read address ready
+  .axi_arid_o     ( hp0_saxi_arid   ), // read address ID
+  .axi_araddr_o   ( hp0_saxi_araddr ), // read address
+  .axi_arlen_o    ( hp0_saxi_arlen  ), // read burst length
+  .axi_arsize_o   ( hp0_saxi_arsize ), // read burst size
+  .axi_arburst_o  ( hp0_saxi_arburst), // read burst type
+  .axi_arlock_o   ( hp0_saxi_arlock ), // read lock type
+  .axi_arcache_o  ( hp0_saxi_arcache), // read cache type
+  .axi_arprot_o   ( hp0_saxi_arprot ), // read protection type
+  .axi_arvalid_o  ( hp0_saxi_arvalid), // read address valid
+  .axi_arready_i  ( hp0_saxi_arready), // read address ready
    // axi read data channel
-  .axi_rid_i      ({hp1_saxi_rid    , hp0_saxi_rid    }), // read response ID
-  .axi_rdata_i    ({hp1_saxi_rdata  , hp0_saxi_rdata  }), // read data
-  .axi_rresp_i    ({hp1_saxi_rresp  , hp0_saxi_rresp  }), // read response
-  .axi_rlast_i    ({hp1_saxi_rlast  , hp0_saxi_rlast  }), // read last
-  .axi_rvalid_i   ({hp1_saxi_rvalid , hp0_saxi_rvalid }), // read response valid
-  .axi_rready_o   ({hp1_saxi_rready , hp0_saxi_rready }), // read response ready
+  .axi_rid_i      ( hp0_saxi_rid    ), // read response ID
+  .axi_rdata_i    ( hp0_saxi_rdata  ), // read data
+  .axi_rresp_i    ( hp0_saxi_rresp  ), // read response
+  .axi_rlast_i    ( hp0_saxi_rlast  ), // read last
+  .axi_rvalid_i   ( hp0_saxi_rvalid ), // read response valid
+  .axi_rready_o   ( hp0_saxi_rready ), // read response ready
    // system write channel
-  .sys_waddr_i    ({axi1_waddr_i    , axi0_waddr_i    }), // system write address
-  .sys_wdata_i    ({axi1_wdata_i    , axi0_wdata_i    }), // system write data
-  .sys_wsel_i     ({axi1_wsel_i     , axi0_wsel_i     }), // system write byte select
-  .sys_wvalid_i   ({axi1_wvalid_i   , axi0_wvalid_i   }), // system write data valid
-  .sys_wlen_i     ({axi1_wlen_i     , axi0_wlen_i     }), // system write burst length
-  .sys_wfixed_i   ({axi1_wfixed_i   , axi0_wfixed_i   }), // system write burst type (fixed / incremental)
-  .sys_werr_o     ({axi1_werr_o     , axi0_werr_o     }), // system write error
-  .sys_wrdy_o     ({axi1_wrdy_o     , axi0_wrdy_o     }), // system write ready
+  .sys_waddr_i    ( axi0_waddr_i    ), // system write address
+  .sys_wdata_i    ( axi0_wdata_i    ), // system write data
+  .sys_wsel_i     ( axi0_wsel_i     ), // system write byte select
+  .sys_wvalid_i   ( axi0_wvalid_i   ), // system write data valid
+  .sys_wlen_i     ( axi0_wlen_i     ), // system write burst lengthW
+  .sys_wfixed_i   ( axi0_wfixed_i   ), // system write burst type (fixed / incremental)
+  .sys_werr_o     ( axi0_werr_o     ), // system write error
+  .sys_wrdy_o     ( axi0_wrdy_o     ), // system write ready
    // system read channel
-  .sys_raddr_i    ({32'h0           , 32'h0           }), // system read address
-  .sys_rvalid_i   ({ 1'b0           ,  1'b0           }), // system read address valid
-  .sys_rsel_i     ({ 8'h0           ,  8'h0           }), // system read byte select
-  .sys_rlen_i     ({ 4'h0           ,  4'h0           }), // system read burst length
-  .sys_rfixed_i   ({ 1'b0           ,  1'b0           }), // system read burst type (fixed / incremental)
-  .sys_rdata_o    (                                    ), // system read data
-  .sys_rrdy_o     (                                    ), // system read data is ready
-  .sys_rerr_o     (                                    )  // system read error
+  .sys_raddr_i    ( 32'h0           ), // system read address
+  .sys_rvalid_i   (  1'b0           ), // system read address valid
+  .sys_rsel_i     (  8'h0           ), // system read byte select
+  .sys_rlen_i     (  4'h0           ), // system read burst length
+  .sys_rfixed_i   (  1'b0           ), // system read burst type (fixed / incremental)
+  .sys_rdata_o    (                 ), // system read data
+  .sys_rrdy_o     (                 ), // system read data is ready
+  .sys_rardy_o    (                 ), // system read address is ready
+  .sys_rerr_o     (                 )  // system read error
+);
+
+axi_master #(
+  .DW   (  64    ), // data width (8,16,...,1024)
+  .AW   (  32    ), // address width
+  .ID   (   2    ), // master ID
+  .IW   (   6    ), // master ID width
+  .LW   (   4    )  // length width
+) axi_master_1 (
+   // global signals
+  .axi_clk_i      ( hp1_saxi_clk_i  ), // global clock
+  .axi_rstn_i     ( hp1_saxi_rstn_i ), // global reset
+   // axi write address channel
+  .axi_awid_o     ( hp1_saxi_awid   ), // write address ID
+  .axi_awaddr_o   ( hp1_saxi_awaddr ), // write address
+  .axi_awlen_o    ( hp1_saxi_awlen  ), // write burst length
+  .axi_awsize_o   ( hp1_saxi_awsize ), // write burst size
+  .axi_awburst_o  ( hp1_saxi_awburst), // write burst type
+  .axi_awlock_o   ( hp1_saxi_awlock ), // write lock type
+  .axi_awcache_o  ( hp1_saxi_awcache), // write cache type
+  .axi_awprot_o   ( hp1_saxi_awprot ), // write protection type
+  .axi_awvalid_o  ( hp1_saxi_awvalid), // write address valid
+  .axi_awready_i  ( hp1_saxi_awready), // write ready
+   // axi write data channel
+  .axi_wid_o      ( hp1_saxi_wid    ), // write data ID
+  .axi_wdata_o    ( hp1_saxi_wdata  ), // write data
+  .axi_wstrb_o    ( hp1_saxi_wstrb  ), // write strobes
+  .axi_wlast_o    ( hp1_saxi_wlast  ), // write last
+  .axi_wvalid_o   ( hp1_saxi_wvalid ), // write valid
+  .axi_wready_i   ( hp1_saxi_wready ), // write ready
+   // axi write response channel
+  .axi_bid_i      ( hp1_saxi_bid    ), // write response ID
+  .axi_bresp_i    ( hp1_saxi_bresp  ), // write response
+  .axi_bvalid_i   ( hp1_saxi_bvalid ), // write response valid
+  .axi_bready_o   ( hp1_saxi_bready ), // write response ready
+   // axi read address channel
+  .axi_arid_o     ( hp1_saxi_arid   ), // read address ID
+  .axi_araddr_o   ( hp1_saxi_araddr ), // read address
+  .axi_arlen_o    ( hp1_saxi_arlen  ), // read burst length
+  .axi_arsize_o   ( hp1_saxi_arsize ), // read burst size
+  .axi_arburst_o  ( hp1_saxi_arburst), // read burst type
+  .axi_arlock_o   ( hp1_saxi_arlock ), // read lock type
+  .axi_arcache_o  ( hp1_saxi_arcache), // read cache type
+  .axi_arprot_o   ( hp1_saxi_arprot ), // read protection type
+  .axi_arvalid_o  ( hp1_saxi_arvalid), // read address valid
+  .axi_arready_i  ( hp1_saxi_arready), // read address ready
+   // axi read data channel
+  .axi_rid_i      ( hp1_saxi_rid    ), // read response ID
+  .axi_rdata_i    ( hp1_saxi_rdata  ), // read data
+  .axi_rresp_i    ( hp1_saxi_rresp  ), // read response
+  .axi_rlast_i    ( hp1_saxi_rlast  ), // read last
+  .axi_rvalid_i   ( hp1_saxi_rvalid ), // read response valid
+  .axi_rready_o   ( hp1_saxi_rready ), // read response ready
+   // system write channel
+  .sys_waddr_i    ( axi1_waddr_i    ), // system write address
+  .sys_wdata_i    ( axi1_wdata_i    ), // system write data
+  .sys_wsel_i     ( axi1_wsel_i     ), // system write byte select
+  .sys_wvalid_i   ( axi1_wvalid_i   ), // system write data valid
+  .sys_wlen_i     ( axi1_wlen_i     ), // system write burst lengthW
+  .sys_wfixed_i   ( axi1_wfixed_i   ), // system write burst type (fixed / incremental)
+  .sys_werr_o     ( axi1_werr_o     ), // system write error
+  .sys_wrdy_o     ( axi1_wrdy_o     ), // system write ready
+   // system read channel
+  .sys_raddr_i    ( 32'h0           ), // system read address
+  .sys_rvalid_i   (  1'b0           ), // system read address valid
+  .sys_rsel_i     (  8'h0           ), // system read byte select
+  .sys_rlen_i     (  4'h0           ), // system read burst length
+  .sys_rfixed_i   (  1'b0           ), // system read burst type (fixed / incremental)
+  .sys_rdata_o    (                 ), // system read data
+  .sys_rrdy_o     (                 ), // system read data is ready
+  .sys_rardy_o    (                 ), // system read address is ready
+  .sys_rerr_o     (                 )  // system read error
 );
 
 assign hp0_saxi_arqos  = 4'h0 ;
