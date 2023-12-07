@@ -817,7 +817,7 @@ wire              asg_trig_p       ;
 wire              asg_trig_n       ;
 wire              adc_trig_clr     ;
 wire              adc_trig_clr2d   ;
-reg               adc_trg_dis      ;
+reg               adc_trg_dis      = 1'b0;
 reg   [   4-1:0]  trig_dis_clr_r   ;
 
 assign adc_trig_clr = (adc_dly_do || adc_trig);
@@ -833,7 +833,6 @@ if (adc_rstn_i == 1'b0) begin
    adc_rst_do    <= 1'b0 ;
    adc_trig_sw   <= 1'b0 ;
    trig_dis_clr  <= 1'b0 ;
-   adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
 end else begin
    adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[0] ; // SW ARM
