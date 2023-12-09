@@ -1148,8 +1148,6 @@ end else begin
                                                                  {16- 5{1'b0}}, axi_a_state }       ; end
                                                                  
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
-     20'h00094 : begin sys_ack <= sys_en;          sys_rdata <= {3'h0, axi0_wvalid_o, axi0_wlen_o, axi0_wsel_o, axi0_wdata_o[15:0]}        ; end
-     20'h00098 : begin sys_ack <= sys_en;          sys_rdata <= {axi0_waddr_o[31:0]}        ; end
 
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 4'h0, adc_a_rd}             ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 4'h0, adc_b_rd}             ; end
