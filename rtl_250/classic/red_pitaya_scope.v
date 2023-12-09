@@ -639,8 +639,8 @@ wire [128-1: 0] axi_b_fifo_dat     ;
 wire [128-1: 0] axi_b_fifo_out     ;
 reg  [128-1: 0] axi_b_fifo_o_r     ;
 wire [128-1: 0] axi_b_fifo_in      ;
-wire            axi_a_fifo_rdreq   ;
-reg  [  2-1: 0] axi_a_fifo_rdack   ;
+wire            axi_b_fifo_rdreq   ;
+reg  [  2-1: 0] axi_b_fifo_rdack   ;
 
 reg  [  2-1: 0] axi_b_dat_sel      ;
 reg  [  3-1: 0] axi_b_md           ;
