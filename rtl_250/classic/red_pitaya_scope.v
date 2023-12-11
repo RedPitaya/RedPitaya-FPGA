@@ -451,8 +451,8 @@ reg             axi_a_we_r         ;
 reg  [ 64-1: 0] axi_a_dat          ;
 
 wire            axi_a_trig    ;
-reg  [  4-1: 0] axi_a_trig_r  ;
-wire [  2-1: 0] axi_a_sel     ;
+reg  [  8-1: 0] axi_a_trig_r  ;
+reg  [  2-1: 0] axi_a_sel     ;
 reg  [ 12-1: 0] axi_a_dat_align [0:2];
 wire [128-1: 0] axi_a_fifo_out     ;
 wire [128-1: 0] axi_a_fifo_in      ;
@@ -474,15 +474,15 @@ wire [ 32-1: 0] axi_a_cur_addr     ;
 wire [  5-1: 0] axi_a_state        ;
 wire            fifo_a_empty       ;
 reg  [  8-1: 0] axi_a_val_byte     ;
-wire [  8-1: 0] axi_a_val_byte_f   ;
+reg  [  8-1: 0] axi_a_val_byte_f   ;
 
 assign axi_a_clr = adc_rst_do || (sys_wen && (sys_addr[19:0]==20'h5C) && sys_wdata[0]) ; // when AXI A is enabled
 assign axi_a_state = {axi_a_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_a_we};           // current state of AXI transfers
 
-assign axi_a_fifo_rdreq = ~fifo_a_empty && ~(axi_a_trig || |axi_a_trig_r); // disable FIFO reads when there is a trigger
+// disable FIFO reads when there is a trigger, when there is a current read being handled
+assign axi_a_fifo_rdreq = ~fifo_a_empty && ~axi_a_fifo_rdack[0] && ~(axi_a_trig || |axi_a_trig_r); 
+
 assign axi_a_trig = axi_a_fifo_o_r[64] && axi_a_fifo_rdack[1];             // pulse when a valid trigger is received
-assign axi_a_sel  = axi_a_fifo_o_r[66:65];                                 // needed to correctly determine trigger location
-assign axi_a_val_byte_f = axi_a_fifo_o_r[74:67];                           // valid bytes within data read from FIFO
 assign axi_a_fifo_in    = {53'h0, axi_a_val_byte, axi_a_md, axi_a_dat};    // inputs to FIFO
 
 always @(posedge adc_clk_i) begin
@@ -541,6 +541,10 @@ always @(posedge adc_clk_i) begin
       if (axi_a_dat_sel == 2'b11) begin axi_a_dat[ 64-1: 48] <= $signed(axi_a_dat_align[2]); axi_a_val_byte <= {2'b11, 2'b11, 2'b11, 2'b11}; end
    end
 
+   if (axi_a_fifo_rdack[0]) begin
+      axi_a_sel         <= axi_a_fifo_out[66:65];
+      axi_a_val_byte_f  <= axi_a_fifo_out[74:67];
+   end
 
    if (adc_trig)
       axi_a_md <= {axi_a_dat_sel,(!axi_a_dly_do && axi_a_we)}; //valid trig
@@ -568,7 +572,7 @@ sync_fifo
   .rd_rst_busy    (                 ));
 
 always @(posedge axi0_clk_o) begin
-   axi_a_trig_r <= {axi_a_trig_r[3-1:0],axi_a_trig}; //axi_trig fifod
+   axi_a_trig_r <= {axi_a_trig_r[7-1:0],axi_a_trig}; //axi_trig fifod
    axi_a_fifo_rdack <= {axi_a_fifo_rdack[0],axi_a_fifo_rdreq};
    
    if (axi_a_fifo_rdack[0]) begin
@@ -632,8 +636,8 @@ reg             axi_b_we           ;
 reg             axi_b_we_r         ;
 reg  [ 64-1: 0] axi_b_dat          ;
 wire            axi_b_trig    ;
-reg  [  4-1: 0] axi_b_trig_r  ;
-wire [  2-1: 0] axi_b_sel     ;
+reg  [  8-1: 0] axi_b_trig_r  ;
+reg  [  2-1: 0] axi_b_sel     ;
 reg  [ 12-1: 0] axi_b_dat_align [0:2];
 wire [128-1: 0] axi_b_fifo_dat     ;
 wire [128-1: 0] axi_b_fifo_out     ;
@@ -656,15 +660,15 @@ wire [ 32-1: 0] axi_b_cur_addr     ;
 wire [  5-1: 0] axi_b_state        ;
 wire            fifo_b_empty       ;
 reg  [  8-1: 0] axi_b_val_byte     ;
-wire [  8-1: 0] axi_b_val_byte_f   ;
+reg  [  8-1: 0] axi_b_val_byte_f   ;
 
 assign axi_b_clr = adc_rst_do || (sys_wen && (sys_addr[19:0]==20'h7C) && sys_wdata[0]) ; // when AXI B is enabled
 assign axi_b_state = {axi_b_dly_end, adc_we_keep, adc_trg_rd, 1'b0, axi_b_we};
 
-assign axi_b_fifo_rdreq = ~fifo_b_empty && ~(axi_b_trig || |axi_b_trig_r); // disable FIFO reads when there is a trigger
+// disable FIFO reads when there is a trigger, when there is a current read being handled
+assign axi_b_fifo_rdreq = ~fifo_b_empty && ~axi_b_fifo_rdack[0] && ~(axi_b_trig || |axi_b_trig_r); 
+
 assign axi_b_trig = axi_b_fifo_o_r[64] && axi_b_fifo_rdack[1];
-assign axi_b_sel  = axi_b_fifo_o_r[66:65];
-assign axi_b_val_byte_f = axi_b_fifo_o_r[74:67];
 assign axi_b_fifo_in    = {53'h0, axi_b_val_byte, axi_b_md, axi_b_dat};
 
 always @(posedge adc_clk_i) begin
@@ -724,6 +728,10 @@ always @(posedge adc_clk_i) begin
       if (axi_b_dat_sel == 2'b11) begin axi_b_dat[ 64-1: 48] <= $signed(axi_b_dat_align[2]); axi_b_val_byte <= {2'b11, 2'b11, 2'b11, 2'b11}; end
    end
 
+   if (axi_b_fifo_rdack[0]) begin
+      axi_b_sel         <= axi_b_fifo_out[66:65];
+      axi_b_val_byte_f  <= axi_b_fifo_out[74:67];
+   end
 
    if (adc_trig)
       axi_b_md <= {axi_b_dat_sel,(!axi_b_dly_do && axi_b_we)}; //valid trig
@@ -751,7 +759,7 @@ sync_fifo
   .rd_rst_busy    (                 ));
 
 always @(posedge axi1_clk_o) begin
-   axi_b_trig_r <= {axi_b_trig_r[3-1:0],axi_b_trig}; //axi_trig fifod
+   axi_b_trig_r <= {axi_b_trig_r[7-1:0],axi_b_trig}; //axi_trig fifod
    axi_b_fifo_rdack <= {axi_b_fifo_rdack[0],axi_b_fifo_rdreq};
 
    if (axi_b_fifo_rdack[0]) begin
