@@ -502,7 +502,7 @@ always @(posedge axi0_clk_o) begin
       else if ((axi_a_dly_do && (axi_a_dly_cnt <= 32'h1)) || axi_a_clr || adc_arm_do) //delayed reached or reset
          axi_a_dly_do  <= 1'b0 ;
 
-      if (axi_a_dly_do && axi_a_we && axi_a_dv)
+      if ((axi_a_dly_do && axi_a_we && axi_a_dv) || (adc_trig && dec1)) // shorthen by 1 if decimation is 1
          axi_a_dly_cnt <= axi_a_dly_cnt - 1;
       else if (!axi_a_dly_do)
          axi_a_dly_cnt <= set_a_axi_dly ;
@@ -676,7 +676,7 @@ always @(posedge axi1_clk_o) begin
       else if ((axi_b_dly_do && (axi_b_dly_cnt <= 32'h1)) || axi_b_clr || adc_arm_do) //delayed reached or reset
          axi_b_dly_do  <= 1'b0 ;
 
-      if (axi_b_dly_do && axi_b_we && axi_b_dv)
+      if ((axi_b_dly_do && axi_b_we && axi_b_dv) || (adc_trig && dec1))
          axi_b_dly_cnt <= axi_b_dly_cnt - 1;
       else if (!axi_b_dly_do)
          axi_b_dly_cnt <= set_b_axi_dly ;
