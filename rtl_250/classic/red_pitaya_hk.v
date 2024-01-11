@@ -50,6 +50,9 @@ module red_pitaya_hk #(
   output               pll_lo_o,     // PLL low
   input      [ 32-1:0] diag_i     ,
 
+  output reg           can_on_o   ,
+
+
   //SPI
   output     [  2-1:0] spi_cs_o,
   output     [  2-1:0] spi_clk_o,
@@ -322,6 +325,7 @@ if (rstn_i == 1'b0) begin
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
   pll_cfg_en   <= 1'b1 ;
+  can_on_o     <= 1'b0;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
 
@@ -331,6 +335,7 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h1C)   exp_n_dat_o  <= sys_wdata[DWE-1:0];
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
+  if (sys_addr[19:0]==20'h34)   can_on_o     <= sys_wdata[      0];
 
   if (sys_addr[19:0]==20'h40)   pll_cfg_en   <= sys_wdata[0];
 
@@ -384,6 +389,7 @@ end else begin
     20'h0002C: begin sys_ack <= sys_en;  sys_rdata <= {                diag_i     }       ; end
 
     20'h00030: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWL{1'b0}}, led_o}             ; end
+    20'h00034: begin sys_ack <= sys_en;  sys_rdata <= {{32-1{1'b0}},   can_on_o}          ; end
 
     20'h00040: begin sys_ack <= sys_en;  sys_rdata <= {                pll_cfg_rd}        ; end
 

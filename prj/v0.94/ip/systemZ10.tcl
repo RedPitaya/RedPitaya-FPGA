@@ -350,6 +350,8 @@ proc create_root_design { parentCell } {
   set FCLK_RESET1_N [ create_bd_port -dir O -type rst FCLK_RESET1_N ]
   set FCLK_RESET2_N [ create_bd_port -dir O -type rst FCLK_RESET2_N ]
   set FCLK_RESET3_N [ create_bd_port -dir O -type rst FCLK_RESET3_N ]
+  set CAN0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:can_rtl:1.0 CAN0 ]
+  set CAN1 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:can_rtl:1.0 CAN1 ]
   set M_AXI_GP0_ACLK [ create_bd_port -dir I -type clk -freq_hz 125000000 M_AXI_GP0_ACLK ]
   set_property -dict [ list \
    CONFIG.ASSOCIATED_BUSIF {M_AXI_GP0} \
@@ -375,6 +377,7 @@ proc create_root_design { parentCell } {
   set_property -dict [ list \
    CONFIG.PCW_ACT_APU_PERIPHERAL_FREQMHZ {666.666687} \
    CONFIG.PCW_ACT_CAN_PERIPHERAL_FREQMHZ {10.000000} \
+   CONFIG.PCW_CAN_PERIPHERAL_FREQMHZ {10} \
    CONFIG.PCW_ACT_DCI_PERIPHERAL_FREQMHZ {10.158730} \
    CONFIG.PCW_ACT_ENET0_PERIPHERAL_FREQMHZ {125.000000} \
    CONFIG.PCW_ACT_ENET1_PERIPHERAL_FREQMHZ {10.000000} \
@@ -746,6 +749,8 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_SPI1_GRP_SS2_ENABLE {0} \
    CONFIG.PCW_SPI1_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_SPI1_SPI1_IO {MIO 10 .. 15} \
+   CONFIG.PCW_CAN0_PERIPHERAL_ENABLE {1} \
+   CONFIG.PCW_CAN1_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_SPI_PERIPHERAL_DIVISOR0 {5} \
    CONFIG.PCW_SPI_PERIPHERAL_FREQMHZ {200} \
    CONFIG.PCW_SPI_PERIPHERAL_VALID {1} \
@@ -845,6 +850,9 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net s_axi_hp1_1 [get_bd_intf_ports S_AXI_HP1] [get_bd_intf_pins processing_system7/S_AXI_HP1]
   connect_bd_intf_net -intf_net s_axi_hp2_1 [get_bd_intf_ports S_AXI_HP2] [get_bd_intf_pins processing_system7/S_AXI_HP2]
   connect_bd_intf_net -intf_net s_axi_hp3_1 [get_bd_intf_ports S_AXI_HP3] [get_bd_intf_pins processing_system7/S_AXI_HP3]
+  connect_bd_intf_net [get_bd_intf_ports CAN0] [get_bd_intf_pins processing_system7/CAN_0]
+  connect_bd_intf_net [get_bd_intf_ports CAN1] [get_bd_intf_pins processing_system7/CAN_1]
+
   # Create port connections
   connect_bd_net -net m_axi_gp0_aclk_1 [get_bd_ports M_AXI_GP0_ACLK] [get_bd_pins processing_system7/M_AXI_GP0_ACLK]
   connect_bd_net -net proc_sys_reset_0_interconnect_aresetn [get_bd_pins axi_protocol_converter_0/aresetn] [get_bd_pins proc_sys_reset/interconnect_aresetn] [get_bd_pins axi_register_slice_0/aresetn] 

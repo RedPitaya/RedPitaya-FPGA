@@ -31,14 +31,17 @@ HSI    = hsi    -nolog -nojournal -mode batch
 BOOTGEN= bootgen -image prj/$(PRJ)/out/red_pitaya.bif -arch zynq -process_bitstream bin
 #HSI    = hsi    -nolog -mode batch
 
-.PHONY: all clean project
+.PHONY: all clean project sim
 
 all: $(FPGA_BIT) $(FSBL_ELF) $(DEVICE_TREE) $(FPGA_BIN)
 
 # TODO: clean should go into each project
 clean:
-	rm -rf out .Xil .srcs sdk project
+	rm -rf out .Xil .srcs sdk project sim
 	rm -rf prj/$(PRJ)/out prj/$(PRJ)/.Xil prj/$(PRJ)/.srcs prj/$(PRJ)/sdk prj/$(PRJ)/project
+
+sim: 
+	vivado -source red_pitaya_vivado_sim.tcl -tclargs $(PRJ) $(MODEL) $(DEFINES)
 
 project:
 ifneq ($(HWID),"")

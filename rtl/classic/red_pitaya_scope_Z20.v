@@ -353,13 +353,13 @@ always @(posedge adc_clk_i) begin
    else begin
       if (adc_arm_do)
          adc_we <= 1'b1 ;
-      else if (((adc_dly_do || adc_trig) && (adc_dly_cnt == {31'h0,dec1}) && ~adc_we_keep) || adc_rst_do) //delayed reached or reset
+      else if (((adc_dly_do || adc_trig) && (adc_dly_cnt == 32'h1) && ~adc_we_keep) || adc_rst_do) //delayed reached or reset
          adc_we <= 1'b0 ;
 
       // count how much data was written into the buffer before trigger
-      if (adc_rst_do | adc_arm_do)
+      if (adc_rst_do || adc_arm_do)
          adc_we_cnt <= 32'h0;
-      if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
+      else if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
 
       if (adc_rst_do)
@@ -380,7 +380,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_trig)
          adc_dly_do  <= 1'b1;
-      else if ((adc_dly_do && (adc_dly_cnt == {31'h0,dec1})) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
+      else if ((adc_dly_do && (adc_dly_cnt <= 32'h1)) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
          adc_dly_do  <= 1'b0;
       
       adc_dly_end_reg <= adc_dly_do; 
@@ -494,15 +494,15 @@ always @(posedge axi0_clk_o) begin
    else begin
       if (adc_arm_do && set_a_axi_en)
          axi_a_we <= 1'b1 ;
-      else if (((axi_a_dly_do || adc_trig) && (axi_a_dly_cnt == {31'h0,dec1})) || adc_rst_do) //delayed reached or reset
+      else if (((axi_a_dly_do || adc_trig) && (axi_a_dly_cnt == 32'h1)) || adc_rst_do) //delayed reached or reset
          axi_a_we <= 1'b0 ;
 
       if (adc_trig && axi_a_we)
          axi_a_dly_do  <= 1'b1 ;
-      else if ((axi_a_dly_do && (axi_a_dly_cnt == {31'h0,dec1})) || axi_a_clr || adc_arm_do) //delayed reached or reset
+      else if ((axi_a_dly_do && (axi_a_dly_cnt <= 32'h1)) || axi_a_clr || adc_arm_do) //delayed reached or reset
          axi_a_dly_do  <= 1'b0 ;
 
-      if (axi_a_dly_do && axi_a_we && axi_a_dv)
+      if ((axi_a_dly_do && axi_a_we && axi_a_dv) || (adc_trig && dec1)) // shorthen by 1 if decimation is 1
          axi_a_dly_cnt <= axi_a_dly_cnt - 1;
       else if (!axi_a_dly_do)
          axi_a_dly_cnt <= set_a_axi_dly ;
@@ -668,15 +668,15 @@ always @(posedge axi1_clk_o) begin
    else begin
       if (adc_arm_do && set_b_axi_en)
          axi_b_we <= 1'b1 ;
-      else if (((axi_b_dly_do || adc_trig) && (axi_b_dly_cnt == {31'h0,dec1})) || adc_rst_do) //delayed reached or reset
+      else if (((axi_b_dly_do || adc_trig) && (axi_b_dly_cnt == 32'h1)) || adc_rst_do) //delayed reached or reset
          axi_b_we <= 1'b0 ;
 
       if (adc_trig && axi_b_we)
          axi_b_dly_do  <= 1'b1 ;
-      else if ((axi_b_dly_do && (axi_b_dly_cnt == {31'h0,dec1})) || axi_b_clr || adc_arm_do) //delayed reached or reset
+      else if ((axi_b_dly_do && (axi_b_dly_cnt <= 32'h1)) || axi_b_clr || adc_arm_do) //delayed reached or reset
          axi_b_dly_do  <= 1'b0 ;
 
-      if (axi_b_dly_do && axi_b_we && axi_b_dv)
+      if ((axi_b_dly_do && axi_b_we && axi_b_dv) || (adc_trig && dec1))
          axi_b_dly_cnt <= axi_b_dly_cnt - 1;
       else if (!axi_b_dly_do)
          axi_b_dly_cnt <= set_b_axi_dly ;
@@ -786,30 +786,39 @@ reg               adc_trig_an      ;
 reg               adc_trig_bp      ;
 reg               adc_trig_bn      ;
 reg               adc_trig_sw      ;
+reg               trig_dis_clr     ;
 reg   [   4-1: 0] set_trig_src     ;
 wire              ext_trig_p       ;
 wire              ext_trig_n       ;
 wire              asg_trig_p       ;
 wire              asg_trig_n       ;
+reg               adc_trg_dis      ;
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
    adc_arm_do    <= 1'b0 ;
    adc_rst_do    <= 1'b0 ;
    adc_trig_sw   <= 1'b0 ;
+   trig_dis_clr  <= 1'b0 ;
+   adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
-   adc_trig      <= 1'b0 ;
-end else begin
-   adc_arm_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0] ; // SW ARM
-   adc_rst_do  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[1] ;
-   adc_trig_sw <= sys_wen && (sys_addr[19:0]==20'h4) && (sys_wdata[3:0]==4'h1); // SW trigger
+   end else begin
+   adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[0] ; // SW ARM
+   adc_rst_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[1] ; // reset
+   adc_trig_sw  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // SW trigger
+   trig_dis_clr <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_wdata[0]==1'b1);   // clear trigger protect/disable
 
       if (sys_wen && (sys_addr[19:0]==20'h4))
-         set_trig_src <= sys_wdata[3:0] ;
-      else if (adc_dly_do || adc_trig || adc_rst_do) //delay reached or reset
-         set_trig_src <= 4'h0 ;
+      set_trig_src <= sys_wdata[3:0] ;
+   else if (adc_dly_do || adc_trig || adc_rst_do) //delay reached or reset
+      set_trig_src <= 4'h0 ;
 
-   case (set_trig_src)
+   if (trig_dis_clr)
+      adc_trg_dis <= 1'b0 ;
+   else if (adc_trig)
+      adc_trg_dis <= 1'b1 ;
+
+   case (set_trig_src & ({4{!adc_trg_dis}}))
        4'd1 : adc_trig <= adc_trig_sw   ; // manual
        4'd2 : adc_trig <= CHN == 0 ? adc_trig_ap : trig_ch_i[0] ; // A ch rising edge
        4'd3 : adc_trig <= CHN == 0 ? adc_trig_an : trig_ch_i[1] ; // A ch falling edge
@@ -827,13 +836,17 @@ end else begin
    endcase
 end
 
+
+
 reg [4-1:0] last_src = 4'h0;
-always @(posedge adc_clk_i) begin // only change delay when the source is explicitly changed
+always @(posedge adc_clk_i) begin
   if (sys_wen && (sys_addr[19:0]==20'h4))
    last_src <= sys_wdata[3:0] ;
 end
 
-always @(*) begin //delay to trigger
+reg [2-1:0] dat_dly  = 2'h0;
+reg [2-1:0] prev_dly = 2'h0;
+always @(posedge adc_clk_i) begin //delay to trigger
    case (last_src)
        4'd2,
        4'd3,
@@ -842,13 +855,17 @@ always @(*) begin //delay to trigger
        4'd10,
        4'd11,
        4'd12,
-       4'd13  : begin adc_a_bram_in <= adc_a_fifo[2]; adc_b_bram_in <= adc_b_fifo[2]; adc_dv_del <= adc_dv_r[2]; end // level trigger
+       4'd13  : begin dat_dly <= 2'h1; prev_dly <= 2'h1; end // level trigger
        4'd6,
        4'd7,
        4'd8,
-       4'd9   : begin adc_a_bram_in <= adc_a_fifo[3]; adc_b_bram_in <= adc_b_fifo[3]; adc_dv_del <= adc_dv_r[3]; end // external and ASG trigger
-      default : begin adc_a_bram_in <= adc_a_dat;     adc_b_bram_in <= adc_b_dat;     adc_dv_del <= adc_dv;      end // manual trigger
+       4'd9   : begin dat_dly <= 2'h2; prev_dly <= 2'h2; end // external and ASG trigger
+      default : begin dat_dly <= prev_dly;              end // manual trigger
    endcase
+
+   adc_a_bram_in <= adc_a_fifo[dat_dly]; 
+   adc_b_bram_in <= adc_b_fifo[dat_dly]; 
+   adc_dv_del    <= adc_dv_r[dat_dly];
 end
 
 assign trig_ch_o = {adc_trig_bn, adc_trig_bp, adc_trig_an, adc_trig_ap};
@@ -1027,7 +1044,9 @@ end else begin
       if (sys_addr[19:0]==20'h78)   set_b_axi_dly   <= sys_wdata[32-1:0] ;
       if (sys_addr[19:0]==20'h7C)   set_b_axi_en    <= sys_wdata[     0] ;
 
-      if (sys_addr[19:0]==20'h90)   set_deb_len <= sys_wdata[20-1:0] ;
+      if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
+      // Offset 0x94 reserved for trigger unlock bit
+
    end
 end
 
@@ -1048,7 +1067,7 @@ end else begin
                                                                               , 1'b0                      // reset
                                                                               , adc_we}             ; end // arm
 
-     20'h00004 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 4{1'b0}}, set_trig_src}       ; end
+     20'h00004 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 5{1'b0}}, adc_trg_dis, set_trig_src}; end 
 
      20'h00008 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}}, set_a_tresh}        ; end
      20'h0000C : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}}, set_b_tresh}        ; end
@@ -1092,7 +1111,7 @@ end else begin
                                                                  {16- 5{1'b0}}, axi_a_state }       ; end
                                                                  
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
-
+     
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, adc_a_rd}                   ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, adc_b_rd}                   ; end
 
