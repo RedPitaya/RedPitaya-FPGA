@@ -162,6 +162,12 @@ logic                 adc_rstn;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
 
+//CAN
+logic                 CAN0_rx, CAN0_tx;
+logic                 CAN1_rx, CAN1_tx;
+logic                 can_on;
+
+
 // stream bus type
 localparam type SBA_T = logic signed [14-1:0];  // acquire
 localparam type SBG_T = logic signed [14-1:0];  // generate
@@ -284,6 +290,12 @@ red_pitaya_ps ps (
   // ADC analog inputs
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
+  // CAN0
+  .CAN0_rx       (CAN0_rx     ),
+  .CAN0_tx       (CAN0_tx     ),
+  // CAN1
+  .CAN1_rx       (CAN1_rx     ),
+  .CAN1_tx       (CAN1_tx     ),
   // GPIO
   .gpio          (gpio),
   // system read/write channel
@@ -410,11 +422,14 @@ ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b), .D2(dac_dat_a), .C(da
 //  House Keeping
 ////////////////////////////////////////////////////////////////////////////////
 
-logic [DWE-1: 0] exp_p_in , exp_n_in ;
-logic [DWE-1: 0] exp_p_out, exp_n_out;
-logic [DWE-1: 0] exp_p_dir, exp_n_dir;
-logic [DWE-1: 0] exp_p_otr, exp_n_otr;
-logic [DWE-1: 0] exp_p_dtr, exp_n_dtr;
+logic [DWE-1: 0] exp_p_in ,  exp_n_in ;
+logic [DWE-1: 0] exp_p_out,  exp_n_out;
+logic [DWE-1: 0] exp_p_dir,  exp_n_dir;
+logic [DWE-1: 0] exp_p_otr,  exp_n_otr;
+logic [DWE-1: 0] exp_p_dtr,  exp_n_dtr;
+logic [DWE-1: 0] exp_p_alt,  exp_n_alt;
+logic [DWE-1: 0] exp_p_altr, exp_n_altr;
+logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 
 red_pitaya_hk i_hk (
   // system signals
@@ -433,6 +448,7 @@ red_pitaya_hk i_hk (
   .exp_n_dat_o     (exp_n_out),
   .exp_n_dir_o     (exp_n_dir),
   .diag_i          (locked_pll_cnt_r2),
+  .can_on_o        (can_on   ),
    // System bus
   .sys_addr        (sys[0].addr ),
   .sys_wdata       (sys[0].wdata),
@@ -452,17 +468,35 @@ red_pitaya_hk i_hk (
 ////////////////////////////////////////////////////////////////////////////////
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
-assign exp_p_otr = exp_p_out;
-assign exp_n_otr = exp_n_out | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},trig_output_sel});
 
-assign exp_p_dtr = exp_p_dir;
-assign exp_n_dtr = exp_n_dir | ({DWE{daisy_mode[1]}} & {{DWE-1{1'b0}},1'b1});
+assign exp_p_alt  = {DWE{1'b0}};
+assign exp_n_alt  = {{DWE-8{1'b0}},  can_on,  can_on, 5'h0, daisy_mode[1]  };
+
+assign exp_p_altr = {DWE{1'b0}};
+assign exp_n_altr = {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, 5'h0, trig_output_sel};
+
+assign exp_p_altd = {DWE{1'b0}};
+assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b0};
+
+genvar GM;
+generate
+for(GM = 0 ; GM < DWE ; GM = GM + 1) begin : gpios
+  assign exp_p_otr[GM] = exp_p_alt[GM] ? exp_p_altr[GM] : exp_p_out[GM];
+  assign exp_n_otr[GM] = exp_n_alt[GM] ? exp_n_altr[GM] : exp_n_out[GM];
+
+  assign exp_p_dtr[GM] = exp_p_alt[GM] ? exp_p_altd[GM] : exp_p_dir[GM];
+  assign exp_n_dtr[GM] = exp_n_alt[GM] ? exp_n_altd[GM] : exp_n_dir[GM];
+end
+endgenerate
 
 IOBUF i_iobufp [DWE-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_otr), .T(~exp_p_dtr) );
 IOBUF i_iobufn [DWE-1:0] (.O(exp_n_in), .IO(exp_n_io), .I(exp_n_otr), .T(~exp_n_dtr) );
 
 assign gpio.i[2*GDW-1:  GDW] = exp_p_in[GDW-1:0];
 assign gpio.i[3*GDW-1:2*GDW] = exp_n_in[GDW-1:0];
+
+assign CAN0_rx = can_on & exp_p_in[7];
+assign CAN1_rx = can_on & exp_p_in[6];
 
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope
