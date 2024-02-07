@@ -107,7 +107,7 @@ begin
    buf_rpnt_o <= dac_pnt[PNT_SIZE-1:16+32];
    dac_rp     <= dac_pnt[PNT_SIZE-1:16+32];
    dac_rd     <= dac_buf[dac_rp] ;
-   dac_rdat   <= dac_do ? dac_rd : set_first_i;  // improve timing
+   dac_rdat   <= (dac_do || |dac_do_dlysr) ? dac_rd : set_first_i;  // improve timing
 end
 
 always @(posedge dac_clk_i) // shift regs are needed because of processing path delay
