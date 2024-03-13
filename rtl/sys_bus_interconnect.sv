@@ -12,10 +12,12 @@ module sys_bus_interconnect #(
   SYNC_OUT_BUS2   = -1, // slave bus 2
   SYNC_OUT_BUS3   = -1, // slave bus 3
   SYNC_OUT_BUS4   = -1, // slave bus 4
+  SYNC_OUT_BUS5   = -1, // slave bus 5
   SYNC_REG_OFS1   = -1, // synchronised reg 1
   SYNC_REG_OFS2   = -1, // synchronised reg 2
   SYNC_REG_OFS3   = -1, // synchronised reg 3
-  SYNC_REG_OFS4   = -1  // synchronised reg 4
+  SYNC_REG_OFS4   = -1, // synchronised reg 4
+  SYNC_REG_OFS5   = -1  // synchronised reg 5
 )(
   sys_bus_if.s bus_m,          // from master
   sys_bus_if.m bus_s [SN-1:0]  // to   slaves
@@ -38,11 +40,20 @@ assign bus_s_a  = bus_m.addr[SW+:SL];
 assign bus_s_cs = SN'(1) << bus_s_a;
 
 assign bus_s_sync_cs = {SN{bus_s_cs[SYNC_IN_BUS]}} & {syncd_cs};
-assign bus_s_sync_adr = bus_s_sync_cs & {SN{((bus_m.addr[SW-1:0] == SYNC_REG_OFS1) || (bus_m.addr[SW-1:0] == SYNC_REG_OFS2) || (bus_m.addr[SW-1:0] == SYNC_REG_OFS3) || (bus_m.addr[SW-1:0] == SYNC_REG_OFS4))}};
+assign bus_s_sync_adr = bus_s_sync_cs & 
+                        {SN{((bus_m.addr[SW-1:0] == SYNC_REG_OFS1) || 
+                             (bus_m.addr[SW-1:0] == SYNC_REG_OFS2) || 
+                             (bus_m.addr[SW-1:0] == SYNC_REG_OFS3) || 
+                             (bus_m.addr[SW-1:0] == SYNC_REG_OFS4) ||
+                             (bus_m.addr[SW-1:0] == SYNC_REG_OFS5))}};
 
 generate
 for (genvar i=0; i<SN; i++) begin: for_bus
-assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) || (i == SYNC_OUT_BUS2) || (i == SYNC_OUT_BUS3) || (i == SYNC_OUT_BUS4);
+assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) || 
+                         (i == SYNC_OUT_BUS2) || 
+                         (i == SYNC_OUT_BUS3) || 
+                         (i == SYNC_OUT_BUS4) ||
+                         (i == SYNC_OUT_BUS5);
 
 assign bus_s[i].addr  =                bus_m.addr ;
 assign bus_s[i].wdata =                bus_m.wdata;
