@@ -183,4 +183,4 @@
 `define TFORMATADC "ADC trigger received at %d, trigger source %d, trigger level %d, sample number %d \n"
 `define TVALSADC adc_triga, trig_src_r, $signed(trig_lvl), write_cntADC[i]
 `define TFORMATAXI "AXI trigger received at %d, trigger source %d, trigger level %d, sample number %d \n"
-`define TVALSAXI axi_triga[12-1:0], trig_src_r, $signed(trig_lvl), write_cntAXI[i]
+`define TVALSAXI axi_triga[20-1:0], trig_src_r, $signed(trig_lvl), write_cntAXI[i]

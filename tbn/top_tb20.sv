@@ -62,7 +62,7 @@ module top_tb #(
 
   parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 1000,           // how many ADC cycles (triggers) are handled
+  parameter CYCLES        = 10,             // how many ADC cycles (triggers) are handled
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
@@ -211,7 +211,7 @@ assign adc_rstn = red_pitaya_top.adc_rstn_01;
 `endif
 
 int BASE =  `BASE_OFS;
-int ADR;
+int ADR, ADR2;
 initial begin
   ##500;
    // top_tc.daisy_trigs();
@@ -220,7 +220,7 @@ initial begin
 
   do begin
     repeat(1000) @(posedge clk0);
-  end while (adc_rstn == 1'b0);
+  end while (adc_rstn != 1'b1);
   #1000;
    //top_tc.test_asg                (32'h40200000, 32'h0, 2);
   fork
@@ -236,12 +236,19 @@ initial begin
 
     end    
 `else
-    ADR = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
+    $display("Testing normal acq mode!");
+
+    ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
+    ADR2 = `BASE_OFS + `SCOPE2_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
       top_tc20.init_adc_01(ADR);
+      top_tc20.init_adc_23(ADR2);
       //top_tc20.custom_test();
-      top_tc20.test_osc   (ADR, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+
+    ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
       //top_tc20.init_dac(ADR);
       //#10000;
       //top_tc20.test_dac(ADR);
