@@ -64,6 +64,7 @@ module red_pitaya_asg_ch #(
    input     [  14-1: 0] set_dc_i        ,  //!< set output offset
    input     [  14-1: 0] set_first_i     ,  //!< set initial value before start
    input     [  14-1: 0] set_last_i      ,  //!< set final value in burst
+   input     [  32-1: 0] set_last_len_i  ,  //!< set length of final value in burst in ADC counts
    input                 set_zero_i      ,  //!< set output to zero
    input     [  16-1: 0] set_ncyc_i      ,  //!< set number of cycle
    input     [  16-1: 0] set_rnum_i      ,  //!< set number of repetitions
@@ -151,6 +152,7 @@ wire             ext_trig_n   ;
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
 reg  [   8-1: 0] dly_tick     ;
+reg  [  32-1: 0] last_cnt     ;
 
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_dlysr ;
@@ -166,12 +168,18 @@ end
 
 always @(posedge dac_clk_i)
 begin 
-   if (dac_rstn_i == 1'b0)
-      lastval <= 1'b0;
-   else begin
+   if (dac_rstn_i == 1'b0) begin
+      lastval  <= 1'b0;
+      last_cnt <= 32'h0;
+   end else begin
+      if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
+         last_cnt <= set_last_len_i;
+      else if (last_cnt > 32'd0)
+         last_cnt <= last_cnt - 1;
+     
       if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
          lastval <= 1'b1;
-      else if ((lastval && dly_cnt == 'd0 && (|rep_cnt || (trig_in && !dac_do)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
+      else if ((lastval && last_cnt == 'd0 && (|rep_cnt || (trig_in && !dac_do)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
          lastval <= 1'b0; // reset from lastval when a new trigger arrives
    end
 end
