@@ -391,6 +391,7 @@ rp_ext_trig #(
 );
 
 rp_scope_cfg #(
+  .CHN (  CHN    ),
   .DW  (  DW     )
 ) i_cfg (
    // global signals
@@ -457,6 +458,6 @@ assign axi_rstn_o = axi_rstn;
 assign trig_ch_o      = {adc_trig_n[1], adc_trig_p[1], adc_trig_n[0], adc_trig_p[0]};
 assign daisy_trig_o   = adc_trig[0];
 
-assign indep_mode_o   = indep_mode[0];
+assign indep_mode_o   = 1'b0; //indep_mode[0];
 
 endmodule
