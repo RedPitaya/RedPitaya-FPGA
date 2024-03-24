@@ -134,6 +134,8 @@ genvar GV;
 generate
 for(GV = 0 ; GV < N_CH ; GV = GV + 1) begin
 wire [ 8-1: 0] sys_dats;
+wire [ 8-1: 0] sys_dats_c;
+
 reg            filt_coef_wr;
 
 
