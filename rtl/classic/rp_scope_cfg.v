@@ -40,6 +40,8 @@ module rp_scope_cfg #(
    input      [   4*8  -1: 0] adc_state_i     ,
    input      [   4*8  -1: 0] axi_state_i     ,
    input      [   4*8  -1: 0] trg_state_i     ,
+   input      [   2*8  -1: 0] adc_state_ext_i ,
+   input      [   2*8  -1: 0] trg_state_ext_i ,
 
    input      [   4*RSZ-1: 0] adc_wp_cur_i    ,
    input      [   4*RSZ-1: 0] adc_wp_trig_i   ,
@@ -117,6 +119,12 @@ reg  [    4-1: 0] set_axi_en    ;
 
 wire              sys_en        ;
 
+wire [   32-1: 0] adc_state_rd   ;
+wire [   32-1: 0] trg_state_rd   ;
+
+assign adc_state_rd = (CHN == 0) ? {adc_state_ext_i, adc_state_i[15:0]} : {adc_state_i[15:0], adc_state_ext_i};
+assign trg_state_rd = (CHN == 0) ? {trg_state_ext_i, trg_state_i[15:0]} : {trg_state_i[15:0], trg_state_ext_i};
+
 assign axi_en_addr[0]   = sys_addr[19: 0] == 20'h5C;
 assign axi_en_addr[1]   = sys_addr[19: 0] == 20'h7C;
 assign axi_en_addr[2]   = sys_addr[19: 0] == 20'h9C;
@@ -172,8 +180,8 @@ always @(posedge adc_clk_i) begin
     adc_trig_sw[GV]  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_dats[3:0]==4'h1); // SW trigger
     trig_dis_clr[GV] <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_dats[0]==1'b1);   // clear trigger protect/disable
     if (sys_wen) begin
-      if (sys_addr[19:0]==20'h0  /*&& |sys_dats*/)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
-      if (sys_addr[19:0]==20'h0  /*&& |sys_dats*/)  indep_mode[GV]   <= sys_dats[5]   ; // independent acq mode
+      if (sys_addr[19:0]==20'h0  && |sys_dats)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
+      if (sys_addr[19:0]==20'h0  && |sys_dats)  indep_mode[GV]   <= sys_dats[5]   ; // independent acq mode
       if (sys_addr[19:0]==20'h28             )  set_avg_en[GV]   <= sys_dats_c[0] ; // averaging enable
     end
   end
@@ -303,8 +311,10 @@ end else begin
   sys_err <= 1'b0 ;
 
   casez (sys_addr[19:0])
-    20'h00000 : begin sys_ack <= sys_en;          sys_rdata <=                 adc_state_i                      ; end
-    20'h00004 : begin sys_ack <= sys_en;          sys_rdata <=                 trg_state_i                      ; end 
+    20'h00000 : begin sys_ack <= sys_en;          sys_rdata <=                 adc_state_rd                     ; end
+    20'h00004 : begin sys_ack <= sys_en;          sys_rdata <=                 trg_state_rd                     ; end 
+    //20'h00000 : begin sys_ack <= sys_en;          sys_rdata <=                 adc_state_i                      ; end
+    //20'h00004 : begin sys_ack <= sys_en;          sys_rdata <=                 trg_state_i                      ; end 
 
     20'h00008 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}}, set_tresh[DW*1-1:DW*0]}          ; end
     20'h0000C : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}}, set_tresh[DW*2-1:DW*1]}          ; end

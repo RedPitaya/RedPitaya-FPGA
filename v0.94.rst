@@ -424,12 +424,16 @@ Oscilloscope
 |          | Reserved                                           |   7:6|   R |
 +----------+----------------------------------------------------+------+-----+
 |          | Independent mode on                              / |     5| R/W |
-|          | Enables independent acquisitions for all channels  |      |     |
+|          | Enables independent acquisitions for all channels /|      |     |
+|          | Can only be changed if any other bits /            |      |     |
+|          | of the same channel are set at the same time       |      |     |
 +----------+----------------------------------------------------+------+-----+
 |          | ACQ delay has passed                             / |     4|   R |
 |          | (all data was written to buffer)                   |      |     |
 +----------+----------------------------------------------------+------+-----+
 |          | Trigger remains armed after ACQ delay passes       |     3|   W |
+|          | Can only be changed if any other bits /            |      |     |
+|          | of the same channel are set at the same time       |      |     |
 +----------+----------------------------------------------------+------+-----+
 |          | Trigger has arrived                                |     2|   R |
 |          | stays on (1) until next arm or reset               |      |     |

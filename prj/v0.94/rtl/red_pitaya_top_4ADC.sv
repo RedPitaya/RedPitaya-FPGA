@@ -586,9 +586,13 @@ assign CAN1_rx = can_on & exp_p_in[6];
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH0 and CH1
 ////////////////////////////////////////////////////////////////////////////////
-wire [4-1:0] trig_ch_0_1;
-wire [4-1:0] trig_ch_2_3;
-logic        trig_asg_out;
+wire [ 4-1:0] trig_ch_0_1;
+wire [ 4-1:0] trig_ch_2_3;
+wire [16-1:0] trg_state_ch_0_1;
+wire [16-1:0] trg_state_ch_2_3;
+wire [16-1:0] adc_state_ch_0_1;
+wire [16-1:0] adc_state_ch_2_3;
+logic         trig_asg_out;
 
 rp_scope_com #(
   .CHN(0),
@@ -606,7 +610,10 @@ rp_scope_com #(
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .daisy_trig_o  (scope_trigo ),
   .indep_mode_o  (indep_mode  ),
-
+  .adc_state_o   (adc_state_ch_0_1),
+  .adc_state_i   (adc_state_ch_2_3),
+  .trg_state_o   (trg_state_ch_0_1),
+  .trg_state_i   (trg_state_ch_2_3),
   // AXI0 master                 // AXI1 master
   .axi_clk_o    ({axi1_clk,    axi0_clk}   ),
   .axi_rstn_o   ({axi1_rstn,   axi0_rstn}  ),
@@ -644,6 +651,10 @@ rp_scope_com #(
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_2_3 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_0_1 ),  // input ADC trigger from other 2 channels
+  .adc_state_o   (adc_state_ch_2_3),
+  .adc_state_i   (adc_state_ch_0_1),
+  .trg_state_o   (trg_state_ch_2_3),
+  .trg_state_i   (trg_state_ch_0_1),
   // AXI2 master                 // AXI3 master
   .axi_clk_o    ({axi3_clk,    axi2_clk}   ),
   .axi_rstn_o   ({axi3_rstn,   axi2_rstn}  ),
