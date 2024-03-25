@@ -221,17 +221,17 @@ if (GL == 0) begin
   assign set_dec1_x[GL]               = set_dec1[GL]               ;
   assign set_avg_en_x[GL]             = set_avg_en[GL]             ;
 end else begin
-  assign adc_arm_do_x[GL]             = indep_mode[GV] ? adc_arm_do[GL]             : adc_arm_do[0]   ;
-  assign adc_rst_do_x[GL]             = indep_mode[GV] ? adc_rst_do[GL]             : adc_rst_do[0]   ;
-  assign adc_trig_sw_x[GL]            = indep_mode[GV] ? adc_trig_sw[GL]            : adc_trig_sw[0]  ;
-  assign adc_we_keep_x[GL]            = indep_mode[GV] ? adc_we_keep[GL]            : adc_we_keep[0]  ;
-  assign trig_dis_clr_x[GL]           = indep_mode[GV] ? trig_dis_clr[GL]           : trig_dis_clr[0] ;
-  assign new_trg_src_x[GL]            = indep_mode[GV] ? new_trg_src[GL]            : new_trg_src[0]  ;
-  assign trg_src_x[(GL+1)*4 -1:GL*4 ] = indep_mode[GV] ? trg_src[(GL+1)*4-1:GL*4]   : trg_src[3:0]    ;
-  assign set_dly_x[(GL+1)*32-1:GL*32] = indep_mode[GV] ? set_dly[(GL+1)*32-1:GL*32] : set_dly[32-1: 0];
-  assign set_dec_x[(GL+1)*17-1:GL*17] = indep_mode[GV] ? set_dec[(GL+1)*17-1:GL*17] : set_dec[17-1: 0];
-  assign set_dec1_x[GL]               = indep_mode[GV] ? set_dec1[GL]               : set_dec1[0]     ;
-  assign set_avg_en_x[GL]             = indep_mode[GV] ? set_avg_en[GL]             : set_avg_en[0]   ;
+  assign adc_arm_do_x[GL]             = indep_mode[GL] ? adc_arm_do[GL]             : adc_arm_do[0]   ;
+  assign adc_rst_do_x[GL]             = indep_mode[GL] ? adc_rst_do[GL]             : adc_rst_do[0]   ;
+  assign adc_trig_sw_x[GL]            = indep_mode[GL] ? adc_trig_sw[GL]            : adc_trig_sw[0]  ;
+  assign adc_we_keep_x[GL]            = indep_mode[GL] ? adc_we_keep[GL]            : adc_we_keep[0]  ;
+  assign trig_dis_clr_x[GL]           = indep_mode[GL] ? trig_dis_clr[GL]           : trig_dis_clr[0] ;
+  assign new_trg_src_x[GL]            = indep_mode[GL] ? new_trg_src[GL]            : new_trg_src[0]  ;
+  assign trg_src_x[(GL+1)*4 -1:GL*4 ] = indep_mode[GL] ? trg_src[(GL+1)*4-1:GL*4]   : trg_src[3:0]    ;
+  assign set_dly_x[(GL+1)*32-1:GL*32] = indep_mode[GL] ? set_dly[(GL+1)*32-1:GL*32] : set_dly[32-1: 0];
+  assign set_dec_x[(GL+1)*17-1:GL*17] = indep_mode[GL] ? set_dec[(GL+1)*17-1:GL*17] : set_dec[17-1: 0];
+  assign set_dec1_x[GL]               = indep_mode[GL] ? set_dec1[GL]               : set_dec1[0]     ;
+  assign set_avg_en_x[GL]             = indep_mode[GL] ? set_avg_en[GL]             : set_avg_en[0]   ;
 end
 
 end
