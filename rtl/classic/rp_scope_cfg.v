@@ -139,7 +139,7 @@ wire [ 8-1: 0] sys_dats_c;
 reg            filt_coef_wr;
 
 
-assign sys_dats                 = CHN == 0 ? sys_wdata[(GV+1)*8-1:GV*8] : sys_wdata[(GV+3)*8-1:(GV+2)*8];
+assign sys_dats                 = ((CHN == 1) && (indep_mode[GV] == 1)) ? sys_wdata[(GV+3)*8-1:(GV+2)*8] : sys_wdata[(GV+1)*8-1:GV*8] ;
 assign sys_dats_c               = sys_wdata[(GV+1)*8-1:GV*8];
 
 //assign sys_dats                 = sys_wdata[(GV+1)*8-1:GV*8];
@@ -172,8 +172,8 @@ always @(posedge adc_clk_i) begin
     adc_trig_sw[GV]  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_dats[3:0]==4'h1); // SW trigger
     trig_dis_clr[GV] <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_dats[0]==1'b1);   // clear trigger protect/disable
     if (sys_wen) begin
-      if (sys_addr[19:0]==20'h0  && |sys_dats)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
-      if (sys_addr[19:0]==20'h0  && |sys_dats)  indep_mode[GV]   <= sys_dats[5]   ; // independent acq mode
+      if (sys_addr[19:0]==20'h0  /*&& |sys_dats*/)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
+      if (sys_addr[19:0]==20'h0  /*&& |sys_dats*/)  indep_mode[GV]   <= sys_dats[5]   ; // independent acq mode
       if (sys_addr[19:0]==20'h28             )  set_avg_en[GV]   <= sys_dats_c[0] ; // averaging enable
     end
   end
@@ -213,17 +213,17 @@ if (GL == 0) begin
   assign set_dec1_x[GL]               = set_dec1[GL]               ;
   assign set_avg_en_x[GL]             = set_avg_en[GL]             ;
 end else begin
-  assign adc_arm_do_x[GL]             = indep_mode[0] ? adc_arm_do[GL]             : adc_arm_do[0]   ;
-  assign adc_rst_do_x[GL]             = indep_mode[0] ? adc_rst_do[GL]             : adc_rst_do[0]   ;
-  assign adc_trig_sw_x[GL]            = indep_mode[0] ? adc_trig_sw[GL]            : adc_trig_sw[0]  ;
-  assign adc_we_keep_x[GL]            = indep_mode[0] ? adc_we_keep[GL]            : adc_we_keep[0]  ;
-  assign trig_dis_clr_x[GL]           = indep_mode[0] ? trig_dis_clr[GL]           : trig_dis_clr[0] ;
-  assign new_trg_src_x[GL]            = indep_mode[0] ? new_trg_src[GL]            : new_trg_src[0]  ;
-  assign trg_src_x[(GL+1)*4 -1:GL*4 ] = indep_mode[0] ? trg_src[(GL+1)*4-1:GL*4]   : trg_src[3:0]    ;
-  assign set_dly_x[(GL+1)*32-1:GL*32] = indep_mode[0] ? set_dly[(GL+1)*32-1:GL*32] : set_dly[32-1: 0];
-  assign set_dec_x[(GL+1)*17-1:GL*17] = indep_mode[0] ? set_dec[(GL+1)*17-1:GL*17] : set_dec[17-1: 0];
-  assign set_dec1_x[GL]               = indep_mode[0] ? set_dec1[GL]               : set_dec1[0]     ;
-  assign set_avg_en_x[GL]             = indep_mode[0] ? set_avg_en[GL]             : set_avg_en[0]   ;
+  assign adc_arm_do_x[GL]             = indep_mode[GV] ? adc_arm_do[GL]             : adc_arm_do[0]   ;
+  assign adc_rst_do_x[GL]             = indep_mode[GV] ? adc_rst_do[GL]             : adc_rst_do[0]   ;
+  assign adc_trig_sw_x[GL]            = indep_mode[GV] ? adc_trig_sw[GL]            : adc_trig_sw[0]  ;
+  assign adc_we_keep_x[GL]            = indep_mode[GV] ? adc_we_keep[GL]            : adc_we_keep[0]  ;
+  assign trig_dis_clr_x[GL]           = indep_mode[GV] ? trig_dis_clr[GL]           : trig_dis_clr[0] ;
+  assign new_trg_src_x[GL]            = indep_mode[GV] ? new_trg_src[GL]            : new_trg_src[0]  ;
+  assign trg_src_x[(GL+1)*4 -1:GL*4 ] = indep_mode[GV] ? trg_src[(GL+1)*4-1:GL*4]   : trg_src[3:0]    ;
+  assign set_dly_x[(GL+1)*32-1:GL*32] = indep_mode[GV] ? set_dly[(GL+1)*32-1:GL*32] : set_dly[32-1: 0];
+  assign set_dec_x[(GL+1)*17-1:GL*17] = indep_mode[GV] ? set_dec[(GL+1)*17-1:GL*17] : set_dec[17-1: 0];
+  assign set_dec1_x[GL]               = indep_mode[GV] ? set_dec1[GL]               : set_dec1[0]     ;
+  assign set_avg_en_x[GL]             = indep_mode[GV] ? set_avg_en[GL]             : set_avg_en[0]   ;
 end
 
 end
