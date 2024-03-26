@@ -142,14 +142,11 @@ genvar GV;
 generate
 for(GV = 0 ; GV < N_CH ; GV = GV + 1) begin
 wire [ 8-1: 0] sys_dats;
-wire [ 8-1: 0] sys_dats_c;
 
 reg            filt_coef_wr;
 
 
 assign sys_dats                 = ((CHN == 1) && (indep_mode[GV] == 1)) ? sys_wdata[(GV+3)*8-1:(GV+2)*8] : sys_wdata[(GV+1)*8-1:GV*8] ;
-assign sys_dats_c               = sys_wdata[(GV+1)*8-1:GV*8];
-
 //assign sys_dats                 = sys_wdata[(GV+1)*8-1:GV*8];
 
 assign axi_en_pulse[GV]         = sys_wen && axi_en_addr[GV] && sys_wdata[0];
@@ -182,7 +179,7 @@ always @(posedge adc_clk_i) begin
     if (sys_wen) begin
       if (sys_addr[19:0]==20'h0  && |sys_dats)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
       if (sys_addr[19:0]==20'h0  && |sys_dats)  indep_mode[GV]   <= sys_dats[5]   ; // independent acq mode
-      if (sys_addr[19:0]==20'h28             )  set_avg_en[GV]   <= sys_dats_c[0] ; // averaging enable
+      if (sys_addr[19:0]==20'h28             )  set_avg_en[GV]   <= sys_dats[0]   ; // averaging enable
     end
   end
 end

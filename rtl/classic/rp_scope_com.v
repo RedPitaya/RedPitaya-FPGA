@@ -74,7 +74,6 @@ module rp_scope_com #(
    output     [N_CH   -1: 0] axi_wfixed_o   ,  // system write burst type (fixed / incremental)
    input      [N_CH   -1: 0] axi_werr_i     ,  // system write error
    input      [N_CH   -1: 0] axi_wrdy_i     ,  // system write ready
-   output                    indep_mode_o   ,  // independent acq mode
    output     [     16-1: 0] adc_state_o    ,
    input      [     16-1: 0] adc_state_i    ,
    output     [     16-1: 0] trg_state_o    ,
@@ -469,6 +468,5 @@ assign axi_rstn_o = axi_rstn;
 assign trig_ch_o      = {adc_trig_n[1], adc_trig_p[1], adc_trig_n[0], adc_trig_p[0]};
 assign daisy_trig_o   = adc_trig[0];
 
-assign indep_mode_o   = 1'b0; //indep_mode[0];
 
 endmodule

@@ -439,11 +439,20 @@ task test_osc_common(
   int mode
 );
   reg [32-1:0] start_mask;
+  reg [ 8-1:0] trig_src0;
+  reg [ 8-1:0] trig_src1;
+  reg [ 8-1:0] trig_src2;
+  reg [ 8-1:0] trig_src3;
+
    int unsigned dat;
 int i;
   ##5000;
 
     start_mask={4{8'h21}};
+    trig_src0=8'h2;
+    trig_src1=8'h4;
+    trig_src2=8'hA;
+    trig_src3=8'hC;
 // MODE 0 regular BRAM mode, wait for the end of trigger
 // MODE 1 AXI0 mode, wait for the end of trigger
 // MODE 2 AXI1 mode, wait for the end of trigger
@@ -451,14 +460,20 @@ int i;
  
   axi_write(offset+'h14,  dec);  // decimation
   axi_write(offset+'h114, dec);  // decimation
+  axi_write(32'h40200000+'h14,  dec);  // decimation
+  axi_write(32'h40200000+'h114, dec);  // decimation
   axi_write(offset+'h0 ,  start_mask); // ARM trigger
-  axi_write(offset+'h94,  {8'h0,8'h0,8'h1,8'h1}); // clear trigger protect
-  axi_write(offset+'h4 ,  {4{trig_src[7:0]}});  // level trigger
+  axi_write(offset+'h94,  {8'h1,8'h1,8'h1,8'h1}); // clear trigger protect
+  //axi_write(offset+'h4 ,  {4{trig_src[7:0]}});  // level trigger
+  axi_write(offset+'h4 ,  {trig_src3,trig_src2,trig_src1,trig_src0});  // level trigger
+  axi_write(offset+'h28,  {4{8'h1}});  // enable decimation averaging
 
 for (i=0; i<cycles; i++) begin: triggering
   //fork
-    handle_channel(offset,trig_src,read_trig, 1, mode);
-    handle_channel(offset,trig_src,read_trig, 2, mode);
+    handle_channel(offset,trig_src0,read_trig, 1, mode);
+    handle_channel(offset,trig_src1,read_trig, 2, mode);
+    handle_channel(offset,trig_src2,read_trig, 3, mode);
+    handle_channel(offset,trig_src3,read_trig, 4, mode);
   //join
 end
 

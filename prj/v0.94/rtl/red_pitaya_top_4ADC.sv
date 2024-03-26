@@ -186,7 +186,6 @@ SBA_T [MNA-1:0]          adc_dat, adc_dat_r;
 logic                 digital_loop;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
-logic                 indep_mode;
 
 //CAN
 logic                 CAN0_rx, CAN0_tx;
@@ -350,13 +349,14 @@ sys_bus_interconnect #(
   .SYNC_OUT_BUS3 (2),
   .SYNC_OUT_BUS4 (2),
   .SYNC_OUT_BUS5 (2),
+  .SYNC_OUT_BUS6 (2),
   .SYNC_REG_OFS1 (0),
   .SYNC_REG_OFS2 (4),
   .SYNC_REG_OFS3 (16),
   .SYNC_REG_OFS4 (20),
-  .SYNC_REG_OFS5 (148)
+  .SYNC_REG_OFS5 (40),
+  .SYNC_REG_OFS6 (148)
 ) sys_bus_interconnect (
-  .indep_mode_i(indep_mode),
   .bus_m (ps_sys),
   .bus_s (sys)
 );
@@ -609,7 +609,6 @@ rp_scope_com #(
   .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .daisy_trig_o  (scope_trigo ),
-  .indep_mode_o  (indep_mode  ),
   .adc_state_o   (adc_state_ch_0_1),
   .adc_state_i   (adc_state_ch_2_3),
   .trg_state_o   (trg_state_ch_0_1),

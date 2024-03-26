@@ -41,19 +41,18 @@ reg  [ 32-1: 0] adc_sum     ;
 reg  [ 32-1: 0] sum_in      ;
 reg  [ 32-1: 0] sum_uns     ;
 reg  [ 32-1: 0] div_uns     ;
-reg  [ 17-1: 0] adc_dec_cnt   ;
-reg             adc_dv        ;
-reg             div_go        ;
-wire            div_ok        ;
-reg             dat_got       ;
-reg             div_dat_got   ;
-reg  [ 32-1: 0] dat_div       ;
-wire [ 32-1: 0] div_out       ;
-reg             adc_dv_div    ;
+reg  [ 17-1: 0] adc_dec_cnt ;
+reg             adc_dv      ;
+reg             div_go      ;
+wire            div_ok      ;
+reg             dat_got     ;
+reg             div_dat_got ;
+reg  [ 32-1: 0] dat_div     ;
+wire [ 32-1: 0] div_out     ;
+reg             adc_dv_div  ;
 reg  [ 34-1: 0] sign_sr     ;
 reg             sign_curr   ;
-reg  [ 34-1: 0] sign_sr_b     ;
-reg             sign_curr_b   ;
+
 
 
 divide #(

@@ -242,16 +242,15 @@ initial begin
     ADR2 = `BASE_OFS + `SCOPE2_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
-      top_tc20.init_adc_01(ADR);
-      top_tc20.init_adc_23(ADR2);
-      //top_tc20.custom_test();
-      top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-      top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+       top_tc20.init_adc_01(ADR);
+       top_tc20.init_adc_23(ADR2);
+       top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+       top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
 
     ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
-      //top_tc20.init_dac(ADR);
-      //#10000;
-      //top_tc20.test_dac(ADR);
+      top_tc20.init_dac(ADR);
+      #10000;
+      top_tc20.test_dac(ADR);
     end
 `endif
 
