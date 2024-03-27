@@ -151,7 +151,7 @@ assign sys_dats                 = ((CHN == 1) && (indep_mode[GV] == 1)) ? sys_wd
 //assign sys_dats                 = sys_wdata[(GV+1)*8-1:GV*8];
 
 assign axi_en_pulse[GV]         = sys_wen && axi_en_addr[GV] && sys_wdata[0];
-assign new_trg_src[GV]          = (sys_addr[19:0] == 20'h4) && sys_wen && |sys_dats;
+assign new_trg_src[GV]          = (sys_addr[19:0] == 20'h4) && sys_wen && |sys_dats[3:0];
 assign set_dec1[GV]             = (set_dec[(GV+1)*17-1:GV*17] == 17'h1);
 assign filt_rstn[GV]            = (adc_rstn_i == 1'b1) && filt_coef_wr;
 assign trg_src[(GV+1)*4-1:GV*4] = sys_dats[3:0];
