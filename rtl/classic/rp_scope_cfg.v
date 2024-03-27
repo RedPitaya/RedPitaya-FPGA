@@ -41,6 +41,7 @@ module rp_scope_cfg #(
    input      [   4*8  -1: 0] axi_state_i     ,
    input      [   4*8  -1: 0] trg_state_i     ,
    input      [   2*8  -1: 0] adc_state_ext_i ,
+   input      [   2*8  -1: 0] axi_state_ext_i ,
    input      [   2*8  -1: 0] trg_state_ext_i ,
 
    input      [   4*RSZ-1: 0] adc_wp_cur_i    ,

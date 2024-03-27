@@ -592,6 +592,8 @@ wire [16-1:0] trg_state_ch_0_1;
 wire [16-1:0] trg_state_ch_2_3;
 wire [16-1:0] adc_state_ch_0_1;
 wire [16-1:0] adc_state_ch_2_3;
+wire [16-1:0] axi_state_ch_0_1;
+wire [16-1:0] axi_state_ch_2_3;
 logic         trig_asg_out;
 
 rp_scope_com #(
@@ -611,6 +613,8 @@ rp_scope_com #(
   .daisy_trig_o  (scope_trigo ),
   .adc_state_o   (adc_state_ch_0_1),
   .adc_state_i   (adc_state_ch_2_3),
+  .axi_state_o   (axi_state_ch_0_1),
+  .axi_state_i   (axi_state_ch_2_3),
   .trg_state_o   (trg_state_ch_0_1),
   .trg_state_i   (trg_state_ch_2_3),
   // AXI0 master                 // AXI1 master
@@ -652,6 +656,8 @@ rp_scope_com #(
   .trig_ch_i     (trig_ch_0_1 ),  // input ADC trigger from other 2 channels
   .adc_state_o   (adc_state_ch_2_3),
   .adc_state_i   (adc_state_ch_0_1),
+  .axi_state_o   (axi_state_ch_2_3),
+  .axi_state_i   (axi_state_ch_0_1),
   .trg_state_o   (trg_state_ch_2_3),
   .trg_state_i   (trg_state_ch_0_1),
   // AXI2 master                 // AXI3 master

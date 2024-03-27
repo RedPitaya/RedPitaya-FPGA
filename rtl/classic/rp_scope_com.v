@@ -76,6 +76,8 @@ module rp_scope_com #(
    input      [N_CH   -1: 0] axi_wrdy_i     ,  // system write ready
    output     [     16-1: 0] adc_state_o    ,
    input      [     16-1: 0] adc_state_i    ,
+   output     [     16-1: 0] axi_state_o    ,
+   input      [     16-1: 0] axi_state_i    ,
    output     [     16-1: 0] trg_state_o    ,
    input      [     16-1: 0] trg_state_i    ,
 
@@ -150,6 +152,7 @@ wire [       4-1: 0] adc_dv_del;
 assign sys_en = sys_wen | sys_ren;
 
 assign adc_state_o = adc_state[15:0];
+assign axi_state_o = axi_state[15:0];
 assign trg_state_o = trg_state[15:0];
 
 genvar GV;
@@ -422,6 +425,7 @@ rp_scope_cfg #(
   .trg_state_i      ( trg_state       ),
 
   .adc_state_ext_i  ( adc_state_i     ),
+  .axi_state_ext_i  ( axi_state_i     ),
   .trg_state_ext_i  ( trg_state_i     ),
 
   .adc_wp_cur_i     ( adc_wp_cur      ),
