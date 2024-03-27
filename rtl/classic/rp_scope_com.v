@@ -334,6 +334,7 @@ rp_axi_sm #(
   .adc_we_keep_i    ( adc_we_keep[GV]                   ),
   .adc_arm_do_i     ( adc_arm_do[GV]                    ),
   .adc_trig_i       ( adc_trig[GV]                      ),
+  .indep_mode_i     ( indep_mode[GV]                    ),
 
   .axi_en_pulse_i   ( axi_en_pulse[GV]                  ),
   .set_axi_en_i     ( set_axi_en[GV]                    ),

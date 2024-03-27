@@ -40,6 +40,7 @@ module rp_axi_sm #(
   input                 axi_dv_i        ,
   input      [ 32-1: 0] set_dly_i       ,
   input                 set_dec1_i      ,
+  input                 indep_mode_i    ,
 
   input                 adc_rst_do_i    ,
   input                 adc_we_keep_i   ,
@@ -85,7 +86,7 @@ reg             axi_trg_rd_reg   ;
 reg             axi_trg_rd       ;
 
 assign axi_clr = adc_rst_do_i || axi_en_pulse_i ; // when AXI A is enabled
-assign axi_state_o = {3'h0, axi_dly_end, adc_we_keep_i, axi_trg_rd, 1'b0, axi_we};
+assign axi_state_o = {2'h0, indep_mode_i, axi_dly_end, adc_we_keep_i, axi_trg_rd, 1'b0, axi_we};
 assign axi_trig_o  = axi_trig;
 
 assign axi_fifo_rd    = ~axi_dat_dv && axi_dat_fifo_lvl > 0 && ~(axi_trig || |axi_trig_r); // disable FIFO reads when there is a trigger
