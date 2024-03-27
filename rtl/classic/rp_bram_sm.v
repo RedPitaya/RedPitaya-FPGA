@@ -32,6 +32,7 @@ module rp_bram_sm #(
   input                 adc_arm_do_i    ,
   input                 adc_trig_i      ,
   input                 adc_dv_i        ,
+  input                 indep_mode_i    ,
 
   output reg [RSZ-1: 0] adc_wp_o        ,
   output reg [RSZ-1: 0] adc_wp_cur_o    ,
@@ -52,7 +53,7 @@ reg               adc_dly_end;
 reg               adc_we;
 
 
-assign adc_state_o = {3'h0, adc_dly_end, adc_we_keep_i, adc_trg_rd, 1'b0, adc_we};
+assign adc_state_o = {2'h0, indep_mode_i, adc_dly_end, adc_we_keep_i, adc_trg_rd, 1'b0, adc_we};
 
 always @(posedge adc_clk_i) begin
   if (adc_rstn_i == 1'b0) begin

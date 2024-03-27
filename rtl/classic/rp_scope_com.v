@@ -279,6 +279,7 @@ rp_bram_sm #(
   .adc_arm_do_i   ( adc_arm_do[GV]                    ),
   .adc_trig_i     ( adc_trig[GV]                      ),
   .adc_dv_i       ( adc_dv_del[GV]                    ),
+  .indep_mode_i   ( indep_mode[GV]                    ),
 
   .adc_wp_o       ( adc_wp_act[(GV+1)*RSZ-1:GV*RSZ]   ),
   .adc_wp_cur_o   ( adc_wp_cur[(GV+1)*RSZ-1:GV*RSZ]   ),
