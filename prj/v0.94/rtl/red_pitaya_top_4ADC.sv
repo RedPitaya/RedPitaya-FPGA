@@ -349,11 +349,13 @@ sys_bus_interconnect #(
   .SYNC_OUT_BUS3 (2),
   .SYNC_OUT_BUS4 (2),
   .SYNC_OUT_BUS5 (2),
+  .SYNC_OUT_BUS6 (2),
   .SYNC_REG_OFS1 (0),
   .SYNC_REG_OFS2 (4),
   .SYNC_REG_OFS3 (16),
   .SYNC_REG_OFS4 (20),
-  .SYNC_REG_OFS5 (148)
+  .SYNC_REG_OFS5 (40),
+  .SYNC_REG_OFS6 (148)
 ) sys_bus_interconnect (
   .bus_m (ps_sys),
   .bus_s (sys)
@@ -584,32 +586,48 @@ assign CAN1_rx = can_on & exp_p_in[6];
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH0 and CH1
 ////////////////////////////////////////////////////////////////////////////////
-wire [4-1:0] trig_ch_0_1;
-wire [4-1:0] trig_ch_2_3;
-logic        trig_asg_out;
+wire [ 4-1:0] trig_ch_0_1;
+wire [ 4-1:0] trig_ch_2_3;
+wire [16-1:0] trg_state_ch_0_1;
+wire [16-1:0] trg_state_ch_2_3;
+wire [16-1:0] adc_state_ch_0_1;
+wire [16-1:0] adc_state_ch_2_3;
+wire [16-1:0] axi_state_ch_0_1;
+wire [16-1:0] axi_state_ch_2_3;
+logic         trig_asg_out;
 
-red_pitaya_scope #(.CHN(0)) i_scope_0_1 (
+rp_scope_com #(
+  .CHN(0),
+  .N_CH(2),
+  .DW(14),
+  .RSZ(14)) 
+  i_scope_0_1 (
   // ADC
-  .adc_a_i       (adc_dat[0]  ),  // CH 1
-  .adc_b_i       (adc_dat[1]  ),  // CH 2
-  .adc_clk_i     (adc_clk_01  ),  // clock
-  .adc_rstn_i    (adc_rstn_01 ),  // reset - active low
+  .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  .adc_clk_i     ({2{adc_clk_01}}  ),  // clock
+  .adc_rstn_i    ({2{adc_rstn_01}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .daisy_trig_o  (scope_trigo ),
+  .adc_state_o   (adc_state_ch_0_1),
+  .adc_state_i   (adc_state_ch_2_3),
+  .axi_state_o   (axi_state_ch_0_1),
+  .axi_state_i   (axi_state_ch_2_3),
+  .trg_state_o   (trg_state_ch_0_1),
+  .trg_state_i   (trg_state_ch_2_3),
   // AXI0 master                 // AXI1 master
-  .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),
-  .axi0_rstn_o   (axi0_rstn  ),  .axi1_rstn_o   (axi1_rstn  ),
-  .axi0_waddr_o  (axi0_waddr ),  .axi1_waddr_o  (axi1_waddr ),
-  .axi0_wdata_o  (axi0_wdata ),  .axi1_wdata_o  (axi1_wdata ),
-  .axi0_wsel_o   (axi0_wsel  ),  .axi1_wsel_o   (axi1_wsel  ),
-  .axi0_wvalid_o (axi0_wvalid),  .axi1_wvalid_o (axi1_wvalid),
-  .axi0_wlen_o   (axi0_wlen  ),  .axi1_wlen_o   (axi1_wlen  ),
-  .axi0_wfixed_o (axi0_wfixed),  .axi1_wfixed_o (axi1_wfixed),
-  .axi0_werr_i   (axi0_werr  ),  .axi1_werr_i   (axi1_werr  ),
-  .axi0_wrdy_i   (axi0_wrdy  ),  .axi1_wrdy_i   (axi1_wrdy  ),
+  .axi_clk_o    ({axi1_clk,    axi0_clk}   ),
+  .axi_rstn_o   ({axi1_rstn,   axi0_rstn}  ),
+  .axi_waddr_o  ({axi1_waddr,  axi0_waddr} ),
+  .axi_wdata_o  ({axi1_wdata,  axi0_wdata} ),
+  .axi_wsel_o   ({axi1_wsel,   axi0_wsel}  ),
+  .axi_wvalid_o ({axi1_wvalid, axi0_wvalid}),
+  .axi_wlen_o   ({axi1_wlen,   axi0_wlen}  ),
+  .axi_wfixed_o ({axi1_wfixed, axi0_wfixed}),
+  .axi_werr_i   ({axi1_werr,   axi0_werr}  ),
+  .axi_wrdy_i   ({axi1_wrdy,   axi0_wrdy}  ),
   // System bus
   .sys_addr      (sys[1].addr ),
   .sys_wdata     (sys[1].wdata),
@@ -623,27 +641,36 @@ red_pitaya_scope #(.CHN(0)) i_scope_0_1 (
 ////////////////////////////////////////////////////////////////////////////////
 // oscilloscope CH2 and CH3
 ////////////////////////////////////////////////////////////////////////////////
-red_pitaya_scope #(.CHN(1)) i_scope_2_3 (
-  // ADC
-  .adc_a_i       (adc_dat[2]  ),  // CH 1
-  .adc_b_i       (adc_dat[3]  ),  // CH 2
-  .adc_clk_i     (adc_clk_01  ),  // clock
-  .adc_rstn_i    (adc_rstn_01 ),  // reset - active low
+rp_scope_com #(
+  .CHN(1),
+  .N_CH(2),
+  .DW(14),
+  .RSZ(14)) 
+  i_scope_2_3(  // ADC
+  .adc_dat_i     ({adc_dat[3], adc_dat[2]}  ),
+  .adc_clk_i     ({2{adc_clk_01}}  ),  // clock
+  .adc_rstn_i    ({2{adc_rstn_01}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_2_3 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_0_1 ),  // input ADC trigger from other 2 channels
+  .adc_state_o   (adc_state_ch_2_3),
+  .adc_state_i   (adc_state_ch_0_1),
+  .axi_state_o   (axi_state_ch_2_3),
+  .axi_state_i   (axi_state_ch_0_1),
+  .trg_state_o   (trg_state_ch_2_3),
+  .trg_state_i   (trg_state_ch_0_1),
   // AXI2 master                 // AXI3 master
-  .axi0_clk_o    (axi2_clk   ),  .axi1_clk_o    (axi3_clk   ),
-  .axi0_rstn_o   (axi2_rstn  ),  .axi1_rstn_o   (axi3_rstn  ),
-  .axi0_waddr_o  (axi2_waddr ),  .axi1_waddr_o  (axi3_waddr ),
-  .axi0_wdata_o  (axi2_wdata ),  .axi1_wdata_o  (axi3_wdata ),
-  .axi0_wsel_o   (axi2_wsel  ),  .axi1_wsel_o   (axi3_wsel  ),
-  .axi0_wvalid_o (axi2_wvalid),  .axi1_wvalid_o (axi3_wvalid),
-  .axi0_wlen_o   (axi2_wlen  ),  .axi1_wlen_o   (axi3_wlen  ),
-  .axi0_wfixed_o (axi2_wfixed),  .axi1_wfixed_o (axi3_wfixed),
-  .axi0_werr_i   (axi2_werr  ),  .axi1_werr_i   (axi3_werr  ),
-  .axi0_wrdy_i   (axi2_wrdy  ),  .axi1_wrdy_i   (axi3_wrdy  ),
+  .axi_clk_o    ({axi3_clk,    axi2_clk}   ),
+  .axi_rstn_o   ({axi3_rstn,   axi2_rstn}  ),
+  .axi_waddr_o  ({axi3_waddr,  axi2_waddr} ),
+  .axi_wdata_o  ({axi3_wdata,  axi2_wdata} ),
+  .axi_wsel_o   ({axi3_wsel,   axi2_wsel}  ),
+  .axi_wvalid_o ({axi3_wvalid, axi2_wvalid}),
+  .axi_wlen_o   ({axi3_wlen,   axi2_wlen}  ),
+  .axi_wfixed_o ({axi3_wfixed, axi2_wfixed}),
+  .axi_werr_i   ({axi3_werr,   axi2_werr}  ),
+  .axi_wrdy_i   ({axi3_wrdy,   axi2_wrdy}  ),
   // System bus
   .sys_addr      (sys[2].addr ),
   .sys_wdata     (sys[2].wdata),

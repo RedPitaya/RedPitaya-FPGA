@@ -53,11 +53,11 @@ localparam CHB_KK       = 32'hD9999A;
 localparam CHB_PP       = 32'h2666;
 localparam CHA_AXI_LADR = 32'h100000;
 localparam CHA_AXI_HADR = 32'h110000;
-localparam CHA_AXI_TDLY = 32'hFF8;
+localparam CHA_AXI_TDLY = 32'h800;
 localparam CHA_AXI_EN   =  1'b1;
 localparam CHB_AXI_LADR = 32'h200000;
 localparam CHB_AXI_HADR = 32'h210000;
-localparam CHB_AXI_TDLY = 32'hFF8;
+localparam CHB_AXI_TDLY = 32'h800;
 localparam CHB_AXI_EN   =  1'b1;
 
 set_osc(.offset(offset),    
@@ -79,7 +79,7 @@ task init_adc_23(
 localparam CHA_THR      = 32'd100;
 localparam CHB_THR      = 32'd100;
 localparam TRG_SRC      =  3'h0;
-localparam TRG_DLY      = 32'h800;
+localparam TRG_DLY      = 32'h1000;
 localparam TRG_DEB      = 32'd100;
 localparam ADCTRG_DEB   = 32'd100;
 localparam DEC          = 32'd1;
@@ -135,18 +135,18 @@ localparam CHA_AMP      = 14'h2000;
 localparam CHA_DC       = 14'h0;
 localparam CHB_AMP      = 14'h2000;
 localparam CHB_DC       = 14'h0;
-localparam CHA_SIZE     = 32'h800;
+localparam CHA_SIZE     = 32'h10000;
 localparam CHA_OFFS     = 32'h0;
-localparam CHA_STEP     = 32'h3610;
+localparam CHA_STEP     = 32'h3150;
 localparam CHA_STEP_LO  = 32'h0;
-localparam CHA_NCYC     = 16'd0;
-localparam CHA_RNUM     = 16'd0;
+localparam CHA_NCYC     = 16'd10;
+localparam CHA_RNUM     = 16'd1;
 localparam CHA_RDLY     = 32'd20;
 localparam CHA_LAST     = 14'h0;
 localparam CHA_FIRST    = 14'h10;
 localparam CHB_SIZE     = 32'h800;
 localparam CHB_OFFS     = 32'h0;
-localparam CHB_STEP     = 32'h3610;
+localparam CHB_STEP     = 32'h3150;
 localparam CHB_STEP_LO  = 32'h0;
 localparam CHB_NCYC     = 16'd3;
 localparam CHB_RNUM     = 16'd999;
@@ -154,7 +154,7 @@ localparam CHB_RDLY     = 32'd20;
 localparam CHB_LAST     = 14'h0;
 localparam CHB_FIRST    = 14'h10;
 localparam DEB_LEN      = 20'h1;
-localparam NUM_SAMP     = 32'h200;
+localparam NUM_SAMP     = 32'h10000;
 localparam SET_BUF      =  1'b1;
 
 set_asg_init( .offset(offset),
@@ -346,10 +346,14 @@ task set_osc(
   axi_write(offset+'hC ,  chb_thr);  // chB threshold
   axi_write(offset+'h4 ,  trig_src);  // manual trigger
   axi_write(offset+'h10,  trig_dly);  // delay after trigger
+  axi_write(offset+'h110, trig_dly);  // delay after trigger
+
   axi_write(offset+'h90,  trig_deb);  // trig debounce
-  axi_write(offset+'h94,  adctrig_deb);  // ADC trig debounce
+  //axi_write(offset+'h94,  adctrig_deb);  // ADC trig debounce
 
   axi_write(offset+'h14,  dec);  // decimation
+  axi_write(offset+'h114, dec);  // decimation
+
   axi_write(offset+'h20,  cha_hyst);  // chA hysteresis
   axi_write(offset+'h24,  cha_hyst);  // chB hysteresis
   axi_write(offset+'h28,  dec_avg);  // enable signal average at decimation
@@ -399,30 +403,158 @@ for (i=0; i<cycles; i++) begin: triggering
   if (mode != 3) begin
     axi_write(offset+'h14,  dec);  // decimation
     axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+    axi_write(offset+'h94 , 32'h1);    // clear trigger protect
 
-    wait_clks(del);
+    //wait_clks(del);
 
     axi_write(offset+'h4 , trig_src);  // level trigger
-    #1000;
-    axi_write(offset+'h4 , 32'h1);  // manual trigger
+    //#1000;
+    //axi_write(offset+'h4 , 32'h1);  // manual trigger
   end
   if (mode == 0)
-    reg_wait_bit(32'h40100000,4);
+    reg_wait_bit(32'h40100000,32'h10);
   else if (mode == 1)
-    reg_wait_bit(32'h40100088,4);  
+    reg_wait_bit(32'h40100088,32'h10);  
   else if (mode == 2)
-    reg_wait_bit(32'h40100088,20);  
+    reg_wait_bit(32'h40100088,32'h100000);  
   else if (mode == 3) begin
     #2000;
     axi_write(offset+'h4 , trig_src);  // manual trigger
   end
-  axi_write(offset+'h4 , 32'h1<<4);    // clear trigger protect
+    axi_write(offset+'h4 , 1);  // sw trigger
 
   if (read_trig)
     trig_samps(offset);
 end
 
 endtask: test_osc
+
+task test_osc_common(
+  int offset,
+  int trig_src,
+  int cycles,
+  int dec,
+  int del,
+  logic read_trig,
+  int mode
+);
+  reg [32-1:0] start_mask;
+  reg [ 8-1:0] trig_src0;
+  reg [ 8-1:0] trig_src1;
+  reg [ 8-1:0] trig_src2;
+  reg [ 8-1:0] trig_src3;
+
+   int unsigned dat;
+int i;
+  ##5000;
+
+    start_mask={4{8'h21}};
+    trig_src0=8'h2;
+    trig_src1=8'h4;
+    trig_src2=8'hA;
+    trig_src3=8'hC;
+// MODE 0 regular BRAM mode, wait for the end of trigger
+// MODE 1 AXI0 mode, wait for the end of trigger
+// MODE 2 AXI1 mode, wait for the end of trigger
+// MODE 3 trigger before end of delay
+ 
+  axi_write(offset+'h14,  dec);  // decimation
+  axi_write(offset+'h114, dec);  // decimation
+  axi_write(32'h40200000+'h14,  dec);  // decimation
+  axi_write(32'h40200000+'h114, dec);  // decimation
+  axi_write(offset+'h0 ,  start_mask); // ARM trigger
+  axi_write(offset+'h94,  {8'h1,8'h1,8'h1,8'h1}); // clear trigger protect
+  //axi_write(offset+'h4 ,  {4{trig_src[7:0]}});  // level trigger
+  axi_write(offset+'h4 ,  {trig_src3,trig_src2,trig_src1,trig_src0});  // level trigger
+  axi_write(offset+'h28,  {4{8'h1}});  // enable decimation averaging
+
+for (i=0; i<cycles; i++) begin: triggering
+  //fork
+    handle_channel(offset,trig_src0,read_trig, 1, mode);
+    handle_channel(offset,trig_src1,read_trig, 2, mode);
+    handle_channel(offset,trig_src2,read_trig, 3, mode);
+    handle_channel(offset,trig_src3,read_trig, 4, mode);
+  //join
+end
+
+endtask: test_osc_common
+
+
+task automatic handle_channel(
+  int offset,
+  int trig_src,
+  logic read_trig,
+  int ch_num,
+  int mode
+);
+  reg [32-1:0] ind_mask;
+  reg [32-1:0] arm_mask;
+  reg [32-1:0] clr_mask;
+  reg [32-1:0] end_mask;
+  reg [32-1:0] axi_end_mask;
+  reg [32-1:0] trg_mask;
+  reg [32-1:0] trg2_mask;
+  reg [32-1:0] trigs_ofs;
+
+  if (ch_num == 1) begin
+    ind_mask = {8'h0, 8'h0, 8'h0, 8'h20};
+    arm_mask = {8'h0, 8'h0, 8'h0, 8'h1 };
+    clr_mask = {8'h0, 8'h0, 8'h0, 8'h1 };
+    end_mask = {8'h0, 8'h0, 8'h0, 8'h10};
+    axi_end_mask = {8'h0, 8'h0, 8'h0, 8'h10};
+    trg_mask = {8'h0, 8'h0, 8'h0, 8'h1 };
+    trg2_mask = {8'h0, 8'h0, 8'h0, trig_src[7:0] };
+    trigs_ofs = 32'h01C;
+  end else if (ch_num == 2) begin
+    ind_mask = {8'h0, 8'h0, 8'h20,8'h0 };
+    arm_mask = {8'h0, 8'h0, 8'h1, 8'h0 };
+    clr_mask = {8'h0, 8'h0, 8'h1, 8'h0 };
+    end_mask = {8'h0, 8'h0, 8'h10,8'h0 };
+    axi_end_mask = {8'h0, 8'h10,8'h0, 8'h0 };
+    trg_mask = {8'h0, 8'h0, 8'h1, 8'h0 };
+    trg2_mask = {8'h0, 8'h0, trig_src[7:0], 8'h0};
+    trigs_ofs = 32'h11C;
+  end else if (ch_num == 3) begin
+    ind_mask = {8'h0, 8'h20,8'h0, 8'h0 };
+    arm_mask = {8'h0, 8'h1, 8'h0, 8'h0 };
+    clr_mask = {8'h0, 8'h1, 8'h0, 8'h0 };
+    end_mask = {8'h0, 8'h10,8'h0, 8'h0 };
+    axi_end_mask = {8'h0, 8'h0, 8'h0, 8'h10};
+    trg_mask = {8'h0, 8'h1, 8'h0, 8'h0 };
+    trg2_mask = {8'h0, trig_src[7:0], 8'h0, 8'h0};
+    trigs_ofs = 32'h21C;
+  end else if (ch_num == 4) begin
+    ind_mask = {8'h20,8'h0, 8'h0, 8'h0 };
+    arm_mask = {8'h1, 8'h0, 8'h0, 8'h0 };
+    clr_mask = {8'h1, 8'h0, 8'h0, 8'h0 };
+    end_mask = {8'h10,8'h0, 8'h0, 8'h0 };
+    axi_end_mask = {8'h0, 8'h10,8'h0, 8'h0 };
+    trg_mask = {8'h1, 8'h0, 8'h0, 8'h0 };
+    trg2_mask = {trig_src[7:0], 8'h0, 8'h0, 8'h0};
+    trigs_ofs = 32'h31C;
+  end
+
+  if (mode == 0)
+    reg_wait_bit(32'h40100000,end_mask);
+  else if (mode == 1)
+    reg_wait_bit(32'h40100088,axi_end_mask);  
+  else if (mode == 2)
+    reg_wait_bit(32'h40100088,axi_end_mask);  
+  else if (mode == 3) begin
+    #2000;
+    axi_write(offset+'h4 , trg2_mask);  // manual trigger
+  end
+    $display("Got trig on CH %d at %t", ch_num, $time);
+    axi_write(offset+'h4 , trg_mask);  // sw trigger
+
+  if (read_trig)
+    trig_samps(offset+trigs_ofs);
+
+  axi_write(offset+'h0 , arm_mask | ind_mask); // ARM trigger
+  axi_write(offset+'h94, clr_mask); // clear trigger protect
+  axi_write(offset+'h4 , trg2_mask);  // level trigger
+
+endtask: handle_channel
 
 task wait_clks(
   int unsigned del
@@ -450,21 +582,21 @@ task custom_test(
   end while (cnt < 10000);
 endtask: custom_test
 
-task reg_wait_bit(
+task automatic reg_wait_bit(
   int unsigned offset,
-  logic bit_index  
+  logic[32-1:0] bit_mask  
 );
   int unsigned dat;
   ##10;
   do begin
     axi_read(offset, dat);
     ##5;
-  end while (dat[bit_index] != 1'b0); // BUF 1 is full
+  end while (|(dat & bit_mask) == 1'b0); // BUF 1 is full
   ##10;
 
 endtask: reg_wait_bit
 
-task trig_samps(
+task automatic trig_samps(
   int unsigned offset
 );
   int unsigned trig_adr;
@@ -476,6 +608,9 @@ task trig_samps(
   ##10;
   // configure
     axi_read(offset, trig_adr);
+    axi_read(32'h40110000+{(trig_adr+32'd2),2'h0}, dat1);
+    axi_read(32'h40110000+{(trig_adr+32'd1),2'h0}, dat1);
+    axi_read(32'h40110000+{(trig_adr+32'd0),2'h0}, dat1);
     axi_read(32'h40110000+{(trig_adr-32'd1),2'h0}, dat1);
     axi_read(32'h40110000+{(trig_adr-32'd2),2'h0}, dat2);
     axi_read(32'h40110000+{(trig_adr-32'd3),2'h0}, dat3);
