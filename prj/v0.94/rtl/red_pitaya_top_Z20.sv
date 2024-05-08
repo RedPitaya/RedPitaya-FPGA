@@ -55,7 +55,7 @@ module red_pitaya_top_Z20 #(
   // module numbers
   int unsigned MNA = 2,  // number of acquisition modules
   int unsigned MNG = 2,  // number of generator   modules
-  int unsigned DWE = 11
+  int unsigned DWE = 8
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -100,8 +100,8 @@ module red_pitaya_top_Z20 #(
   input  logic [ 5-1:0] vinp_i     ,  // voltages p
   input  logic [ 5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
-  inout  logic [DWE-1:0] exp_p_io  ,
-  inout  logic [DWE-1:0] exp_n_io  ,
+  inout  logic [ 8-1:0] exp_p_io   ,
+  inout  logic [ 8-1:0] exp_n_io   ,
   // SATA connector
   output logic [ 2-1:0] daisy_p_o  ,  // line 1 is clock capable
   output logic [ 2-1:0] daisy_n_o  ,
@@ -433,7 +433,7 @@ logic [DWE-1: 0] exp_p_alt,  exp_n_alt;
 logic [DWE-1: 0] exp_p_altr, exp_n_altr;
 logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 
-red_pitaya_hk #(.DWE(DWE)) i_hk (
+red_pitaya_hk i_hk (
   // system signals
   .clk_i           (adc_clk ),  // clock
   .rstn_i          (adc_rstn),  // reset - active low
