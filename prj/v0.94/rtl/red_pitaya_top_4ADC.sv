@@ -53,8 +53,8 @@ module red_pitaya_top_4ADC #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
-  int unsigned MNA =  4, // number of acquisition modules
-  int unsigned DWE = 11
+  parameter MNA =  4, // number of acquisition modules
+  parameter DWE = 11
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,

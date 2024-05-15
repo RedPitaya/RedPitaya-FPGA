@@ -53,9 +53,9 @@ module red_pitaya_top #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
-  int unsigned MNA = 2,  // number of acquisition modules
-  int unsigned MNG = 2,  // number of generator   modules
-  int unsigned DWE = 9
+  parameter MNA = 2,  // number of acquisition modules
+  parameter MNG = 2,  // number of generator   modules
+  parameter DWE = 9
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
