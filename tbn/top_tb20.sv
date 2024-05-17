@@ -13,7 +13,7 @@ module top_tb #(
   parameter MNG           = 1,
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
-  parameter DWE           = 8,
+  parameter DWE           = 11,
   parameter CLKA_PER      = 8138,
   realtime  TP            = 8.138ns,  // 122.88 MHz
   `endif
@@ -23,7 +23,7 @@ module top_tb #(
   parameter MNG           = 1,
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
-  parameter DWE           = 8,
+  parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
   `endif
@@ -67,7 +67,7 @@ module top_tb #(
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
   parameter ACK_DELAY     = 500,            // delay in ack after interrupt (DMA streaming)
-  parameter ARM_DELAY     = 5000,           // delay in sending SW trigger after arming
+  parameter ARM_DELAY     = 200,           // delay in sending SW trigger after arming
 
   parameter MON_LEN       = 100000,         // how many samples are acquired before monitor file is closed
 
@@ -244,8 +244,10 @@ initial begin
     begin
        top_tc20.init_adc_01(ADR);
        top_tc20.init_adc_23(ADR2);
-       top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-       top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+       top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+       //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      // top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
 
     ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
       top_tc20.init_dac(ADR);

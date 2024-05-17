@@ -36,7 +36,7 @@ task init_adc_01(
 localparam CHA_THR      = 32'd100;
 localparam CHB_THR      = 32'd100;
 localparam TRG_SRC      =  3'h0;
-localparam TRG_DLY      = 32'h1000;
+localparam TRG_DLY      = 32'h100;
 localparam TRG_DEB      = 32'd100;
 localparam ADCTRG_DEB   = 32'd1000;
 localparam DEC          = 32'd1;
@@ -79,7 +79,7 @@ task init_adc_23(
 localparam CHA_THR      = 32'd100;
 localparam CHB_THR      = 32'd100;
 localparam TRG_SRC      =  3'h0;
-localparam TRG_DLY      = 32'h1000;
+localparam TRG_DLY      = 32'h100;
 localparam TRG_DEB      = 32'd100;
 localparam ADCTRG_DEB   = 32'd100;
 localparam DEC          = 32'd1;
@@ -151,10 +151,10 @@ localparam CHB_STEP_LO  = 32'h0;
 localparam CHB_NCYC     = 16'd3;
 localparam CHB_RNUM     = 16'd999;
 localparam CHB_RDLY     = 32'd20;
-localparam CHB_LAST     = 14'h0;
-localparam CHB_FIRST    = 14'h10;
+localparam CHB_LAST     = 14'h100;
+localparam CHB_FIRST    = 14'h200;
 localparam DEB_LEN      = 20'h1;
-localparam NUM_SAMP     = 32'h10000;
+localparam NUM_SAMP     = 32'h4000;
 localparam SET_BUF      =  1'b1;
 
 set_asg_init( .offset(offset),
@@ -401,11 +401,19 @@ int i;
 
 for (i=0; i<cycles; i++) begin: triggering
   if (mode != 3) begin
+    axi_write(offset+'h0 ,  'd2  );  // reset
+    wait_clks(del);
     axi_write(offset+'h14,  dec);  // decimation
+    wait_clks(del);
+  axi_write(offset+'h10,  32'h100);  // delay after trigger
+  axi_write(offset+'h8 ,  32'd100);  // chA threshold
+  axi_write(offset+'h20,  32'h29);  // chA hysteresis
+  axi_write(offset+'h10,  32'h100);  // delay after trigger
     axi_write(offset+'h0 ,  'd1  );  // ARM trigger
+    wait_clks(del);
     axi_write(offset+'h94 , 32'h1);    // clear trigger protect
 
-    //wait_clks(del);
+    wait_clks(del);
 
     axi_write(offset+'h4 , trig_src);  // level trigger
     //#1000;
@@ -817,3 +825,4 @@ endtask: axi_write
 
 
 endmodule
+

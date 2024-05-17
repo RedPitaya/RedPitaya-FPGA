@@ -4,6 +4,7 @@ module adc_driver #(
   parameter N_SAMP  = 1000,
   parameter FILERD  = 0,
   parameter SINE    = 0,
+  parameter CNT_SHFT= 0,
   parameter DW      = 14
 )(
    // ADC
@@ -20,6 +21,7 @@ module adc_driver #(
    output logic [4-1:0][ 7-1:0] adc_drv_n_o
 );
 
+integer SHIFT_CNT = 1 << CNT_SHFT;
 
 wire [14-1:0] adc_data1;
 wire [14-1:0] adc_data2;
@@ -211,31 +213,31 @@ reg [16-1:0] buf_rp3 = 16'd90;
 wire [16-1:0] buf_rd0, buf_rd1, buf_rd2, buf_rd3;
 
 always @(posedge adc_clk_i[0]) begin
-  if (buf_rp0<'d124)
+  if (buf_rp0<124*SHIFT_CNT)
     buf_rp0 <= buf_rp0 +1;
   else
     buf_rp0 <= 'd0;
 
-  if (buf_rp1<'d124)
+  if (buf_rp1<124*SHIFT_CNT)
     buf_rp1 <= buf_rp1 +1;
   else
     buf_rp1 <= 'd0;
 end
 
 always @(posedge adc_clk_i[1]) begin
-  if (buf_rp2<'d124)
+  if (buf_rp2<124*SHIFT_CNT)
     buf_rp2 <= buf_rp2 +1;
   else
     buf_rp2 <= 'd0;
 
-  if (buf_rp3<'d124)
+  if (buf_rp3<124*SHIFT_CNT)
     buf_rp3 <= buf_rp3 +1;
   else
     buf_rp3 <= 'd0;
 end
 
-assign buf_rd0=buffer[buf_rp0];
-assign buf_rd1=buffer[buf_rp1];
-assign buf_rd2=buffer[buf_rp2];
-assign buf_rd3=buffer[buf_rp3];
+assign buf_rd0=buffer[buf_rp0[16-1:CNT_SHFT]];
+assign buf_rd1=buffer[buf_rp1[16-1:CNT_SHFT]];
+assign buf_rd2=buffer[buf_rp2[16-1:CNT_SHFT]];
+assign buf_rd3=buffer[buf_rp3[16-1:CNT_SHFT]];
 endmodule

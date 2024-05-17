@@ -42,6 +42,8 @@ create_project -part $part -force redpitaya ./project
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::gpio_width 33
+
 source                            $path_ip/systemZ20.tcl
 
 # generate SDK files

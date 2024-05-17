@@ -55,7 +55,15 @@ module red_pitaya_top #(
   // module numbers
   parameter MNA = 2,  // number of acquisition modules
   parameter MNG = 2,  // number of generator   modules
-  parameter DWE = 8
+  parameter DWE_Z10 = 8,
+  parameter DWE_Z20 = 11,
+`ifdef Z20_14
+  parameter DWE=DWE_Z20
+`else
+  parameter DWE=DWE_Z10
+`endif
+
+
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -116,7 +124,9 @@ module red_pitaya_top #(
 ////////////////////////////////////////////////////////////////////////////////
 
 // GPIO input data width
-localparam int unsigned GDW = 8;
+
+
+localparam int unsigned GDW = DWE;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;

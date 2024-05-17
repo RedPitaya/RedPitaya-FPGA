@@ -58,6 +58,8 @@ set_property verilog_define $prj_defs [current_fileset]
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::gpio_width 33
+
 source                            $path_ip/systemZ20.tcl
 
 # generate SDK files

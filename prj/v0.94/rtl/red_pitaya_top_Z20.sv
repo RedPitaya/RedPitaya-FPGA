@@ -116,7 +116,7 @@ module red_pitaya_top_Z20 #(
 ////////////////////////////////////////////////////////////////////////////////
 
 // GPIO input data width
-localparam int unsigned GDW = 8;
+localparam int unsigned GDW = DWE;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;

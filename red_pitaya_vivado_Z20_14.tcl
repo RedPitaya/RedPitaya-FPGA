@@ -58,8 +58,8 @@ set_property verilog_define $prj_defs [current_fileset]
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
-set ::gpio_width 24
-set_property generic {DWE=11} [current_fileset]
+set ::gpio_width 33
+set_property verilog_define {Z20_14} [current_fileset]
 
 source                            $path_ip/systemZ20_14.tcl
 
