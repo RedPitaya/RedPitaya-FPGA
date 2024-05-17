@@ -33,6 +33,7 @@ module rp_bram_sm #(
   input                 adc_trig_i      ,
   input                 adc_dv_i        ,
   input                 indep_mode_i    ,
+  input                 trig_dis_clr_i  ,
 
   output reg [RSZ-1: 0] adc_wp_o        ,
   output reg [RSZ-1: 0] adc_wp_cur_o    ,
@@ -66,7 +67,7 @@ always @(posedge adc_clk_i) begin
       adc_we <= 1'b0 ;
 
     // count how much data was written into the buffer before trigger
-    if (adc_rst_do_i || adc_arm_do_i)
+    if ((adc_rst_do_i || adc_arm_do_i) || (trig_dis_clr_i && adc_we_keep_i)) // at arm, in cont mode at trigger protect clear
       adc_we_cnt_o <= 32'h0;
     else if (adc_we & ~adc_dly_do & adc_dv_i & ~&adc_we_cnt_o)
       adc_we_cnt_o <= adc_we_cnt_o + 1;         

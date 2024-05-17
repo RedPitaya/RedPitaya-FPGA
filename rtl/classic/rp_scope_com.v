@@ -283,6 +283,7 @@ rp_bram_sm #(
   .adc_trig_i     ( adc_trig[GV]                      ),
   .adc_dv_i       ( adc_dv_del[GV]                    ),
   .indep_mode_i   ( indep_mode[GV]                    ),
+  .trig_dis_clr_i ( trig_dis_clr[GV]                  ),
 
   .adc_wp_o       ( adc_wp_act[(GV+1)*RSZ-1:GV*RSZ]   ),
   .adc_wp_cur_o   ( adc_wp_cur[(GV+1)*RSZ-1:GV*RSZ]   ),
