@@ -58,11 +58,11 @@ module top_tb #(
   realtime  TP            = 4.0ns,  // 250 MHz
   `endif
 
-  parameter N_SAMP        = 102401-1, // size of ADC buffer file
+  parameter N_SAMP        = 131072-1, // size of ADC buffer file
 
   parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 10,             // how many ADC cycles (triggers) are handled
+  parameter CYCLES        = 1000,             // how many ADC cycles (triggers) are handled
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
@@ -146,6 +146,8 @@ wire  [DWE-1:0] gpio_p_rec;
 wire  [DWE-1:0] gpio_n_rec;
 wire            gpio_9_rec;
 
+logic [32-1:0 ] ext_trig_cnt;
+
 wire d_clko_p ;
 wire d_clko_n ;
 wire d_trigo_p;
@@ -192,6 +194,7 @@ initial begin
   gpio_n_driver = {DWE{1'bz}};
   gpio_9_driver =      1'bz  ;
   trig_ext      = ~`TRIG_ACT_LVL;
+  ext_trig_cnt  = 32'h0;
 end
 
 `ifdef Z10_14
@@ -378,6 +381,20 @@ assign gpio_n_dir =  top_tb.red_pitaya_top.exp_n_dtr;
 always @(posedge clk0) begin
   gpio_p_driver[7:6] <= gpio_n_rec[7:6];
 end
+
+
+
+initial
+begin:trig_gen
+  forever
+  begin
+    #((10000 + ({$random} % 100)) / 2) trig_ext = 1'b1 ;
+    #100                               trig_ext = 1'b0 ;
+  end
+end
+
+
+
 
 assign gpio_p_drv = {gpio_p_driver[DWE-1:1], trig_ext};
 assign gpio_n_drv =  gpio_n_driver;
