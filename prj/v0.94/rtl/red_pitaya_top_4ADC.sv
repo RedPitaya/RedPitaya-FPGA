@@ -130,6 +130,7 @@ logic          daisy_trig;
 logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
 logic          trig_output_sel;
+logic [ 4-1:0] trig_ext_asg01;
 
 // AXI masters 0, 1
 logic            axi1_clk    , axi0_clk    ;
@@ -561,7 +562,7 @@ assign exp_p_altr = {DWE{1'b0}};
 assign exp_n_altr = {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, 5'h0, trig_output_sel};
 
 assign exp_p_altd = {DWE{1'b0}};
-assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b0};
+assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b1};
 
 genvar GM;
 generate
@@ -610,6 +611,8 @@ rp_scope_com #(
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
+  .trig_ext_asg_o(trig_ext_asg01),
+  .trig_ext_asg_i(trig_ext_asg01),
   .daisy_trig_o  (scope_trigo ),
   .adc_state_o   (adc_state_ch_0_1),
   .adc_state_i   (adc_state_ch_2_3),
@@ -654,6 +657,7 @@ rp_scope_com #(
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_2_3 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_0_1 ),  // input ADC trigger from other 2 channels
+  .trig_ext_asg_i(trig_ext_asg01),
   .adc_state_o   (adc_state_ch_2_3),
   .adc_state_i   (adc_state_ch_0_1),
   .axi_state_o   (axi_state_ch_2_3),

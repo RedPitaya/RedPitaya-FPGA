@@ -138,6 +138,7 @@ logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
 logic          trig_output_sel;
 logic          trig_asg_out;
+logic [ 4-1:0] trig_ext_asg01;
 
 // AXI masters
 logic            axi1_clk    , axi0_clk    ;
@@ -486,7 +487,7 @@ assign exp_p_altr = {DWE{1'b0}};
 assign exp_n_altr = {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, 5'h0, trig_output_sel};
 
 assign exp_p_altd = {DWE{1'b0}};
-assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b0};
+assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b1};
 
 genvar GM;
 generate
@@ -521,6 +522,8 @@ red_pitaya_scope i_scope (
   .adc_rstn_i    (adc_rstn    ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_ext_asg_o(trig_ext_asg01),
+  .trig_ext_asg_i(trig_ext_asg01),
   .daisy_trig_o  (scope_trigo ),
   // AXI0 master                 // AXI1 master
   .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),

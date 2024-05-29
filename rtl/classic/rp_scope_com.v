@@ -62,6 +62,8 @@ module rp_scope_com #(
    input                     trig_asg_i     ,  // ASG trigger
    output     [      4-1: 0] trig_ch_o      ,  // output trigger to ADC for other 2 channels
    input      [      4-1: 0] trig_ch_i      ,  // input ADC trigger from other 2 channels
+   output     [      4-1: 0] trig_ext_asg_o ,  // output External and ASG trigger to share between multiple scope modules
+   input      [      4-1: 0] trig_ext_asg_i ,  // input External and ASG trigger 
    output                    daisy_trig_o   ,  // trigger for daisy chaining
    // axi master
    output     [N_CH   -1: 0] axi_clk_o      ,  // global clock
@@ -255,14 +257,14 @@ rp_trig_src #(
   .set_trg_src_i  ( trg_src[(GV+1)*4-1:GV*4] ),
   .set_trg_new_i  ( new_trg_src[GV]          ),
 
-  .adc_trig_sw_i  ( adc_trig_sw[GV]  ),
-  .adc_trig_p_i   ( adc_trig_p       ),
-  .adc_trig_n_i   ( adc_trig_n       ),
-  .ext_trig_p_i   ( ext_trig_p       ),
-  .ext_trig_n_i   ( ext_trig_n       ),
-  .asg_trig_p_i   ( asg_trig_p       ),
-  .asg_trig_n_i   ( asg_trig_n       ),
-  .trig_ch_i      ( trig_ch_i        ),
+  .adc_trig_sw_i  ( adc_trig_sw[GV]   ),
+  .adc_trig_p_i   ( adc_trig_p        ),
+  .adc_trig_n_i   ( adc_trig_n        ),
+  .ext_trig_p_i   ( trig_ext_asg_i[0] ),
+  .ext_trig_n_i   ( trig_ext_asg_i[1] ),
+  .asg_trig_p_i   ( trig_ext_asg_i[2] ),
+  .asg_trig_n_i   ( trig_ext_asg_i[3] ),
+  .trig_ch_i      ( trig_ch_i         ),
 
   .trg_state_o    ( trg_state[(GV+1)*8-1:GV*8]),
   .adc_trig_o     ( adc_trig[GV]              )
@@ -475,5 +477,6 @@ assign axi_rstn_o = axi_rstn;
 assign trig_ch_o      = {adc_trig_n[1], adc_trig_p[1], adc_trig_n[0], adc_trig_p[0]};
 assign daisy_trig_o   = adc_trig[0];
 
+assign trig_ext_asg_o = {asg_trig_n, asg_trig_p, ext_trig_n, ext_trig_p};
 
 endmodule
