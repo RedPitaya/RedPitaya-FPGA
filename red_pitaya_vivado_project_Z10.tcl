@@ -60,7 +60,11 @@ generate_target all [get_files    system.bd]
 # 3. constraints
 ################################################################################
 
+if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+}
+
 add_files                         $path_rtl
 add_files                         $path_bd
 
@@ -69,7 +73,6 @@ if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 
