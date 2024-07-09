@@ -70,6 +70,9 @@ module red_pitaya_asg_ch #(
    input     [  16-1: 0] set_rnum_i      ,  //!< set number of repetitions
    input     [  32-1: 0] set_rdly_i      ,  //!< set delay between repetitions
    input     [  20-1: 0] set_deb_len_i   ,  //!< set trigger debouncer
+   input     [  32-1: 0] set_seed_i      ,  //!< initial value for LFSR
+   input                 rand_en_i       ,  //!< enable random output
+   input                 rand_init_i     ,  //!< initialize LFSR
    input                 set_rgate_i        //!< set external gated repetition
 );
 
@@ -77,10 +80,25 @@ module red_pitaya_asg_ch #(
 //
 //  DAC buffer RAM
 
+wire [14-1:0] lfsr_noise;
+  rand_lfsr #(
+    .DW ( 14 ) // output data width
+  )
+  i_rand
+  (
+    .clk_i   (  dac_clk_i  ), // clock
+    .rstn_i  (  dac_rstn_i ), // reset
+    .init_i  (  rand_init_i), // enable
+    .seed_i  (  set_seed_i ), // init value
+    .dat_o   (  lfsr_noise )  // data output noise
+  );
+
+
 localparam PNT_SIZE = RSZ+16+32;
 
 reg   [  14-1: 0] dac_buf [0:(1<<RSZ)-1] ;
 reg   [  14-1: 0] dac_rd    ;
+wire  [  14-1: 0] dac_sel   ;
 reg   [  14-1: 0] dac_rdat  ;
 
 reg   [ RSZ-1: 0] dac_rp    ;
@@ -125,10 +143,11 @@ if (buf_we_i)  dac_buf[buf_addr_i] <= buf_wdata_i[14-1:0] ;
 always @(posedge dac_clk_i)
 buf_rdata_o <= dac_buf[buf_addr_i] ;
 
+assign dac_sel = rand_en_i ? lfsr_noise : dac_rdat;
 // scale and offset
 always @(posedge dac_clk_i)
 begin
-   dac_mult <= $signed(dac_rdat) * $signed({1'b0,set_amp_i}) ;
+   dac_mult <= $signed(dac_sel) * $signed({1'b0,set_amp_i}) ;
    dac_sum  <= $signed(dac_mult[28-1:13]) + $signed(set_dc_i) ;
 
    // saturation
