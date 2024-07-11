@@ -139,9 +139,9 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) ch [1:0] (
   .set_rdly_i      ({set_b_rdly       , set_a_rdly       }),  // set delay between repetitions
   .set_rgate_i     ({set_b_rgate      , set_a_rgate      }),  // set external gated repetition
   .set_deb_len_i   ({set_deb_len      , set_deb_len      }),  // set external trigger debouncer
-  .set_seed_i      ({set_a_seed       , set_b_seed       }),  // initial value of LFSR
-  .rand_init_i     ({rand_a_init      , rand_b_init      }),  // initialization pulse for random gen
-  .rand_en_i       ({rand_a_en        , rand_b_en        })   // enable random gen
+  .set_seed_i      ({set_b_seed       , set_a_seed       }),  // initial value of LFSR
+  .rand_init_i     ({rand_b_init      , rand_a_init      }),  // initialization pulse for random gen
+  .rand_en_i       ({rand_b_en        , rand_a_en        })   // enable random gen
 );
 
 always @(posedge dac_clk_i)
