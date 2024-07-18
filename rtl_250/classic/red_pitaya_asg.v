@@ -108,8 +108,12 @@ reg   [   3-1: 0] trig_a_src   , trig_b_src   ;
 wire              trig_a_done  , trig_b_done  ;
 reg   [  14-1: 0] set_a_first  , set_b_first  ;
 reg   [  14-1: 0] set_a_last   , set_b_last   ;
+reg   [  32-1: 0] set_a_last_l , set_b_last_l ;
 reg   [  32-1: 0] set_a_step_lo, set_b_step_lo;
 reg   [  20-1: 0] set_deb_len  ;
+reg   [  32-1: 0] set_a_seed   , set_b_seed   ;
+reg               rand_a_en    , rand_b_en    ;
+reg               rand_a_init  , rand_b_init ;
 
 
 red_pitaya_asg_ch  #(.RSZ (RSZ)) ch [1:0] (
@@ -141,12 +145,16 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) ch [1:0] (
   .set_dc_i        ({ set_b_dc                    ,  set_a_dc                     }),  // set output offset
   .set_first_i     ({ set_b_first                 ,  set_a_first                  }),  // set initial value before start
   .set_last_i      ({ set_b_last                  ,  set_a_last                   }),  // set last value
+  .set_last_len_i  ({ set_b_last_l                ,  set_a_last_l                 }),  // set last value
   .set_zero_i      ({(set_b_zero || set_b_talm)   , (set_a_zero || set_a_talm)    }),  // set output to zero
   .set_ncyc_i      ({ set_b_ncyc                  ,  set_a_ncyc                   }),  // set number of cycle
   .set_rnum_i      ({ set_b_rnum                  ,  set_a_rnum                   }),  // set number of repetitions
   .set_rdly_i      ({ set_b_rdly                  ,  set_a_rdly                   }),  // set delay between repetitions
   .set_rgate_i     ({ set_b_rgate                 ,  set_a_rgate                  }),  // set external gated repetition
-  .set_deb_len_i   ({ set_deb_len                 ,  set_deb_len                  })   // set external trigger debouncer
+  .set_deb_len_i   ({ set_deb_len                 ,  set_deb_len                  }),  // set external trigger debouncer
+  .set_seed_i      ({ set_b_seed                  ,  set_a_seed                   }),  // initial value of LFSR
+  .rand_init_i     ({ rand_b_init                 ,  rand_a_init                  }),  // initialization pulse for random gen
+  .rand_en_i       ({ rand_b_en                   ,  rand_a_en                    })   // enable random gen
 );
 
 always @(posedge sys_clk)
@@ -155,6 +163,12 @@ begin
    buf_b_we   <= sys_wen && (sys_addr[19:RSZ+2] == 'h2);
    buf_a_addr <= sys_addr[RSZ+1:2] ;  // address timing violation
    buf_b_addr <= sys_addr[RSZ+1:2] ;  // can change only synchronous to write clock
+end
+
+always @(posedge sys_clk)
+begin
+   rand_a_init <= sys_wen && (sys_addr[20-1:0] == 'h78);
+   rand_b_init <= sys_wen && (sys_addr[20-1:0] == 'h7C);
 end
 
 assign trig_out_o = trig_a_done ;
@@ -206,9 +220,16 @@ if (sys_rstn == 1'b0) begin
    set_b_first <= 14'h0    ;
    set_a_last  <= 14'h0    ;
    set_b_last  <= 14'h0    ;
+   set_a_last_l  <= 32'd249   ;
+   set_b_last_l  <= 32'd249   ;
    set_a_step_lo <=  32'b0    ;
    set_b_step_lo <=  32'b0    ;
    set_deb_len   <=  20'd62500; //0.5 ms
+   set_a_seed    <= 32'h1     ;
+   set_b_seed    <= 32'h1     ;
+   rand_a_en     <=  1'b0     ;
+   rand_b_en     <=  1'b0     ;
+
    ren_dly     <=  3'h0    ;
    ack_dly     <=  1'b0    ;
 end else begin
@@ -258,6 +279,15 @@ end else begin
 
       if (sys_addr[19:0]==20'h68)  set_a_first   <= sys_wdata[  14-1: 0] ;
       if (sys_addr[19:0]==20'h6C)  set_b_first   <= sys_wdata[  14-1: 0] ;
+
+      if (sys_addr[19:0]==20'h70)  set_a_last_l  <= sys_wdata;
+      if (sys_addr[19:0]==20'h74)  set_b_last_l  <= sys_wdata;
+
+      if (sys_addr[19:0]==20'h78)  set_a_seed    <= sys_wdata;
+      if (sys_addr[19:0]==20'h7C)  set_b_seed    <= sys_wdata;
+      if (sys_addr[19:0]==20'h80)  rand_a_en     <= sys_wdata;
+      if (sys_addr[19:0]==20'h84)  rand_b_en     <= sys_wdata;
+
    end
 
    if (sys_ren) begin
@@ -313,6 +343,14 @@ end else begin
 
      20'h00068 : begin sys_ack <= sys_en;          sys_rdata <= {{32-14{1'b0}},set_a_first}        ; end
      20'h0006C : begin sys_ack <= sys_en;          sys_rdata <= {{32-14{1'b0}},set_b_first}        ; end
+
+     20'h00070 : begin sys_ack <= sys_en;          sys_rdata <= set_a_last_l                       ; end
+     20'h00074 : begin sys_ack <= sys_en;          sys_rdata <= set_b_last_l                       ; end
+
+     20'h00078 : begin sys_ack <= sys_en;          sys_rdata <= set_a_seed                         ; end
+     20'h0007C : begin sys_ack <= sys_en;          sys_rdata <= set_b_seed                         ; end
+     20'h00080 : begin sys_ack <= sys_en;          sys_rdata <= rand_a_en                          ; end
+     20'h00084 : begin sys_ack <= sys_en;          sys_rdata <= rand_b_en                          ; end
 
      20'h1zzzz : begin sys_ack <= ack_dly;         sys_rdata <= {{32-14{1'b0}},buf_a_rdata}        ; end
      20'h2zzzz : begin sys_ack <= ack_dly;         sys_rdata <= {{32-14{1'b0}},buf_b_rdata}        ; end

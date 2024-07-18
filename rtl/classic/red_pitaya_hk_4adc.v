@@ -280,17 +280,17 @@ always @(posedge clk_i)
 begin
   idly_rst_o[  6: 0] <= sys_wdata[ 7-1: 0] & {7{ ((sys_addr[19:0]==20'h44) & sys_wen) || (rstn_i == 1'b0) }};
   idly_rst_o[ 13: 7] <= sys_wdata[15-1: 8] & {7{ ((sys_addr[19:0]==20'h44) & sys_wen) || (rstn_i == 1'b0) }};
-  idly_rst_o[  6: 0] <= sys_wdata[23-1:16] & {7{ ((sys_addr[19:0]==20'h44) & sys_wen) || (rstn_i == 1'b0) }};
-  idly_rst_o[ 13: 7] <= sys_wdata[31-1:24] & {7{ ((sys_addr[19:0]==20'h44) & sys_wen) || (rstn_i == 1'b0) }};
+  idly_rst_o[ 20:14] <= sys_wdata[23-1:16] & {7{ ((sys_addr[19:0]==20'h44) & sys_wen) || (rstn_i == 1'b0) }};
+  idly_rst_o[ 27:21] <= sys_wdata[31-1:24] & {7{ ((sys_addr[19:0]==20'h44) & sys_wen) || (rstn_i == 1'b0) }};
 
   idly_ce_o[   6: 0] <= sys_wdata[ 7-1: 0] & {7{ ((sys_addr[19:0]==20'h48) & sys_wen) }};
   idly_inc_o[  6: 0] <= sys_wdata[15-1: 8] & {7{ ((sys_addr[19:0]==20'h48) & sys_wen) }};
-  idly_ce_o[  13: 7] <= sys_wdata[23-1:16] & {7{ ((sys_addr[19:0]==20'h4C) & sys_wen) }};
-  idly_inc_o[ 13: 7] <= sys_wdata[31-1:24] & {7{ ((sys_addr[19:0]==20'h4C) & sys_wen) }};
+  idly_ce_o[  13: 7] <= sys_wdata[ 7-1: 0] & {7{ ((sys_addr[19:0]==20'h4C) & sys_wen) }};
+  idly_inc_o[ 13: 7] <= sys_wdata[15-1: 8] & {7{ ((sys_addr[19:0]==20'h4C) & sys_wen) }};
   idly_ce_o[  20:14] <= sys_wdata[ 7-1: 0] & {7{ ((sys_addr[19:0]==20'h50) & sys_wen) }};
   idly_inc_o[ 20:14] <= sys_wdata[15-1: 8] & {7{ ((sys_addr[19:0]==20'h50) & sys_wen) }};
-  idly_ce_o[  27:21] <= sys_wdata[23-1:16] & {7{ ((sys_addr[19:0]==20'h54) & sys_wen) }};
-  idly_inc_o[ 27:21] <= sys_wdata[31-1:24] & {7{ ((sys_addr[19:0]==20'h54) & sys_wen) }};
+  idly_ce_o[  27:21] <= sys_wdata[ 7-1: 0] & {7{ ((sys_addr[19:0]==20'h54) & sys_wen) }};
+  idly_inc_o[ 27:21] <= sys_wdata[15-1: 8] & {7{ ((sys_addr[19:0]==20'h54) & sys_wen) }};
 end
 
 wire sys_en;

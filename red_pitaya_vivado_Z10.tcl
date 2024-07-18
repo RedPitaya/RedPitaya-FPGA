@@ -59,6 +59,8 @@ set_property verilog_define $prj_defs [current_fileset]
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ10.tcl"
 # create PS BD
+set ::gpio_width 24
+
 source                            $path_ip/systemZ10.tcl
 
 # generate SDK files
@@ -74,7 +76,12 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 
 add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
 add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
+
+if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+}
+
 add_files                               $path_rtl
 add_files                               $path_bd
 
@@ -83,7 +90,6 @@ if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ################################################################################

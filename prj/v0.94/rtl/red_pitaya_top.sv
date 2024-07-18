@@ -53,9 +53,17 @@ module red_pitaya_top #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
-  int unsigned MNA = 2,  // number of acquisition modules
-  int unsigned MNG = 2,  // number of generator   modules
-  int unsigned DWE = 8
+  parameter MNA = 2,  // number of acquisition modules
+  parameter MNG = 2,  // number of generator   modules
+  parameter DWE_Z10 = 8,
+  parameter DWE_Z20 = 11,
+`ifdef Z20_14
+  parameter DWE=DWE_Z20
+`else
+  parameter DWE=DWE_Z10
+`endif
+
+
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -100,8 +108,8 @@ module red_pitaya_top #(
   input  logic [ 5-1:0] vinp_i     ,  // voltages p
   input  logic [ 5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
-  inout  logic [ 8-1:0] exp_p_io   ,
-  inout  logic [ 8-1:0] exp_n_io   ,
+  inout  logic [DWE-1:0] exp_p_io  ,
+  inout  logic [DWE-1:0] exp_n_io  ,
   // SATA connector
   output logic [ 2-1:0] daisy_p_o  ,  // line 1 is clock capable
   output logic [ 2-1:0] daisy_n_o  ,
@@ -116,7 +124,9 @@ module red_pitaya_top #(
 ////////////////////////////////////////////////////////////////////////////////
 
 // GPIO input data width
-localparam int unsigned GDW = 8;
+
+
+localparam int unsigned GDW = DWE;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -128,6 +138,7 @@ logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
 logic          trig_output_sel;
 logic          trig_asg_out;
+logic [ 4-1:0] trig_ext_asg01;
 
 // AXI masters
 logic            axi1_clk    , axi0_clk    ;
@@ -431,7 +442,7 @@ logic [DWE-1: 0] exp_p_alt,  exp_n_alt;
 logic [DWE-1: 0] exp_p_altr, exp_n_altr;
 logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 
-red_pitaya_hk i_hk (
+red_pitaya_hk #(.DWE(DWE)) i_hk (
   // system signals
   .clk_i           (adc_clk ),  // clock
   .rstn_i          (adc_rstn),  // reset - active low
@@ -476,7 +487,7 @@ assign exp_p_altr = {DWE{1'b0}};
 assign exp_n_altr = {{DWE-8{1'b0}}, CAN0_tx, CAN1_tx, 5'h0, trig_output_sel};
 
 assign exp_p_altd = {DWE{1'b0}};
-assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b0};
+assign exp_n_altd = {{DWE-8{1'b0}},   1'b1,   1'b1, 5'h0, 1'b1};
 
 genvar GM;
 generate
@@ -511,6 +522,8 @@ red_pitaya_scope i_scope (
   .adc_rstn_i    (adc_rstn    ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_ext_asg_o(trig_ext_asg01),
+  .trig_ext_asg_i(trig_ext_asg01),
   .daisy_trig_o  (scope_trigo ),
   // AXI0 master                 // AXI1 master
   .axi0_clk_o    (axi0_clk   ),  .axi1_clk_o    (axi1_clk   ),

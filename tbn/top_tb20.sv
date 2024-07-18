@@ -13,7 +13,7 @@ module top_tb #(
   parameter MNG           = 1,
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
-  parameter DWE           = 8,
+  parameter DWE           = 11,
   parameter CLKA_PER      = 8138,
   realtime  TP            = 8.138ns,  // 122.88 MHz
   `endif
@@ -23,7 +23,7 @@ module top_tb #(
   parameter MNG           = 1,
   parameter TRIG_ACT_LVL  = 0,
   parameter NUM_ADC       = 2,
-  parameter DWE           = 8,
+  parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
   `endif
@@ -58,16 +58,16 @@ module top_tb #(
   realtime  TP            = 4.0ns,  // 250 MHz
   `endif
 
-  parameter N_SAMP        = 102401-1, // size of ADC buffer file
+  parameter N_SAMP        = 131072-1, // size of ADC buffer file
 
   parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 1000,           // how many ADC cycles (triggers) are handled
+  parameter CYCLES        = 1000,             // how many ADC cycles (triggers) are handled
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
   parameter ACK_DELAY     = 500,            // delay in ack after interrupt (DMA streaming)
-  parameter ARM_DELAY     = 5000,           // delay in sending SW trigger after arming
+  parameter ARM_DELAY     = 200,           // delay in sending SW trigger after arming
 
   parameter MON_LEN       = 100000,         // how many samples are acquired before monitor file is closed
 
@@ -146,6 +146,8 @@ wire  [DWE-1:0] gpio_p_rec;
 wire  [DWE-1:0] gpio_n_rec;
 wire            gpio_9_rec;
 
+logic [32-1:0 ] ext_trig_cnt;
+
 wire d_clko_p ;
 wire d_clko_n ;
 wire d_trigo_p;
@@ -192,6 +194,7 @@ initial begin
   gpio_n_driver = {DWE{1'bz}};
   gpio_9_driver =      1'bz  ;
   trig_ext      = ~`TRIG_ACT_LVL;
+  ext_trig_cnt  = 32'h0;
 end
 
 `ifdef Z10_14
@@ -211,7 +214,7 @@ assign adc_rstn = red_pitaya_top.adc_rstn_01;
 `endif
 
 int BASE =  `BASE_OFS;
-int ADR;
+int ADR, ADR2;
 initial begin
   ##500;
    // top_tc.daisy_trigs();
@@ -220,7 +223,7 @@ initial begin
 
   do begin
     repeat(1000) @(posedge clk0);
-  end while (adc_rstn == 1'b0);
+  end while (adc_rstn != 1'b1);
   #1000;
    //top_tc.test_asg                (32'h40200000, 32'h0, 2);
   fork
@@ -236,15 +239,23 @@ initial begin
 
     end    
 `else
-    ADR = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
+    $display("Testing normal acq mode!");
+
+    ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
+    ADR2 = `BASE_OFS + `SCOPE2_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
-      top_tc20.init_adc_01(ADR);
-      //top_tc20.custom_test();
-      top_tc20.test_osc   (ADR, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-      //top_tc20.init_dac(ADR);
-      //#10000;
-      //top_tc20.test_dac(ADR);
+       top_tc20.init_adc_01(ADR);
+       top_tc20.init_adc_23(ADR2);
+       top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+       //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      // top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+
+    ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
+      top_tc20.init_dac(ADR);
+      #10000;
+      top_tc20.test_dac(ADR);
     end
 `endif
 
@@ -370,6 +381,20 @@ assign gpio_n_dir =  top_tb.red_pitaya_top.exp_n_dtr;
 always @(posedge clk0) begin
   gpio_p_driver[7:6] <= gpio_n_rec[7:6];
 end
+
+
+
+initial
+begin:trig_gen
+  forever
+  begin
+    #((10000 + ({$random} % 100)) / 2) trig_ext = 1'b1 ;
+    #100                               trig_ext = 1'b0 ;
+  end
+end
+
+
+
 
 assign gpio_p_drv = {gpio_p_driver[DWE-1:1], trig_ext};
 assign gpio_n_drv =  gpio_n_driver;
