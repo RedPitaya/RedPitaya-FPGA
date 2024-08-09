@@ -99,8 +99,8 @@ localparam PNT_SIZE = RSZ+16+32;
 
 reg   [  14-1: 0] dac_buf [0:(1<<RSZ)-1] ;
 reg   [  14-1: 0] dac_rd    ;
-wire  [  14-1: 0] dac_sel   ;
 reg   [  14-1: 0] dac_rdat  ;
+
 reg   [ RSZ-1: 0] dac_rp    ;
 reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
 reg   [PNT_SIZE-1: 0] dac_pntp  ; // previour read pointer
@@ -121,20 +121,33 @@ reg   [   5-1: 0] lastval_sr;
 reg   [   5-1: 0] zero_sr;
 
 wire              not_burst;
+wire  [   4-1: 0] out_sel;
 
 assign not_burst = (&(~set_ncyc_i)) && (&(~set_rnum_i));
+
+assign out_sel[0] = |dac_do_sr[4:1];
+assign out_sel[1] = lastval || |lastval_sr;
+assign out_sel[2] = rand_en_i;
+assign out_sel[3] = set_zero_i || |zero_sr;
 
 // read
 always @(posedge dac_clk_i)
 begin
-   buf_rpnt_o <= dac_pnt[PNT_SIZE-1:16+32];
-   dac_rp     <= dac_pnt[PNT_SIZE-1:16+32];
-   dac_rd     <= dac_buf[dac_rp] ;
-   dac_rdat   <= dac_do ? dac_rd : set_first_i;  // improve timing
+  buf_rpnt_o <= dac_pnt[PNT_SIZE-1:16+32];
+  dac_rp     <= dac_pnt[PNT_SIZE-1:16+32];
+  dac_rd     <= dac_buf[dac_rp] ;
+  casez (out_sel)
+    4'b0001: dac_rdat <= dac_rd;
+    4'b001?: dac_rdat <= set_last_i;
+    4'b01??: dac_rdat <= lfsr_noise;
+    4'b1???: dac_rdat <= 14'h0;
+   default: dac_rdat <= set_first_i;
+  endcase
 end
 
 always @(posedge dac_clk_i) // shift regs are needed because of processing path delay
 begin
+   dac_do_sr  <= {dac_do_sr[3:0],  dac_do    };
    lastval_sr <= {lastval_sr[3:0], lastval   };
    zero_sr    <= {zero_sr[3:0]   , set_zero_i};
 end
@@ -147,23 +160,16 @@ if (buf_we_i)  dac_buf[buf_addr_i] <= buf_wdata_i[14-1:0] ;
 always @(posedge sys_clk_i)
 buf_rdata_o <= dac_buf[buf_addr_i] ;
 
-assign dac_sel = rand_en_i ? lfsr_noise : dac_rdat;
 // scale and offset
 always @(posedge dac_clk_i)
 begin
    set_amp_r <= {1'b0,set_amp_i} ;
 
-   dac_mult <= $signed(dac_sel) * $signed(set_amp_r) ;
+   dac_mult <= $signed(dac_rdat) * $signed(set_amp_r) ;
    dac_msr  <= dac_mult[28-1:13] ;
    dac_sum  <= $signed(dac_msr) + $signed(set_dc_i) ;
+   dac_o    <= ^dac_sum[15-1:15-2] ? {dac_sum[15-1], {13{~dac_sum[15-1]}}} : dac_sum[13:0];
 
-   // saturation
-   if (set_zero_i || |zero_sr)  
-      dac_o <= 14'h0;
-   else if (lastval || |lastval_sr) //on last value in burst send user specified last value
-      dac_o <= set_last_i;
-   else 
-      dac_o <= ^dac_sum[15-1:15-2] ? {dac_sum[15-1], {13{~dac_sum[15-1]}}} : dac_sum[13:0];
 
 end
 
@@ -182,16 +188,10 @@ reg  [   8-1: 0] dly_tick     ;
 reg  [  32-1: 0] last_cnt     ;
 
 reg              dac_do       ;
-reg  [   5-1: 0] dac_do_dlysr ;
+reg  [   5-1: 0] dac_do_sr ;
 reg              dac_rep      ;
 wire             dac_trig     ;
 reg              dac_trigr    ;
-
-always @(posedge dac_clk_i)
-begin 
-   dac_do_dlysr[0]   <= dac_do;
-   dac_do_dlysr[4:1] <= dac_do_dlysr[3:0];
-end
 
 always @(posedge dac_clk_i)
 begin 
@@ -199,12 +199,12 @@ begin
       lastval  <= 1'b0;
       last_cnt <= 32'h0;
    end else begin
-      if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
+      if (dac_do_sr[1:0] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
          last_cnt <= set_last_len_i;
       else if (last_cnt > 32'd0)
          last_cnt <= last_cnt - 1;
      
-      if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
+      if (dac_do_sr[1:0] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
          lastval <= 1'b1;
       else if ((lastval && last_cnt == 'd0 && (|rep_cnt || (trig_in && !dac_do)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
          lastval <= 1'b0; // reset from lastval when a new trigger arrives
