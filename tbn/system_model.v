@@ -788,5 +788,83 @@ i_s_axi_hp3
   .axi_rready_i   (  S_AXI_HP3_rready       )  // read response ready
 );
 //------------------------------------------------------------------------------
+
+  axi_prot_check inst_axi_prot_check
+       (.aclk(S_AXI_HP2_aclk),
+        .aresetn(axi_rst),
+        /*
+        .pc_axi_awid     (  S_AXI_HP2_awid         ), // write address ID
+        .pc_axi_awaddr   (  S_AXI_HP2_awaddr       ), // write address
+        .pc_axi_awlen    (  S_AXI_HP2_awlen        ), // write burst length
+        .pc_axi_awsize   (  S_AXI_HP2_awsize       ), // write burst size
+        .pc_axi_awburst  (  S_AXI_HP2_awburst      ), // write burst type
+        .pc_axi_awlock   (  S_AXI_HP2_awlock       ), // write lock type
+        .pc_axi_awcache  (  S_AXI_HP2_awcache      ), // write cache type
+        .pc_axi_awprot   (  S_AXI_HP2_awprot       ), // write protection type
+        .pc_axi_awvalid  (  S_AXI_HP2_awvalid      ), // write address valid
+        .pc_axi_awready  (  S_AXI_HP2_awready      ), // write ready
+
+          // axi write data channel
+        .pc_axi_wid      (  S_AXI_HP2_wid          ), // write data ID
+        .pc_axi_wdata    (  S_AXI_HP2_wdata        ), // write data
+        .pc_axi_wstrb    (  S_AXI_HP2_wstrb        ), // write strobes
+        .pc_axi_wlast    (  S_AXI_HP2_wlast        ), // write last
+        .pc_axi_wvalid   (  S_AXI_HP2_wvalid       ), // write valid
+        .pc_axi_wready   (  S_AXI_HP2_wready       ), // write ready
+
+          // axi write response channel
+        .pc_axi_bid      (  S_AXI_HP2_bid          ), // write response ID
+        .pc_axi_bresp    (  S_AXI_HP2_bresp        ), // write response
+        .pc_axi_bvalid   (  S_AXI_HP2_bvalid       ), // write response valid
+        .pc_axi_bready   (  S_AXI_HP2_bready       ), // write response ready
+*/
+        .pc_axi_awid     (   4'h0 ), // write address ID
+        .pc_axi_awqos    (   4'h0 ),
+        .pc_axi_awaddr   (  32'h0 ), // write address
+        .pc_axi_awlen    (   4'h0 ), // write burst length
+        .pc_axi_awsize   (   3'h0 ), // write burst size
+        .pc_axi_awburst  (   2'h0 ), // write burst type
+        .pc_axi_awlock   (   2'h0 ), // write lock type
+        .pc_axi_awcache  (   4'h0 ), // write cache type
+        .pc_axi_awprot   (   3'h0 ), // write protection type
+        .pc_axi_awvalid  (   1'b0 ), // write address valid
+        .pc_axi_awready  (   1'b0 ), // write ready
+
+          // axi write data channel
+        .pc_axi_wid      (   4'h0 ), // write data ID
+        .pc_axi_wdata    (  64'h0 ), // write data
+        .pc_axi_wstrb    (   8'h0 ), // write strobes
+        .pc_axi_wlast    (   1'b0 ), // write last
+        .pc_axi_wvalid   (   1'b0 ), // write valid
+        .pc_axi_wready   (   1'b0 ), // write ready
+
+          // axi write response channel
+        .pc_axi_bid      (   4'h0 ), // write response ID
+        .pc_axi_bresp    (   2'h0 ), // write response
+        .pc_axi_bvalid   (   1'b0 ), // write response valid
+        .pc_axi_bready   (   1'b0 ), // write response ready
+          // axi read address channel
+        .pc_axi_arid     (  S_AXI_HP2_arid         ), // read address ID
+        .pc_axi_arqos    (  4'h0                   ),
+        .pc_axi_araddr   (  S_AXI_HP2_araddr       ), // read address
+        .pc_axi_arlen    (  S_AXI_HP2_arlen        ), // read burst length
+        .pc_axi_arsize   (  S_AXI_HP2_arsize       ), // read burst size
+        .pc_axi_arburst  (  S_AXI_HP2_arburst      ), // read burst type
+        .pc_axi_arlock   (  S_AXI_HP2_arlock       ), // read lock type
+        .pc_axi_arcache  (  S_AXI_HP2_arcache      ), // read cache type
+        .pc_axi_arprot   (  S_AXI_HP2_arprot       ), // read protection type
+        .pc_axi_arvalid  (  S_AXI_HP2_arvalid      ), // read address valid
+        .pc_axi_arready  (  S_AXI_HP2_arready      ),
+        
+          // axi read data channel
+        .pc_axi_rid      (  S_AXI_HP2_rid          ), // read response ID
+        .pc_axi_rdata    (  S_AXI_HP2_rdata        ), // read data
+        .pc_axi_rresp    (  S_AXI_HP2_rresp        ), // read response
+        .pc_axi_rlast    (  S_AXI_HP2_rlast        ), // read last
+        .pc_axi_rvalid   (  S_AXI_HP2_rvalid       ), // read response valid
+        .pc_axi_rready   (  S_AXI_HP2_rready       )  // read response ready
+
+        ); // read address ready
+
 `endif
 endmodule 

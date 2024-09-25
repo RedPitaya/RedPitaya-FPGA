@@ -13,6 +13,7 @@
 module axi_wr_fifo #(
   parameter   DW  =  64      , // data width (8,16,...,1024)
   parameter   AW  =  32      , // address width
+  parameter   LW  =   8      , // length width
   parameter   FW  =   5      , // address width of FIFO pointers
   parameter   BYTE_SEL = 0   ,
   parameter   SW  = DW >> 3    // strobe width - 1 bit for every data byte
@@ -26,6 +27,7 @@ module axi_wr_fifo #(
    output reg  [ AW-1: 0] axi_waddr_o        , // write address
    output reg  [ DW-1: 0] axi_wdata_o        , // write data
    output reg  [ SW-1: 0] axi_wsel_o         , // write byte select
+   output reg  [  3-1: 0] axi_wsize_o        , // write size
    output reg             axi_wvalid_o       , // write data valid
    output reg  [  4-1: 0] axi_wlen_o         , // write burst length
    output reg             axi_wfixed_o       , // write burst type (fixed / incremental)
@@ -35,6 +37,7 @@ module axi_wr_fifo #(
    // data and configuration
    input       [ DW-1: 0] wr_data_i          , // write data
    input       [ SW-1: 0] wr_byte_val_i      ,
+   input       [  3-1: 0] wr_size_i          , // write size
    input                  wr_val_i           , // write data valid
    input       [ AW-1: 0] ctrl_start_addr_i  , // range start address
    input       [ AW-1: 0] ctrl_stop_addr_i   , // range stop address
@@ -69,8 +72,8 @@ wire push = wr_val_i && !fill_lvl[FW] ;
 wire pop ;
 wire new_burst ;
 wire [    SW-1: 0] byte_selector ;
-wire [ DW+SW-1: 0] fifo_rdr      ;
-reg  [ DW+SW-1: 0] fifo[(1<<FW)-1:0]  ;
+wire [ DW+SW+2: 0] fifo_rdr      ;
+reg  [ DW+SW+2: 0] fifo[(1<<FW)-1:0]  ;
 
 
 // overflow detection & indication
@@ -112,13 +115,14 @@ begin
    end
    else begin
       if (push) begin
-         fifo[wr_pt]      <= {byte_selector, wr_data_i} ;
+         fifo[wr_pt]      <= {wr_size_i, byte_selector, wr_data_i} ;
          wr_pt            <= wr_pt + {{FW-1{1'b0}},1'b1} ;
       end
 
       if (pop) begin
-         axi_wdata_o <= fifo_rdr[   DW-1: 0] ;
-         axi_wsel_o  <= fifo_rdr[SW+DW-1:DW] ;
+         axi_wdata_o <= fifo_rdr[ 0    +: DW] ;
+         axi_wsel_o  <= fifo_rdr[DW    +: SW] ;
+         axi_wsize_o <= fifo_rdr[SW+DW +:  3] ;
          rd_pt       <= rd_pt + {{FW-1{1'b0}},1'b1} ;
       end
    end

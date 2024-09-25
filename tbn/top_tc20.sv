@@ -224,28 +224,35 @@ task test_dac (
   int unsigned offset
 );
   int init_ctrl;
+  //int trig={13'h0, `SW_TRIG_ADC, 13'h0, `SW_TRIG_ADC };
+  int trig=65537;
+
   #5000;
-  init_ctrl = ({29'h0, `SW_TRIG_ADC}  );
+  init_ctrl = (trig  );
   axi_write(offset+'h00, init_ctrl);
 
   #1000;
-  init_ctrl = (1<<`CTRL_DAC_ZERO      ) +
-              ({29'h0, `SW_TRIG_ADC}  );  
+  init_ctrl = ((1<< `CTRL_DAC_ZERO    )+
+               (1<<(`CTRL_DAC_ZERO+16))+
+              trig);  
   axi_write(offset+'h00, init_ctrl);
 
   #1000;
-  init_ctrl = (0<<`CTRL_DAC_ZERO      ) +
-              ({29'h0, `SW_TRIG_ADC}  );  
+  init_ctrl = ((0<< `CTRL_DAC_ZERO    )+
+               (0<<(`CTRL_DAC_ZERO+16))+
+              trig);  
   axi_write(offset+'h00, init_ctrl);
 
   #1000;
-  init_ctrl = (1<<`CTRL_DAC_RST      ) +
-              ({29'h0, `SW_TRIG_ADC}  );  
+  init_ctrl = ((1<< `CTRL_DAC_RST    )+
+               (1<<(`CTRL_DAC_RST+16))+
+              trig);  
   axi_write(offset+'h00, init_ctrl);
 
   #2000;
-  init_ctrl = (0<<`CTRL_DAC_RST      ) +
-              ({29'h0, `SW_TRIG_ADC}  );  
+  init_ctrl = ((0<< `CTRL_DAC_RST    )+
+               (0<<(`CTRL_DAC_RST+16))+
+              trig);  
   axi_write(offset+'h00, init_ctrl);
 
   #1000;
@@ -253,8 +260,15 @@ task test_dac (
   axi_write(offset+'h00, init_ctrl);
 
   #1000;
-  init_ctrl = ({29'h0, `SW_TRIG_ADC}  );
+  init_ctrl = ((1<< `CTRL_DAC_WRAP    )+
+               (1<<(`CTRL_DAC_WRAP+16))+
+                trig  );
   axi_write(offset+'h00, init_ctrl);
+
+  #500000;
+  axi_write(offset+'h30, 32'h200000);
+  #500000;
+  axi_write(offset+'h30, 32'h80000);
 /*
   init_ctrl = ({29'h0, `SW_TRIG_ADC}  );
   axi_write(offset+'h00, init_ctrl); // write trigger and reset at the same time
@@ -272,6 +286,17 @@ task test_dac (
   axi_write(offset+'h00, init_ctrl); // write trigger*/
 endtask: test_dac
 
+task test_rand (
+  int unsigned offset
+);
+  axi_write(offset+'h04, 32'h3fcf0df4);
+  axi_write(offset+'h04, 32'h00360dbd);  
+  #1000;
+  axi_write(offset+'h80, 32'h1); // enable random noise generator
+  axi_write(offset+'h84, 32'h1);
+  axi_write(32'h40000000+'h0c, 32'h1); //enable digital loopback
+
+endtask: test_rand
 
 task daisy_trigs (
 );
@@ -697,6 +722,23 @@ task set_asg_init(
   axi_write(offset+32'h6C, chb_first            );
 
   axi_write(offset+32'h54, deb_len              );
+
+  axi_write(offset+32'h78, 32'habcdef98      );
+  axi_write(offset+32'h7C, 32'h12345678      );
+
+
+  axi_write(offset+32'h108, 32'h1000      );
+  axi_write(offset+32'h10C, 32'h2000      );
+  axi_write(offset+32'h118, 32'h3000      );
+  axi_write(offset+32'h11C, 32'h4000      );
+
+  axi_write(offset+32'h130, 32'h1          );
+  axi_write(offset+32'h134, 32'h1          );
+  
+  axi_write(offset+32'h104, 32'h1          );
+  axi_write(offset+32'h114, 32'h1          );
+
+
 
 if (set_buf == 1) begin
   write_buf_both(offset,   num_samp             );

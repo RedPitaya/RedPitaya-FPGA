@@ -37,7 +37,24 @@ set_param board.repoPaths [list $path_brd]
 # setup an in memory project
 ################################################################################
 
-set part xc7z020clg400-1
+switch $model {
+"Z20" {
+    set part xc7z020clg400-1
+}
+"Z20_14" {
+    set part xc7z020clg400-1
+}
+"Z20_4" {
+    set part xc7z020clg400-1
+}
+"Z20_250" {
+    set part xc7z020clg400-3
+}
+default {
+    set part xc7z010clg400-1
+}
+}
+
 
 create_project -part $part -force redpitaya ./sim
 
@@ -109,6 +126,7 @@ if {($def_name == "STREAMING")} {
         source ${path_ip}/systemZ20.tcl
     }
     "Z20_14" {
+        set_property verilog_define {Z20_14} [current_fileset]
         source ${path_ip}/systemZ20_14.tcl
     }
     "Z20_4" {
@@ -145,6 +163,18 @@ add_files -fileset sim_1 -norecurse $binfiles
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip/asg_dat_fifo]} {
+add_files $path_ip/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip/sync_fifo]} {
+add_files $path_ip/sync_fifo/sync_fifo.xci
+}
+
+if {[file isdirectory $path_tbn_top/axi_prot_check]} {
+add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
 }
 
 add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc

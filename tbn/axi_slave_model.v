@@ -549,6 +549,12 @@ wire [4*16-1:0] ch3_4samp = {dats34_flip, dats33_flip, dats32_flip, dats31_flip}
 
 wire [ 2-1:0] strm_dac_en = top_tb.strm_dac_en;
 
+wire [16-1:0] pnt00, pnt11, pnt22, pnt33;
+assign pnt00 = rd_pnt+0;
+assign pnt11 = rd_pnt+1;
+assign pnt22 = rd_pnt+2;
+assign pnt33 = rd_pnt+3;
+/*
 always @(*)
 begin
   if (test_dac1)
@@ -558,7 +564,12 @@ begin
   else if (test_gpio)
     axi_rdata_o = ch3_4samp;
 end
+*/
 
+always @(*)
+begin
+  axi_rdata_o = {pnt33,pnt22,pnt11,pnt00};
+end
 
 always @(*)
 begin

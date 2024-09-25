@@ -132,29 +132,8 @@ logic          trig_ext;
 logic          trig_output_sel;
 logic [ 4-1:0] trig_ext_asg01;
 
-// AXI masters 0, 1
-logic            axi1_clk    , axi0_clk    ;
-logic            axi1_rstn   , axi0_rstn   ;
-logic [ 32-1: 0] axi1_waddr  , axi0_waddr  ;
-logic [ 64-1: 0] axi1_wdata  , axi0_wdata  ;
-logic [  8-1: 0] axi1_wsel   , axi0_wsel   ;
-logic            axi1_wvalid , axi0_wvalid ;
-logic [  4-1: 0] axi1_wlen   , axi0_wlen   ;
-logic            axi1_wfixed , axi0_wfixed ;
-logic            axi1_werr   , axi0_werr   ;
-logic            axi1_wrdy   , axi0_wrdy   ;
 
-// AXI masters 2, 3
-logic            axi3_clk    , axi2_clk    ;
-logic            axi3_rstn   , axi2_rstn   ;
-logic [ 32-1: 0] axi3_waddr  , axi2_waddr  ;
-logic [ 64-1: 0] axi3_wdata  , axi2_wdata  ;
-logic [  8-1: 0] axi3_wsel   , axi2_wsel   ;
-logic            axi3_wvalid , axi2_wvalid ;
-logic [  4-1: 0] axi3_wlen   , axi2_wlen   ;
-logic            axi3_wfixed , axi2_wfixed ;
-logic            axi3_werr   , axi2_werr   ;
-logic            axi3_wrdy   , axi2_wrdy   ;
+
 // PLL signals
 logic [  2-1: 0]      adc_clk_in;
 logic [  2-1: 0]      pll_adc_clk;
@@ -202,6 +181,11 @@ sys_bus_if   sys_adc_23  (.clk (adc_clk_23), .rstn (adc_rstn_23));
 // GPIO interface
 gpio_if #(.DW (3*GDW)) gpio ();
 
+// AXI masters
+axi_sys_if axi0_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi1_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi2_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi3_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
@@ -314,28 +298,12 @@ red_pitaya_ps ps (
   .gpio          (gpio),
   // system read/write channel
   .bus           (ps_sys      ),
-  // AXI masters 0, 1 
-  .axi1_clk_i    (axi1_clk    ),  .axi0_clk_i    (axi0_clk    ),  // global clock
-  .axi1_rstn_i   (axi1_rstn   ),  .axi0_rstn_i   (axi0_rstn   ),  // global reset
-  .axi1_waddr_i  (axi1_waddr  ),  .axi0_waddr_i  (axi0_waddr  ),  // system write address
-  .axi1_wdata_i  (axi1_wdata  ),  .axi0_wdata_i  (axi0_wdata  ),  // system write data
-  .axi1_wsel_i   (axi1_wsel   ),  .axi0_wsel_i   (axi0_wsel   ),  // system write byte select
-  .axi1_wvalid_i (axi1_wvalid ),  .axi0_wvalid_i (axi0_wvalid ),  // system write data valid
-  .axi1_wlen_i   (axi1_wlen   ),  .axi0_wlen_i   (axi0_wlen   ),  // system write burst length
-  .axi1_wfixed_i (axi1_wfixed ),  .axi0_wfixed_i (axi0_wfixed ),  // system write burst type (fixed / incremental)
-  .axi1_werr_o   (axi1_werr   ),  .axi0_werr_o   (axi0_werr   ),  // system write error
-  .axi1_wrdy_o   (axi1_wrdy   ),  .axi0_wrdy_o   (axi0_wrdy   ),  // system write ready
-  // AXI masters 2, 3 
-  .axi3_clk_i    (axi3_clk    ),  .axi2_clk_i    (axi2_clk    ),  // global clock
-  .axi3_rstn_i   (axi3_rstn   ),  .axi2_rstn_i   (axi2_rstn   ),  // global reset
-  .axi3_waddr_i  (axi3_waddr  ),  .axi2_waddr_i  (axi2_waddr  ),  // system write address
-  .axi3_wdata_i  (axi3_wdata  ),  .axi2_wdata_i  (axi2_wdata  ),  // system write data
-  .axi3_wsel_i   (axi3_wsel   ),  .axi2_wsel_i   (axi2_wsel   ),  // system write byte select
-  .axi3_wvalid_i (axi3_wvalid ),  .axi2_wvalid_i (axi2_wvalid ),  // system write data valid
-  .axi3_wlen_i   (axi3_wlen   ),  .axi2_wlen_i   (axi2_wlen   ),  // system write burst length
-  .axi3_wfixed_i (axi3_wfixed ),  .axi2_wfixed_i (axi2_wfixed ),  // system write burst type (fixed / incremental)
-  .axi3_werr_o   (axi3_werr   ),  .axi2_werr_o   (axi2_werr   ),  // system write error
-  .axi3_wrdy_o   (axi3_wrdy   ),  .axi2_wrdy_o   (axi2_wrdy   )   // system write ready
+  // AXI masters
+
+  .axi0_sys      (axi0_sys    ),
+  .axi1_sys      (axi1_sys    ),
+  .axi2_sys      (axi2_sys    ),
+  .axi3_sys      (axi3_sys    )
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -621,16 +589,14 @@ rp_scope_com #(
   .trg_state_o   (trg_state_ch_0_1),
   .trg_state_i   (trg_state_ch_2_3),
   // AXI0 master                 // AXI1 master
-  .axi_clk_o    ({axi1_clk,    axi0_clk}   ),
-  .axi_rstn_o   ({axi1_rstn,   axi0_rstn}  ),
-  .axi_waddr_o  ({axi1_waddr,  axi0_waddr} ),
-  .axi_wdata_o  ({axi1_wdata,  axi0_wdata} ),
-  .axi_wsel_o   ({axi1_wsel,   axi0_wsel}  ),
-  .axi_wvalid_o ({axi1_wvalid, axi0_wvalid}),
-  .axi_wlen_o   ({axi1_wlen,   axi0_wlen}  ),
-  .axi_wfixed_o ({axi1_wfixed, axi0_wfixed}),
-  .axi_werr_i   ({axi1_werr,   axi0_werr}  ),
-  .axi_wrdy_i   ({axi1_wrdy,   axi0_wrdy}  ),
+  .axi0_waddr_o  (axi0_sys.waddr ),  .axi1_waddr_o  (axi1_sys.waddr ),
+  .axi0_wdata_o  (axi0_sys.wdata ),  .axi1_wdata_o  (axi1_sys.wdata ),
+  .axi0_wsel_o   (axi0_sys.wsel  ),  .axi1_wsel_o   (axi1_sys.wsel  ),
+  .axi0_wvalid_o (axi0_sys.wvalid),  .axi1_wvalid_o (axi1_sys.wvalid),
+  .axi0_wlen_o   (axi0_sys.wlen  ),  .axi1_wlen_o   (axi1_sys.wlen  ),
+  .axi0_wfixed_o (axi0_sys.wfixed),  .axi1_wfixed_o (axi1_sys.wfixed),
+  .axi0_werr_i   (axi0_sys.werr  ),  .axi1_werr_i   (axi1_sys.werr  ),
+  .axi0_wrdy_i   (axi0_sys.wrdy  ),  .axi1_wrdy_i   (axi1_sys.wrdy  ),
   // System bus
   .sys_addr      (sys[1].addr ),
   .sys_wdata     (sys[1].wdata),
@@ -665,16 +631,14 @@ rp_scope_com #(
   .trg_state_o   (trg_state_ch_2_3),
   .trg_state_i   (trg_state_ch_0_1),
   // AXI2 master                 // AXI3 master
-  .axi_clk_o    ({axi3_clk,    axi2_clk}   ),
-  .axi_rstn_o   ({axi3_rstn,   axi2_rstn}  ),
-  .axi_waddr_o  ({axi3_waddr,  axi2_waddr} ),
-  .axi_wdata_o  ({axi3_wdata,  axi2_wdata} ),
-  .axi_wsel_o   ({axi3_wsel,   axi2_wsel}  ),
-  .axi_wvalid_o ({axi3_wvalid, axi2_wvalid}),
-  .axi_wlen_o   ({axi3_wlen,   axi2_wlen}  ),
-  .axi_wfixed_o ({axi3_wfixed, axi2_wfixed}),
-  .axi_werr_i   ({axi3_werr,   axi2_werr}  ),
-  .axi_wrdy_i   ({axi3_wrdy,   axi2_wrdy}  ),
+  .axi0_waddr_o  (axi2_sys.waddr ),  .axi1_waddr_o  (axi3_sys.waddr ),
+  .axi0_wdata_o  (axi2_sys.wdata ),  .axi1_wdata_o  (axi3_sys.wdata ),
+  .axi0_wsel_o   (axi2_sys.wsel  ),  .axi1_wsel_o   (axi3_sys.wsel  ),
+  .axi0_wvalid_o (axi2_sys.wvalid),  .axi1_wvalid_o (axi3_sys.wvalid),
+  .axi0_wlen_o   (axi2_sys.wlen  ),  .axi1_wlen_o   (axi3_sys.wlen  ),
+  .axi0_wfixed_o (axi2_sys.wfixed),  .axi1_wfixed_o (axi3_sys.wfixed),
+  .axi0_werr_i   (axi2_sys.werr  ),  .axi1_werr_i   (axi3_sys.werr  ),
+  .axi0_wrdy_i   (axi2_sys.wrdy  ),  .axi1_wrdy_i   (axi3_sys.wrdy  ),
   // System bus
   .sys_addr      (sys[2].addr ),
   .sys_wdata     (sys[2].wdata),
