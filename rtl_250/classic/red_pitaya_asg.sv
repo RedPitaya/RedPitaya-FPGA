@@ -269,7 +269,7 @@ if (sys_rstn == 1'b0) begin
    set_a_wrap  <=  1'b0    ;
    set_a_size  <= {RSZ+16{1'b1}} ;
    set_a_ofs   <= {32{1'b0}} ;
-   set_a_step  <={{RSZ+15{1'b0}},1'b0} ;
+   set_a_step  <= 32'h0 ;
    set_a_ncyc  <= 16'h0    ;
    set_a_rnum  <= 16'h0    ;
    set_a_rdly  <= 32'h0    ;
@@ -286,7 +286,7 @@ if (sys_rstn == 1'b0) begin
    set_b_wrap  <=  1'b0    ;
    set_b_size  <= {RSZ+16{1'b1}} ;
    set_b_ofs   <= {32{1'b0}} ;
-   set_b_step  <={{RSZ+15{1'b0}},1'b0} ;
+   set_b_step  <= 32'h0 ;
    set_b_ncyc  <= 16'h0    ;
    set_b_rnum  <= 16'h0    ;
    set_b_rdly  <= 32'h0    ;
@@ -299,8 +299,8 @@ if (sys_rstn == 1'b0) begin
    set_b_last  <= 14'h0    ;
    set_a_last_l  <= 32'd249   ;
    set_b_last_l  <= 32'd249   ;
-   set_a_step_lo <=  32'b0    ;
-   set_b_step_lo <=  32'b0    ;
+   set_a_step_lo <=  32'h0    ;
+   set_b_step_lo <=  32'h0    ;
    set_deb_len   <=  20'd62500; //0.5 ms
    set_a_seed    <= 32'h1     ;
    set_b_seed    <= 32'h1     ;
