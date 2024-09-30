@@ -422,7 +422,7 @@ red_pitaya_scope i_scope (
 ////////////////////////////////////////////////////////////////////////////////
 
 
-red_pitaya_asg i_asg (
+red_pitaya_asg_classic i_asg (
    // DAC
   .dac_a_o         (asg_dat[0]  ),  // CH 1
   .dac_b_o         (asg_dat[1]  ),  // CH 2
