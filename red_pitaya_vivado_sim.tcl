@@ -19,7 +19,8 @@ cd prj/$prj_name
 
 set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
+set path_ip      ip
+set path_ip_top  ../../ip
 set path_bd  sim/redpitaya.srcs/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_tbn tbn
@@ -102,6 +103,24 @@ set defines SIMULATION\ ${def_name}\ ${def_model}
 set_property verilog_define $defines [get_filesets sim_1]
 
 set binfiles $path_tbn_top/dac_src_ch1.bin\ $path_tbn_top/adc_src_ch2.bin\ $path_tbn_top/adc_src_ch3.bin\ $path_tbn_top/adc_src_ch0.bin\ $path_tbn_top/dac_src_ch0.bin\ $path_tbn_top/adc_src_ch1.bin\ $path_tbn_top/gpio_src_out.bin
+
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
+}
+
+if {[file isdirectory $path_tbn_top/axi_prot_check]} {
+add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
+}
+
 if {($def_name == "STREAMING")} {
     switch $def_model {
     "Z20" {

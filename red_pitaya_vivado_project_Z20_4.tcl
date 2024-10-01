@@ -16,7 +16,8 @@ cd prj/$prj_name
 
 set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
+set path_ip      ip
+set path_ip_top  ../../ip
 set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_sdc_prj sdc
@@ -73,12 +74,12 @@ if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
-if {[file isdirectory $path_ip/asg_dat_fifo]} {
-add_files $path_ip/asg_dat_fifo/asg_dat_fifo.xci
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
 }
 
-if {[file isdirectory $path_ip/sync_fifo]} {
-add_files $path_ip/sync_fifo/sync_fifo.xci
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_4ADC.xdc

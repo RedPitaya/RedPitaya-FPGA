@@ -142,6 +142,10 @@ gpio_if #(.DW (24)) gpio ();
 // SPI0
 spi_if spi0 ();
 
+axi_sys_if axi0_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi1_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi2_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi3_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
@@ -489,6 +493,9 @@ red_pitaya_asg i_asg (
   .trig_a_i        (  gpio.i[8]     ),
   .trig_b_i        (  gpio.i[8]     ),
   .trig_out_o      (  trig_asg_out  ),
+
+  .axi_a_sys       (  axi2_sys      ),
+  .axi_b_sys       (  axi3_sys      ),
   // System bus
   .sys_addr        (  sys_addr      ),  // address
   .sys_wdata       (  sys_wdata     ),  // write data
