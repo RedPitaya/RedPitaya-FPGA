@@ -22,10 +22,6 @@ module dac_top
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_start,
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_reset,
   //
-  // output reg                              event_op_trig,
-  // output reg                              event_op_stop,
-  // output reg                              event_op_start,
-  // output reg                              event_op_reset,
 
   input  wire [TRIG_SRC_NUM-1:0]          event_sel,
   input  wire                             event_val, 
@@ -33,12 +29,10 @@ module dac_top
   input  wire [TRIG_SRC_NUM-1:0]          trig_ip,
   output wire                             trig_op,
 
-  //output      [31:0]                    reg_ctrl,
-  input  wire                           ctrl_val, 
-  output      [31:0]                    reg_sts,
-  //input  wire                           sts_val, 
+  input  wire                             ctrl_val, 
+  output      [31:0]                      reg_sts,
 
-  input  [16-1:0]                       dac_conf,
+  input  [16-1:0]                         dac_conf,
 
   input [DAC_DATA_BITS-1:0]               dac_scale,
   input [DAC_DATA_BITS-1:0]               dac_offs,
@@ -87,7 +81,8 @@ module dac_top
 // DAC configuration reg
 localparam TRIG_SEL         = 3;
 localparam OUT_ZERO         = 7;
-  
+localparam BIT_MODE         = 8;
+
 
 
 ////////////////////////////////////////////////////////////
@@ -112,6 +107,7 @@ wire [DAC_DATA_BITS-1:0]    dac_data_shiftr;
 wire [DAC_DATA_BITS-1:0]    dac_calibrated;
 
 wire set_zero = dac_conf[OUT_ZERO];
+wire set_8bit = dac_conf[BIT_MODE];
 
 assign dac_data_o      = loopback_en ? dac_data_raw : dac_calibrated;
 assign dac_data_shiftr = dac_data_raw >>> dac_outshift;
@@ -139,13 +135,10 @@ rp_dma_mm2s #(
   .axi_rstn       (axi_rstn),  
   .adc_rstn       (adc_rstn),  
   .busy           (),
-  //.intr           (dma_intr),     
   .mode           (dma_mode),  
 
-  //.reg_ctrl       (reg_ctrl),
   .ctrl_val       (ctrl_val),
   .reg_sts        (reg_sts),
-  //.sts_val        (sts_val),  
 
   .dac_step         (dac_step),
   .dac_rp           (dac_rp),
@@ -160,7 +153,8 @@ rp_dma_mm2s #(
   .dac_rvalid_o     (dac_rvalid),
   .diag_reg         (diag_reg),
   .diag_reg2        (diag_reg2),
-  
+  .set_8bit_i       (set_8bit),
+
   .m_axi_arid_o     (m_axi_dac_arid_o), 
   .m_axi_araddr_o   (m_axi_dac_araddr_o),  
   .m_axi_arlen_o    (m_axi_dac_arlen_o), 

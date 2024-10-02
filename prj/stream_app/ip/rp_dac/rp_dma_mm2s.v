@@ -37,6 +37,8 @@ module rp_dma_mm2s
   output wire                           dac_rvalid_o,
   output [32-1:0]                       diag_reg,
   output [32-1:0]                       diag_reg2,
+  input                                 set_8bit_i,
+
   // 
   output wire [3:0]                       m_axi_arid_o     , // read address ID
   output wire [AXI_ADDR_BITS-1: 0]        m_axi_araddr_o   , // read address
@@ -62,15 +64,13 @@ module rp_dma_mm2s
 ////////////////////////////////////////////////////////////
 
 localparam FIFO_CNT_BITS = 12;  // Size of the FIFO data counter
-localparam FIFO_MAX      = (1<<FIFO_CNT_BITS)-2-256;
+localparam FIFO_MAX      = 256-2;
 
 ////////////////////////////////////////////////////////////
 // Signals
 ////////////////////////////////////////////////////////////
 
 wire                      fifo_rst;
-//wire [AXI_DATA_BITS-1:0]  fifo_wr_data; 
-//wire                      fifo_wr_we;
 reg  [AXI_DATA_BITS-1:0]  fifo_wr_data; 
 reg                       fifo_wr_we;
 
@@ -83,20 +83,6 @@ wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt;
 wire                      fifo_almost_full    = fifo_wr_cnt > FIFO_MAX;
 wire                      fifo_almost_full_rd = fifo_rd_cnt > FIFO_MAX;
 
-// DMA control reg
-// localparam CTRL_STRT            = 0;
-// localparam CTRL_RESET           = 1;
-// localparam CTRL_MODE_NORM       = 4;
-// localparam CTRL_MODE_STREAM     = 5;
-
-// wire                      ctrl_start = dac_ctrl_reg[CTRL_STRT];
-// wire                      ctrl_reset = dac_ctrl_reg[CTRL_RESET];
-// wire                      ctrl_norm  = dac_ctrl_reg[CTRL_MODE_NORM];
-// wire                      ctrl_strm  = dac_ctrl_reg[CTRL_MODE_STREAM];
-
-//assign fifo_wr_data = m_axi_rdata_i;                    // write data into the FIFO from AXI
-//assign fifo_wr_we   = m_axi_rvalid_i && m_axi_rready_o; // when valid data is on the bus
-
 always @(posedge m_axi_aclk) begin
 fifo_wr_data <= m_axi_rdata_i;                    // write data into the FIFO from AXI
 fifo_wr_we   <= m_axi_rvalid_i && m_axi_rready_o; // when valid data is on the bus
@@ -107,8 +93,8 @@ assign m_axi_arsize_o  = $clog2(AXI_DATA_BITS/8); // how many bytes per beat
 assign m_axi_arburst_o = 2'b01;     // Incrementing burst
 assign m_axi_arprot_o  = 3'b000;    // no protected read
 assign m_axi_arcache_o = 4'b0011;   // buffering allowed, cached
-assign m_axi_arid_o = CH_NUM + 2;   // different IDs for each channel
-assign m_axi_arqos_o = 4'hF;        // elevate QOS priority
+assign m_axi_arid_o    = CH_NUM + 2;   // different IDs for each channel
+assign m_axi_arqos_o   = 4'hF;        // elevate QOS priority
 
 assign diag_reg  = fifo_wr_data[63:32];
 assign diag_reg2 = fifo_wr_data[31: 0];
@@ -131,16 +117,9 @@ rp_dma_mm2s_ctrl #(
   .busy           (busy),
   .intr           (intr),      
   .mode           (mode),    
-  //.reg_ctrl       (reg_ctrl),
   .ctrl_val       (ctrl_val),
   .reg_sts        (reg_sts),
-  //.sts_val        (sts_val),  
-  //.ctrl_reset     (ctrl_reset),
-  //.ctrl_start     (ctrl_start),
-  //.ctrl_norm      (ctrl_norm),
-  //.ctrl_strm      (ctrl_norm),
   .data_valid       (dac_rvalid_o),
- // .dac_pntr_step    (dac_step),
   .dac_rp           (dac_rp),
   .dac_buf_size     (dac_buf_size),
   .dac_buf1_adr     (dac_buf1_adr),
@@ -176,6 +155,7 @@ rp_dma_mm2s_downsize #(
   .fifo_rd_data   (fifo_rd_data),          
   .fifo_rd_re     (fifo_rd_re),     
   .dac_pntr_step  (dac_step),
+  .set_8bit_i     (set_8bit_i),
   .m_axis_tdata   (dac_rdata_o),      
   .m_axis_tvalid  (dac_rvalid_o));      
 

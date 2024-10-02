@@ -14,26 +14,34 @@ module rp_dma_mm2s_downsize
   input  wire [AXI_DATA_BITS-1:0]   fifo_rd_data,
   output wire                       fifo_rd_re,      
   input [AXI_ADDR_BITS-1:0]         dac_pntr_step,
- 
+  input  wire                       set_8bit_i,
+
   output reg  [AXIS_DATA_BITS-1:0]  m_axis_tdata,
   output reg                        m_axis_tvalid
 );
 
-localparam NUM_SAMPS      = AXI_DATA_BITS/16;  // how many samples in one read from FIFO
+localparam NUM_SAMPS      = AXI_DATA_BITS/8;  // how many samples in one read from FIFO
 localparam NUM_SAMPS_BITS = $clog2(NUM_SAMPS); // how many bits is the above number
 localparam ADDR_DECS      = AXI_ADDR_BITS+16;  // to be able to get a finer pointer step
 
 reg  [ADDR_DECS-1:0]      dac_rp_curr;
-(* use_dsp="yes" *) wire [ADDR_DECS-1:0]      dac_rp_next      = dac_rp_curr+{15'h0, dac_pntr_step, 1'b0}; //shifted by 1 so that step 1 is a read of 1 address.
-//wire [ADDR_DECS-1:0]      dac_rp_next_next = dac_rp_next+{15'h0, dac_pntr_step, 1'b0}; //shifted by 1 so that step 1 is a read of 1 address.
-(* use_dsp="yes" *) wire [ADDR_DECS-1:0]      dac_rp_next_next = dac_rp_curr+{14'h0, dac_pntr_step, 2'h0}; //shifted by 1 so that step 1 is a read of 1 address.
+wire [ADDR_DECS-1:0]      step_sh_next;
+wire [ADDR_DECS-1:0]      step_sh_next_next;
 
-reg [AXIS_DATA_BITS-1:0] samp_buf [0:NUM_SAMPS-1]; 
-reg fifo_empty_r;
+assign step_sh_next      = {16'h0,dac_pntr_step} << {     1'b0  ,!set_8bit_i}; //SHL 00 or 01
+assign step_sh_next_next = {16'h0,dac_pntr_step} << {!set_8bit_i, set_8bit_i}; //SHL 01 or 10
+(* use_dsp="yes" *) wire [ADDR_DECS-1:0]      dac_rp_next      = dac_rp_curr+step_sh_next; //shifted by 1 so that step 1 is a read of 1 address.
+(* use_dsp="yes" *) wire [ADDR_DECS-1:0]      dac_rp_next_next = dac_rp_curr+step_sh_next_next; //shifted by 1 so that step 1 is a read of 1 address.
+
+reg [8-1:0] samp_buf [0:NUM_SAMPS-1]; 
+reg fifo_empty_r = 1'b0;
 reg first_full;
 reg  [AXIS_DATA_BITS-1:0]  m_axis_tdata_r;
 
-assign fifo_rd_re = (first_full & ~fifo_empty_r && (dac_rp_next_next[NUM_SAMPS_BITS+1+16] ^ dac_rp_next[NUM_SAMPS_BITS+1+16]));
+wire bit8_rd_re  = dac_rp_next_next[NUM_SAMPS_BITS+1+16] ^ dac_rp_next[NUM_SAMPS_BITS+1+16];
+wire bit16_rd_re = dac_rp_next_next[NUM_SAMPS_BITS+0+16] ^ dac_rp_next[NUM_SAMPS_BITS+0+16];
+wire rp_rd_en    = set_8bit_i ? bit8_rd_re : bit16_rd_re;
+assign fifo_rd_re = (first_full & ~fifo_empty_r && rp_rd_en);
 ////////////////////////////////////////////////////////////
 // Name : First full
 // must wait to fill up the FIFO before starting to read
@@ -54,7 +62,9 @@ end
 
 always @(posedge clk)
 begin
-fifo_empty_r <= fifo_empty;
+  if ((fifo_rd_re && fifo_empty) || !fifo_empty)
+    fifo_empty_r <= fifo_empty;
+
   if (rst == 0) begin
     dac_rp_curr <= 'h0;
   end else begin 
@@ -67,7 +77,7 @@ genvar GV;
 generate
 for (GV = 0; GV < NUM_SAMPS; GV = GV + 1) begin : read_decoder
   always @(posedge clk) begin
-    samp_buf[GV] <= fifo_rd_data[GV*16+15:GV*16];  
+    samp_buf[GV] <= fifo_rd_data[GV*8 +: 8];  
   end
 end
 endgenerate
@@ -84,7 +94,8 @@ begin
     m_axis_tvalid <= 'h0;
   end else begin 
     m_axis_tvalid <= first_full;
-    m_axis_tdata  <= samp_buf[dac_rp_curr[NUM_SAMPS_BITS+16:17]];
+    m_axis_tdata  <= set_8bit_i ? {samp_buf[dac_rp_curr[NUM_SAMPS_BITS+16:17]]  , {8{samp_buf[dac_rp_curr[NUM_SAMPS_BITS+16:17]][8-1]}}} : 
+                                  {samp_buf[{dac_rp_curr[NUM_SAMPS_BITS+15:17],1'b1}],    samp_buf[{dac_rp_curr[NUM_SAMPS_BITS+15:17],1'b0}]       } ;
     m_axis_tdata_r <= m_axis_tdata;
   end
 end
