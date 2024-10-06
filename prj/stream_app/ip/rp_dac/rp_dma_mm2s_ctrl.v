@@ -136,11 +136,17 @@ begin
 end
 //--------------------------------------------------------------------------------------------------------------------------------
 // wait for the buffer to be read out if full
+reg fifo_re_rin;
 reg fifo_re_r, fifo_re_r2, fifo_re_r3;
 wire fifo_re_in = ~fifo_re_r2 & fifo_re_r3;
+always @(posedge s_axis_aclk)
+begin
+  fifo_re_rin <= fifo_re;
+end
+
 always @(posedge m_axi_aclk)
 begin
-  fifo_re_r  <= fifo_re;
+  fifo_re_r  <= fifo_re_rin;
   fifo_re_r2 <= fifo_re_r;
   fifo_re_r3 <= fifo_re_r2;
 

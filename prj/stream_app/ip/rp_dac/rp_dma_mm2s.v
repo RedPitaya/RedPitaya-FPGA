@@ -78,10 +78,15 @@ wire [AXI_DATA_BITS-1:0]  fifo_rd_data;
 wire                      fifo_rd_re;
 wire                      fifo_empty;
 wire                      fifo_full;
+reg                       fifo_full_r;
+reg                       fifo_full_rr;
+
 wire [FIFO_CNT_BITS-1:0]  fifo_wr_cnt; 
 wire [FIFO_CNT_BITS-1:0]  fifo_rd_cnt; 
 wire                      fifo_almost_full    = fifo_wr_cnt > FIFO_MAX;
 wire                      fifo_almost_full_rd = fifo_rd_cnt > FIFO_MAX;
+reg                       rstn_logic,rstn_fifo;
+
 
 always @(posedge m_axi_aclk) begin
 fifo_wr_data <= m_axi_rdata_i;                    // write data into the FIFO from AXI
@@ -99,6 +104,11 @@ assign m_axi_arqos_o   = 4'hF;        // elevate QOS priority
 assign diag_reg  = fifo_wr_data[63:32];
 assign diag_reg2 = fifo_wr_data[31: 0];
 
+always @(posedge m_axi_aclk) // resolve high fanout timing issues
+begin
+  rstn_logic <= axi_rstn;
+  rstn_fifo  <= axi_rstn;
+end
 ////////////////////////////////////////////////////////////
 // Name : DMA MM2S Control
 // Accepts DMA requests and sends data over the AXI bus.
@@ -113,7 +123,7 @@ rp_dma_mm2s_ctrl #(
   U_dma_mm2s_ctrl(
   .m_axi_aclk     (m_axi_aclk),         
   .s_axis_aclk    (s_axis_aclk),       
-  .m_axi_aresetn  (axi_rstn),     
+  .m_axi_aresetn  (rstn_logic),     
   .busy           (busy),
   .intr           (intr),      
   .mode           (mode),    
@@ -142,6 +152,12 @@ rp_dma_mm2s_ctrl #(
 // Packs input data into the AXI bus width. 
 ////////////////////////////////////////////////////////////
 
+always @(posedge s_axis_aclk) // resolve high fanout timing issues
+begin
+  fifo_full_r  <= fifo_full;
+  fifo_full_rr <= fifo_full_r;
+end
+
 rp_dma_mm2s_downsize #(
   .AXI_DATA_BITS  (AXI_DATA_BITS),
   .AXI_ADDR_BITS  (AXI_ADDR_BITS),
@@ -151,7 +167,7 @@ rp_dma_mm2s_downsize #(
   .clk            (s_axis_aclk),              
   .rst            (adc_rstn ),        
   .fifo_empty     (fifo_empty),
-  .fifo_full      (fifo_full | fifo_almost_full_rd),
+  .fifo_full      (fifo_full_rr | fifo_almost_full_rd),
   .fifo_rd_data   (fifo_rd_data),          
   .fifo_rd_re     (fifo_rd_re),     
   .dac_pntr_step  (dac_step),
@@ -170,7 +186,7 @@ fifo_axi_data_dac
   U_fifo_axi_data(
   .wr_clk         (m_axi_aclk),               
   .rd_clk         (s_axis_aclk),               
-  .rst            (~axi_rstn),     
+  .rst            (~rstn_fifo),     
   .din            (fifo_wr_data),                                 
   .wr_en          (fifo_wr_we),            
   .full           (fifo_full),   

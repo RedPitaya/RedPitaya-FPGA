@@ -115,14 +115,14 @@ assign dac_data_shiftr = dac_data_raw >>> dac_outshift;
 // Name : DMA S2MM
 // 
 ////////////////////////////////////////////////////////////
-  /*
+  
 reg rstn_cal, rstn_smm;
 always @(posedge clk_adc) // resolve high fanout timing issues
 begin
   rstn_cal <= adc_rstn;
   rstn_smm <= adc_rstn;
 end
-*/
+
 rp_dma_mm2s #(
   .AXI_ADDR_BITS  (M_AXI_DAC_ADDR_BITS),
   .AXI_DATA_BITS  (M_AXI_DAC_DATA_BITS),
@@ -133,7 +133,7 @@ rp_dma_mm2s #(
   .m_axi_aclk     (clk_axi),        
   .s_axis_aclk    (clk_adc),      
   .axi_rstn       (axi_rstn),  
-  .adc_rstn       (adc_rstn),  
+  .adc_rstn       (rstn_smm),  
   .busy           (),
   .mode           (dma_mode),  
 
@@ -177,7 +177,7 @@ dac_calib #(
   .AXIS_DATA_BITS (DAC_DATA_BITS))
   U_osc_calib(
   .dac_clk_i      (clk_adc),
-  .dac_rstn_i     (adc_rstn),
+  .dac_rstn_i     (rstn_cal),
 
   .dac_o          (dac_calibrated),
   .dac_rdata_i    (dac_data_shiftr),
@@ -190,7 +190,7 @@ dac_calib #(
 
 always @(posedge clk_adc)
 begin
-  if (adc_rstn == 0) begin
+  if (rstn_cal == 0) begin
     event_num_trig  <= 0;    
     event_num_start <= 0;   
     event_num_stop  <= 0;    

@@ -154,6 +154,7 @@ wire [31:0]                     diag1_ch1, diag1_ch2;
 wire [31:0]                     diag2_ch1, diag2_ch2;
 wire [31:0]                     diag3_ch1, diag3_ch2;
 wire [31:0]                     diag4_ch1, diag4_ch2;
+reg                             rstn_cfg;
 
 assign intr = 1'b0;
 assign dac1_event_op = cfg_event_op;
@@ -187,7 +188,6 @@ begin
 end
 
 
-reg rstn_cfg;
 always @(posedge clk)
 begin
   rstn_cfg <= rst_n;
