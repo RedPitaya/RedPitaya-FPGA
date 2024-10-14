@@ -416,8 +416,8 @@ begin
       cfg_buf2_adr_cha    <= 32'h0;
       cfg_buf2_adr_chb    <= 32'h0;
    end else begin
-      if ((reg_ofs_axi[12-1:0] == DMA_CTRL_ADDR     ) && reg_write_axi) begin cfg_ctrl_reg_cha   <= reg_wdat_axi[ 8-1:0];
-                                                                              cfg_ctrl_reg_chb   <= reg_wdat_axi[16-1:8]; end
+      if ((reg_ofs_axi[12-1:0] == DMA_CTRL_ADDR     ) && reg_write_axi) begin cfg_ctrl_reg_cha   <= reg_wdat_axi[ 8-1: 0];
+                                                                              cfg_ctrl_reg_chb   <= reg_wdat_axi[24-1:16]; end
 
       if ((reg_ofs_axi[12-1:0] == DMA_BUF_SIZE_ADDR ) && reg_write_axi)       cfg_dma_buf_size   <= reg_wdat_axi;
       if ((reg_ofs_axi[12-1:0] == DMA_BUF1_ADR_CHA  ) && reg_write_axi)       cfg_buf1_adr_cha   <= reg_wdat_axi;

@@ -77,7 +77,8 @@ localparam END_STATE_BUF2       = 3;
 localparam RESET_STATE          = 4;
 localparam SEND_DMA_STATE1      = 5;
 localparam SEND_DMA_STATE2      = 6;
-
+localparam BUF1_FREE            = 7;
+localparam BUF2_FREE            = 8;
 
 localparam AXI_BURST_BYTES  = AXI_BURST_LEN*AXI_DATA_BITS/8;
 localparam FULL_WAIT = AXI_BURST_LEN*8; //4 samples, 2x slower read
@@ -236,8 +237,8 @@ end
 // Name : Diag reg
 // Sets AXI diag reg
 ////////////////////////////////////////////////////////////
-assign req_buf_addr_sel_pedge =  req_buf_addr_sel & ~req_buf_addr_sel_p1;
-assign req_buf_addr_sel_nedge = ~req_buf_addr_sel &  req_buf_addr_sel_p1;
+assign req_buf_addr_sel_pedge = req_buf_addr_sel == 1'b1 & ~req_buf_addr_sel_p1;
+assign req_buf_addr_sel_nedge = req_buf_addr_sel == 1'b0 &  req_buf_addr_sel_p1;
 
 always @(posedge m_axi_aclk)
 begin
@@ -259,14 +260,17 @@ begin
   if (m_axi_aresetn == 0) begin
     reg_sts <= 32'h0;
   end else begin
-    reg_sts[31:5] <= 27'd0;
-    reg_sts[END_STATE_BUF1]   <= (((state_cs == WAIT_BUF_FULL)) && ~req_buf_addr_sel);
-    reg_sts[READ_STATE_BUF1]  <= (state_cs == WAIT_DATA_RDY  && ~req_buf_addr_sel);
-    reg_sts[END_STATE_BUF2]   <= (((state_cs == WAIT_BUF_FULL)) &&  req_buf_addr_sel);
-    reg_sts[READ_STATE_BUF2]  <= (state_cs == WAIT_DATA_RDY  &&  req_buf_addr_sel);
-    reg_sts[SEND_DMA_STATE1]  <= (state_cs == SEND_DMA_REQ  && ~req_buf_addr_sel);
-    reg_sts[SEND_DMA_STATE2]  <= (state_cs == SEND_DMA_REQ  &&  req_buf_addr_sel);
-    reg_sts[RESET_STATE] <= (state_cs == FIFO_RST);
+    reg_sts[31:9] <= 'h0;
+    reg_sts[END_STATE_BUF1]   <= (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0);
+    reg_sts[READ_STATE_BUF1]  <= (state_cs == WAIT_DATA_RDY     && req_buf_addr_sel == 1'b0);
+    reg_sts[END_STATE_BUF2]   <= (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1);
+    reg_sts[READ_STATE_BUF2]  <= (state_cs == WAIT_DATA_RDY     && req_buf_addr_sel == 1'b1);
+    reg_sts[RESET_STATE]      <= (state_cs == FIFO_RST);
+    reg_sts[SEND_DMA_STATE1]  <= (state_cs == SEND_DMA_REQ      && req_buf_addr_sel == 1'b0);
+    reg_sts[SEND_DMA_STATE2]  <= (state_cs == SEND_DMA_REQ      && req_buf_addr_sel == 1'b1);
+    reg_sts[BUF1_FREE]        <= req_buf_addr_sel == 1'b1 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0);
+    reg_sts[BUF2_FREE]        <= req_buf_addr_sel == 1'b0 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1);
+
   end
 end
 

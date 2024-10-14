@@ -81,7 +81,7 @@ module dac_top
 // DAC configuration reg
 localparam TRIG_SEL         = 3;
 localparam OUT_ZERO         = 7;
-localparam BIT_MODE         = 8;
+localparam BIT_MODE         = 6;
 
 
 
