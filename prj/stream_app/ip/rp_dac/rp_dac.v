@@ -294,8 +294,8 @@ dac_cfg #(
 
   .diag1_i                  (diag1_ch1),
   .diag2_i                  (diag2_ch1),
-  .diag3_i                  (diag3_ch1),
-  .diag4_i                  (diag4_ch1)
+  .diag3_i                  (diag1_ch2),
+  .diag4_i                  (diag2_ch2)
   );
 
 ////////////////////////////////////////////////////////////
@@ -340,8 +340,8 @@ dac_top #(
   .dac_buf1_adr     (cfg_buf1_adr_cha),
   .dac_buf2_adr     (cfg_buf2_adr_cha),
   .dac_data_o       (dac_data_cha),
-  .diag_reg         (diag_reg),
-  .diag_reg2        (diag_reg2),
+  .diag_reg         (diag1_ch1),
+  .diag_reg2        (diag2_ch1),
   .loopback_en      (cfg_loopback_cha),
 
   .m_axi_dac_arid_o     (m_axi_dac1_arid_o),
@@ -403,6 +403,8 @@ dac_top #(
   .dac_buf1_adr     (cfg_buf1_adr_chb),
   .dac_buf2_adr     (cfg_buf2_adr_chb),
   .dac_data_o       (dac_data_chb),
+  .diag_reg         (diag1_ch2),
+  .diag_reg2        (diag2_ch2),
   .loopback_en      (cfg_loopback_chb),
   
   .m_axi_dac_arid_o     (m_axi_dac2_arid_o),

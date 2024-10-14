@@ -101,8 +101,6 @@ assign m_axi_arcache_o = 4'b0011;   // buffering allowed, cached
 assign m_axi_arid_o    = CH_NUM + 2;   // different IDs for each channel
 assign m_axi_arqos_o   = 4'hF;        // elevate QOS priority
 
-assign diag_reg  = fifo_wr_data[63:32];
-assign diag_reg2 = fifo_wr_data[31: 0];
 
 always @(posedge m_axi_aclk) // resolve high fanout timing issues
 begin
@@ -136,6 +134,8 @@ rp_dma_mm2s_ctrl #(
   .dac_buf2_adr     (dac_buf2_adr),
   .dac_trig         (dac_trig),
   .dac_ctrl_reg     (dac_ctrl_reg),
+  .diag_reg         (diag_reg),
+  .diag_reg2        (diag_reg2),
   .fifo_rst         (fifo_rst),
   .fifo_full        (fifo_full | fifo_almost_full),   
   .fifo_re          ((fifo_rd_re | fifo_empty)),   
