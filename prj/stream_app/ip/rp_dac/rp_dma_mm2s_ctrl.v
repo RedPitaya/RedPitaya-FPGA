@@ -26,7 +26,8 @@ module rp_dma_mm2s_ctrl
   // input  wire                       ctrl_strm, 
 
   input  wire                       data_valid, 
-  output reg                        fifo_rst,
+  output reg                        fifo_rst_o,
+  output reg                        downsize_rst_o,
   input  wire                       fifo_full,
   input  wire                       fifo_re,
 
@@ -100,11 +101,18 @@ wire                      dat_ctrl_req_we;
 reg                       buf1_rdy;
 reg                       buf2_rdy;
 reg                       data_valid_reg;
-reg  [3:0]                fifo_rst_cnt;
+reg  [5:0]                fifo_rst_cnt;
 reg                       next_buf_nfull;
 reg                       fifo_rst_cntdwn;
 reg                       transf_end, transf_end_r;
 wire                      m_axi_rready;
+reg                       fifo_rst;
+reg  [3:0]                fifo_rst_sr;
+reg  [3:0]                idle_rst_sr;
+reg                       fifo_rst_saxi_r1;
+reg                       fifo_rst_saxi_r2;
+reg                       idle_rst_saxi_r1;
+reg                       idle_rst_saxi_r2;
 
 wire [7:0] arlen = AXI_BURST_LEN;
 
@@ -150,14 +158,13 @@ begin
   fifo_re_r  <= fifo_re_rin;
   fifo_re_r2 <= fifo_re_r;
   fifo_re_r3 <= fifo_re_r2;
-
 end
 
 reg  fifo_full_reg;
 wire fifo_wait_full = (full_cnt == 'h0);
 always @(posedge m_axi_aclk)
 begin
-  if (m_axi_aresetn == 0)
+  if (m_axi_aresetn == 0 || state_cs == IDLE)
     fifo_full_reg <= 'h1;
   if (transf_end) // was the fifo full at the end of the last transfer?
     fifo_full_reg <= fifo_wait_full;
@@ -173,6 +180,10 @@ begin
       full_cnt <= 'h1;
     
     case (state_cs)
+    IDLE: begin
+      full_cnt <= 'h0;
+    end
+
     SEND_DMA_REQ: begin
       if (|full_cnt && m_axi_dac_rvalid_i && fifo_re_in) begin
         if (full_cnt < FULL_WAIT) // wait 2x more than number of samples in burst because reads should be 1.6x slower. 
@@ -207,8 +218,8 @@ end
   
 rp_dma_mm2s_data_ctrl U_dma_mm2s_data_ctrl(
   .m_axi_aclk     (m_axi_aclk),            
-  .m_axi_aresetn  (m_axi_aresetn),                  
-  .fifo_rst       (fifo_rst),              
+  .m_axi_aresetn  (m_axi_aresetn),
+  .fifo_rst       (fifo_rst),
   .fifo_full      (~fifo_wait_full),
   .req_data       (dat_ctrl_req_data),              
   .req_we         (dat_ctrl_req_we),            
@@ -281,7 +292,7 @@ end
 ////////////////////////////////////////////////////////////
 always @(posedge m_axi_aclk)
 begin
-  if (m_axi_aresetn == 0) begin
+  if (m_axi_aresetn == 0 || state_cs == IDLE) begin
     data_valid_reg <= 1'b0;
   end else begin
     data_valid_reg <= data_valid;
@@ -326,7 +337,7 @@ begin
     FIFO_RST: begin
       if (reg_ctrl[CTRL_RESET])
         state_ns = IDLE;
-      else if (fifo_rst_cnt == 15) begin
+      else if (fifo_rst_cnt == 63) begin
         state_ns = WAIT_DATA_RDY;
       end
     end
@@ -449,7 +460,7 @@ begin
     end
 
     FIFO_RST: begin
-      if (fifo_rst_cnt == 15) begin
+      if (fifo_rst_cnt == 63) begin
         fifo_rst_cntdwn <= 1'b0;
       end
       if (reg_ctrl[CTRL_RESET])
@@ -759,8 +770,21 @@ begin
       fifo_rst <= 0;
     end   
   endcase  
+
+  fifo_rst_sr <= {fifo_rst_sr[2:0],fifo_rst};
+  idle_rst_sr <= {idle_rst_sr[2:0],state_cs==IDLE};
+
 end
 
+always @(posedge s_axis_aclk)
+begin
+  fifo_rst_saxi_r1 <= |fifo_rst_sr;
+  fifo_rst_saxi_r2 <= fifo_rst_saxi_r1;
+  fifo_rst_o       <= fifo_rst_saxi_r2;
+  idle_rst_saxi_r1 <= |idle_rst_sr;
+  idle_rst_saxi_r2 <= idle_rst_saxi_r1;
+  downsize_rst_o   <= idle_rst_saxi_r2;
+end
 ////////////////////////////////////////////////////////////
 // Name : FIFO Reset Count
 // The Xilinx FIFO needs a certain reset time.

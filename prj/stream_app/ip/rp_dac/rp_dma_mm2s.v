@@ -71,6 +71,8 @@ localparam FIFO_MAX      = 256-2;
 ////////////////////////////////////////////////////////////
 
 wire                      fifo_rst;
+wire                      downsize_rst;
+
 reg  [AXI_DATA_BITS-1:0]  fifo_wr_data; 
 reg                       fifo_wr_we;
 
@@ -136,7 +138,8 @@ rp_dma_mm2s_ctrl #(
   .dac_ctrl_reg     (dac_ctrl_reg),
   .diag_reg         (diag_reg),
   .diag_reg2        (diag_reg2),
-  .fifo_rst         (fifo_rst),
+  .fifo_rst_o       (fifo_rst),
+  .downsize_rst_o   (downsize_rst),
   .fifo_full        (fifo_full | fifo_almost_full),   
   .fifo_re          ((fifo_rd_re | fifo_empty)),   
   .m_axi_dac_araddr_o   (m_axi_araddr_o),       
@@ -165,7 +168,7 @@ rp_dma_mm2s_downsize #(
   .AXI_BURST_LEN  (AXI_BURST_LEN))
   U_dma_mm2s_downsize(
   .clk            (s_axis_aclk),              
-  .rst            (adc_rstn ),        
+  .rst            ((adc_rstn==1'b1 && downsize_rst==1'b0)),        
   .fifo_empty     (fifo_empty),
   .fifo_full      (fifo_full_rr | fifo_almost_full_rd),
   .fifo_rd_data   (fifo_rd_data),          
@@ -186,7 +189,7 @@ fifo_axi_data_dac
   U_fifo_axi_data(
   .wr_clk         (m_axi_aclk),               
   .rd_clk         (s_axis_aclk),               
-  .rst            (~rstn_fifo),     
+  .rst            (!(rstn_fifo==1'b1 && fifo_rst==1'b0)),
   .din            (fifo_wr_data),                                 
   .wr_en          (fifo_wr_we),            
   .full           (fifo_full),   
