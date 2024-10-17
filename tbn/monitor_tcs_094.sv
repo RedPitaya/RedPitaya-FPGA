@@ -52,14 +52,14 @@ wire  [4*1 -1:0] axi_clk   = {top_tb.red_pitaya_top.ps.system_i.i_s_axi_hp3.axi_
                               top_tb.red_pitaya_top.ps.system_i.i_s_axi_hp1.axi_clk_i,
                               top_tb.red_pitaya_top.ps.system_i.i_s_axi_hp0.axi_clk_i};
 
-
 `ifdef Z20_4ADC
+/*
 wire  [  14-1:0] adc_adr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_wp[14-1:0],
                               top_tb.red_pitaya_top.i_scope_2_3.adc_wp[14-1:0],
                               top_tb.red_pitaya_top.i_scope_0_1.adc_wp[14-1:0],
                               top_tb.red_pitaya_top.i_scope_0_1.adc_wp[14-1:0]};
 
-wire  [  14-1:0] adc_datr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_b_bram_in,
+wire  [  12-1:0] adc_datr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_b_bram_in,
                               top_tb.red_pitaya_top.i_scope_2_3.adc_a_bram_in,
                               top_tb.red_pitaya_top.i_scope_0_1.adc_b_bram_in,
                               top_tb.red_pitaya_top.i_scope_0_1.adc_a_bram_in};
@@ -85,6 +85,39 @@ wire           axi_trig  = top_tb.red_pitaya_top.i_scope_0_1.axi_a_trig;
 wire [32-1:0]  axi_triga = top_tb.red_pitaya_top.i_scope_0_1.set_a_axi_trig;
 wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope_0_1.adc_wp_trig[14-1:0];
 wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope_0_1.set_a_tresh;
+*/
+
+wire  [  14-1:0] adc_adr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_wp_act[28-1:14],
+                              top_tb.red_pitaya_top.i_scope_2_3.adc_wp_act[14-1: 0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_wp_act[28-1:14],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_wp_act[14-1: 0]};
+
+wire  [  14-1:0] adc_datr [3:0] = {top_tb.red_pitaya_top.i_scope_2_3.adc_bram_in[28-1:14],
+                              top_tb.red_pitaya_top.i_scope_2_3.adc_bram_in[14-1: 0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_bram_in[28-1:14],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_bram_in[14-1: 0]};
+
+wire  [4*1 -1:0] adc_we    = {top_tb.red_pitaya_top.i_scope_2_3.adc_we[1],
+                              top_tb.red_pitaya_top.i_scope_2_3.adc_we[0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_we[1],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_we[0]};
+
+wire  [4*1 -1:0] adc_dv    = {top_tb.red_pitaya_top.i_scope_2_3.adc_dv_del[1],
+                              top_tb.red_pitaya_top.i_scope_2_3.adc_dv_del[0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_dv_del[1],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_dv_del[0]};
+
+wire  [4*1 -1:0] adc_clk   = {top_tb.red_pitaya_top.i_scope_2_3.adc_clk_i[1],
+                              top_tb.red_pitaya_top.i_scope_2_3.adc_clk_i[0],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_clk_i[1],
+                              top_tb.red_pitaya_top.i_scope_0_1.adc_clk_i[0]};
+
+wire [ 4-1:0]  trig_src  = top_tb.red_pitaya_top.i_scope_0_1.trg_state[3:0];
+wire           adc_trig  = top_tb.red_pitaya_top.i_scope_0_1.adc_trig[0];
+wire           axi_trig  = top_tb.red_pitaya_top.i_scope_0_1.axi_trig[0];
+wire [32-1:0]  axi_triga = top_tb.red_pitaya_top.i_scope_0_1.axi_wp_trig[32-1:0];
+wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope_0_1.adc_wp_trig[14-1:0];
+wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope_0_1.set_tresh[14-1:0];
 
 `else
 wire  [  14-1:0] adc_adr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_wp[14-1:0],
@@ -252,7 +285,7 @@ task axi_monitor_ch0  (
     //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
-        $display("writing AXI file %d,%t",i,$time);
+        //$display("writing AXI file %d,%t",i,$time);
         if(axi_strb[i*8+0])
           $fwrite(AXI_rfile[i], `XFORMAT, `XVALS0);
 
@@ -274,7 +307,7 @@ task axi_monitor_ch1  (
     //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
-        $display("writing AXI file %d,%t",i,$time);
+        //$display("writing AXI file %d,%t",i,$time);
         if(axi_strb[i*8+0])
           $fwrite(AXI_rfile[i], `XFORMAT, `XVALS0);
 
@@ -296,7 +329,7 @@ task axi_monitor_ch2  (
     //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
-        $display("writing AXI file %d,%t",i,$time);
+        //$display("writing AXI file %d,%t",i,$time);
         if(axi_strb[i*8+0])
           $fwrite(AXI_rfile[i], `XFORMAT, `XVALS0);
 
@@ -318,7 +351,7 @@ task axi_monitor_ch3  (
     //$display("AXI enable: %d, i: %d, %t", enable, i, $time);
     @(posedge axi_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
-        $display("writing AXI file %d,%t",i,$time);
+       // $display("writing AXI file %d,%t",i,$time);
         if(axi_strb[i*8+0])
           $fwrite(AXI_rfile[i], `XFORMAT, `XVALS0);
 
@@ -359,7 +392,7 @@ task adc_monitor_ch0 (
   int i = ch0;
   if (adc_we[i] && adc_dv[i] && enable) begin
     $fwrite(ADC_rfile[i], `AFORMAT, `AVALS);
-    $display("writing ADC file %d,%t",i,$time);
+    //$display("writing ADC file %d,%t",i,$time);
   end
 endtask: adc_monitor_ch0
 
@@ -370,7 +403,7 @@ task adc_monitor_ch1 (
   int i = ch1;
   if (adc_we[i] && adc_dv[i] && enable) begin
     $fwrite(ADC_rfile[i], `AFORMAT, `AVALS);
-    $display("writing ADC file %d,%t",i,$time);
+    //$display("writing ADC file %d,%t",i,$time);
   end
 endtask: adc_monitor_ch1
 
@@ -380,7 +413,7 @@ task adc_monitor_ch2 (
   int i = ch2;
   if (adc_we[i] && adc_dv[i] && enable) begin
     $fwrite(ADC_rfile[i], `AFORMAT, `AVALS);
-    $display("writing ADC file %d,%t",i,$time);
+    //$display("writing ADC file %d,%t",i,$time);
   end
 endtask: adc_monitor_ch2
 
@@ -391,7 +424,7 @@ task adc_monitor_ch3 (
   int i = ch3;
   if (adc_we[i] && adc_dv[i] && enable) begin
     $fwrite(ADC_rfile[i], `AFORMAT, `AVALS);
-    $display("writing ADC file %d,%t",i,$time);
+    //$display("writing ADC file %d,%t",i,$time);
   end
 endtask: adc_monitor_ch3
 

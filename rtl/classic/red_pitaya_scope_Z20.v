@@ -61,6 +61,8 @@ module red_pitaya_scope_Z20 #(
    input                 trig_asg_i      ,  // ASG trigger
    output     [  4-1: 0] trig_ch_o       ,  // output trigger to ADC for other 2 channels
    input      [  4-1: 0] trig_ch_i       ,  // input ADC trigger from other 2 channels
+   output     [  4-1: 0] trig_ext_asg_o  ,  // output External and ASG trigger to share between multiple scope modules
+   input      [  4-1: 0] trig_ext_asg_i  ,  // input External and ASG trigger 
    output                daisy_trig_o    ,  // trigger for daisy chaining
    // AXI0 master
    output                axi0_clk_o      ,  // global clock
@@ -357,7 +359,7 @@ always @(posedge adc_clk_i) begin
          adc_we <= 1'b0 ;
 
       // count how much data was written into the buffer before trigger
-      if (adc_rst_do || adc_arm_do)
+      if ((adc_rst_do || adc_arm_do) || (trig_dis_clr && adc_we_keep)) // at arm, in cont mode at trigger protect clear
          adc_we_cnt <= 32'h0;
       else if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
@@ -824,10 +826,10 @@ if (adc_rstn_i == 1'b0) begin
        4'd3 : adc_trig <= CHN == 0 ? adc_trig_an : trig_ch_i[1] ; // A ch falling edge
        4'd4 : adc_trig <= CHN == 0 ? adc_trig_bp : trig_ch_i[2] ; // B ch rising edge
        4'd5 : adc_trig <= CHN == 0 ? adc_trig_bn : trig_ch_i[3] ; // B ch falling edge
-       4'd6 : adc_trig <= ext_trig_p    ; // external - rising edge
-       4'd7 : adc_trig <= ext_trig_n    ; // external - falling edge
-       4'd8 : adc_trig <= asg_trig_p    ; // ASG - rising edge
-       4'd9 : adc_trig <= asg_trig_n    ; // ASG - falling edge
+       4'd6 : adc_trig <= trig_ext_asg_i[0]    ; // external - rising edge
+       4'd7 : adc_trig <= trig_ext_asg_i[1]    ; // external - falling edge
+       4'd8 : adc_trig <= trig_ext_asg_i[2]    ; // ASG - rising edge
+       4'd9 : adc_trig <= trig_ext_asg_i[3]    ; // ASG - falling edge
        4'd10: adc_trig <= CHN == 1 ? adc_trig_ap : trig_ch_i[0] ; // from the other two ADC channels: C ch rising edge
        4'd11: adc_trig <= CHN == 1 ? adc_trig_an : trig_ch_i[1] ; // from the other two ADC channels: C ch falling edge
        4'd12: adc_trig <= CHN == 1 ? adc_trig_bp : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
@@ -1006,6 +1008,7 @@ assign ext_trig_n = (ext_trig_dn == 2'b10) ;
 assign asg_trig_p = (asg_trig_dp == 2'b01) ;
 assign asg_trig_n = (asg_trig_dn == 2'b10) ;
 
+assign trig_ext_asg_o = {asg_trig_n, asg_trig_p, ext_trig_n, ext_trig_p};
 //---------------------------------------------------------------------------------
 //  System bus connection
 

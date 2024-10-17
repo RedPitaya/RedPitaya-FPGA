@@ -64,11 +64,15 @@ module red_pitaya_asg_ch #(
    input     [  14-1: 0] set_dc_i        ,  //!< set output offset
    input     [  14-1: 0] set_first_i     ,  //!< set initial value before start
    input     [  14-1: 0] set_last_i      ,  //!< set final value in burst
+   input     [  32-1: 0] set_last_len_i  ,  //!< set length of final value in burst in ADC counts
    input                 set_zero_i      ,  //!< set output to zero
    input     [  16-1: 0] set_ncyc_i      ,  //!< set number of cycle
    input     [  16-1: 0] set_rnum_i      ,  //!< set number of repetitions
    input     [  32-1: 0] set_rdly_i      ,  //!< set delay between repetitions
    input     [  20-1: 0] set_deb_len_i   ,  //!< set trigger debouncer
+   input     [  32-1: 0] set_seed_i      ,  //!< initial value for LFSR
+   input                 rand_en_i       ,  //!< enable random output
+   input                 rand_init_i     ,  //!< initialize LFSR
    input                 set_rgate_i        //!< set external gated repetition
 );
 
@@ -76,10 +80,25 @@ module red_pitaya_asg_ch #(
 //
 //  DAC buffer RAM
 
+wire [14-1:0] lfsr_noise;
+  rand_lfsr #(
+    .DW ( 14 ) // output data width
+  )
+  i_rand
+  (
+    .clk_i   (  dac_clk_i  ), // clock
+    .rstn_i  (  dac_rstn_i ), // reset
+    .init_i  (  rand_init_i), // enable
+    .seed_i  (  set_seed_i ), // init value
+    .dat_o   (  lfsr_noise )  // data output noise
+  );
+
+
 localparam PNT_SIZE = RSZ+16+32;
 
 reg   [  14-1: 0] dac_buf [0:(1<<RSZ)-1] ;
 reg   [  14-1: 0] dac_rd    ;
+wire  [  14-1: 0] dac_sel   ;
 reg   [  14-1: 0] dac_rdat  ;
 
 reg   [ RSZ-1: 0] dac_rp    ;
@@ -124,10 +143,11 @@ if (buf_we_i)  dac_buf[buf_addr_i] <= buf_wdata_i[14-1:0] ;
 always @(posedge dac_clk_i)
 buf_rdata_o <= dac_buf[buf_addr_i] ;
 
+assign dac_sel = rand_en_i ? lfsr_noise : dac_rdat;
 // scale and offset
 always @(posedge dac_clk_i)
 begin
-   dac_mult <= $signed(dac_rdat) * $signed({1'b0,set_amp_i}) ;
+   dac_mult <= $signed(dac_sel) * $signed({1'b0,set_amp_i}) ;
    dac_sum  <= $signed(dac_mult[28-1:13]) + $signed(set_dc_i) ;
 
    // saturation
@@ -151,6 +171,7 @@ wire             ext_trig_n   ;
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
 reg  [   8-1: 0] dly_tick     ;
+reg  [  32-1: 0] last_cnt     ;
 
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_dlysr ;
@@ -166,12 +187,18 @@ end
 
 always @(posedge dac_clk_i)
 begin 
-   if (dac_rstn_i == 1'b0)
-      lastval <= 1'b0;
-   else begin
+   if (dac_rstn_i == 1'b0) begin
+      lastval  <= 1'b0;
+      last_cnt <= 32'h0;
+   end else begin
+      if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
+         last_cnt <= set_last_len_i;
+      else if (last_cnt > 32'd0)
+         last_cnt <= last_cnt - 1;
+     
       if (dac_do_dlysr[4:3] == 2'b10) // negative edge of dly_do, delayed for 4 cycles
          lastval <= 1'b1;
-      else if ((lastval && dly_cnt == 'd0 && (|rep_cnt || (trig_in && !dac_do)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
+      else if ((lastval && last_cnt == 'd0 && (|rep_cnt || (trig_in && !dac_do)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
          lastval <= 1'b0; // reset from lastval when a new trigger arrives
    end
 end

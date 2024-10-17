@@ -358,7 +358,7 @@ always @(posedge adc_clk_i) begin
          adc_we <= 1'b0 ;
 
       // count how much data was written into the buffer before trigger
-      if (adc_rst_do || adc_arm_do)
+      if ((adc_rst_do || adc_arm_do) || (trig_dis_clr && adc_we_keep)) // at arm, in cont mode at trigger protect clear
          adc_we_cnt <= 32'h0;
       else if (adc_we & ~adc_dly_do & adc_dv_del & ~&adc_we_cnt)
          adc_we_cnt <= adc_we_cnt + 1;
