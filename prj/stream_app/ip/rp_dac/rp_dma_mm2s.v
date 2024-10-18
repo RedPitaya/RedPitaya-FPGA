@@ -189,7 +189,7 @@ fifo_axi_data_dac
   U_fifo_axi_data(
   .wr_clk         (m_axi_aclk),               
   .rd_clk         (s_axis_aclk),               
-  .rst            (!(rstn_fifo==1'b1 && fifo_rst==1'b0)),
+  .rst            (!(rstn_fifo==1'b1 && downsize_rst==1'b0)),
   .din            (fifo_wr_data),                                 
   .wr_en          (fifo_wr_we),            
   .full           (fifo_full),   

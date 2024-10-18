@@ -224,14 +224,6 @@
       </spirit:portMaps>
       <spirit:parameters>
         <spirit:parameter>
-          <spirit:name>NUM_READ_OUTSTANDING</spirit:name>
-          <spirit:value spirit:id="BUSIFPARAM_VALUE.S_AXI_REG.NUM_READ_OUTSTANDING"/>
-        </spirit:parameter>
-        <spirit:parameter>
-          <spirit:name>NUM_WRITE_OUTSTANDING</spirit:name>
-          <spirit:value spirit:id="BUSIFPARAM_VALUE.S_AXI_REG.NUM_WRITE_OUTSTANDING"/>
-        </spirit:parameter>
-        <spirit:parameter>
           <spirit:name>PROTOCOL</spirit:name>
           <spirit:value spirit:id="BUSIFPARAM_VALUE.S_AXI_REG.PROTOCOL">AXI3</spirit:value>
         </spirit:parameter>
