@@ -279,8 +279,8 @@ begin
     reg_sts[RESET_STATE]      <= (state_cs == FIFO_RST);
     reg_sts[SEND_DMA_STATE1]  <= (state_cs == SEND_DMA_REQ      && req_buf_addr_sel == 1'b0);
     reg_sts[SEND_DMA_STATE2]  <= (state_cs == SEND_DMA_REQ      && req_buf_addr_sel == 1'b1);
-    reg_sts[BUF1_FREE]        <= req_buf_addr_sel == 1'b1 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0);
-    reg_sts[BUF2_FREE]        <= req_buf_addr_sel == 1'b0 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1);
+    reg_sts[BUF1_FREE]        <= req_buf_addr_sel == 1'b1 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0) || (state_cs == IDLE);
+    reg_sts[BUF2_FREE]        <= req_buf_addr_sel == 1'b0 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1) || (state_cs == IDLE);
 
   end
 end
