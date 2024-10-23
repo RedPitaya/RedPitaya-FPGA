@@ -119,12 +119,14 @@ wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
 wire                  dac_npnt_sub_neg;
 wire                  axi_dac_do;
+wire                  axi_init;
 reg  [   5-1: 0] axi_dac_do_sr ;
 wire                  axi_last;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
 assign axi_dac_do = axi_state_o[1];
+assign axi_init   = axi_state_o[3];
 
 reg   [  16-1: 0] cyc_cnt   ;
 reg signed  [  28-1: 0] dac_mult  ;
@@ -203,13 +205,16 @@ wire             dac_trig     ;
 reg              dac_trigr    ;
 
 wire             do_read      ;
+wire             do_read_start;
 wire             do_read_end  ;
 wire             buf_cycle    ;
 
-assign do_read     = set_axi_en_i ? axi_dac_do  : dac_do;
-assign do_read_end = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr && !axi_dac_do) : 
+assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
+assign do_read_start = set_axi_en_i ? axi_init    : dac_do;
+
+assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
-assign buf_cycle   = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
 
 always @(posedge dac_clk_i)
 begin 
@@ -250,7 +255,7 @@ always @(posedge dac_clk_i) begin
          dly_tick <= dly_tick + 8'h1 ;
 
       // delay between repetitions 
-      if (set_rst_i || do_read)
+      if (set_rst_i || do_read_start)
          dly_cnt <= set_rdly_i ;
       else if (|dly_cnt && (dly_tick == 8'd124))
          dly_cnt <= dly_cnt - 32'h1 ;
@@ -267,6 +272,7 @@ always @(posedge dac_clk_i) begin
       dac_pntp  <= dac_pnt;
       axi_pntp  <= axi_pnt;
       dac_trigr <= dac_trig; // ignore trigger when count
+
       if (dac_trig)
          cyc_cnt <= set_ncyc_i ;
       else if (!dac_trigr && |cyc_cnt && buf_cycle)
@@ -379,6 +385,7 @@ rp_asg_axi #(
   .set_axi_start_i ( set_axi_start_i   ),
   .set_axi_stop_i  ( set_axi_stop_i    ),
   .set_axi_dec_i   ( set_axi_dec_i     ),
+  .set_cyc_cnt_i   ( set_ncyc_i        ),
   .cyc_cnt_i       ( cyc_cnt           ),
   .axi_state_o     ( axi_state_o       ),
   .axi_last_o      ( axi_last          ),

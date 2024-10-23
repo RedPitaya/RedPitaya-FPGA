@@ -24,9 +24,10 @@ module rp_asg_axi #(
    input      [  32-1: 0] set_axi_start_i ,  //!< AXI start address
    input      [  32-1: 0] set_axi_stop_i  ,  //!< AXI stop address
    input      [  32-1: 0] set_axi_dec_i   ,  //!< AXI decimation
+   input      [  16-1: 0] set_cyc_cnt_i   ,  //!< limit number of writes
    input      [  16-1: 0] cyc_cnt_i       ,  //!< cycle count for dac_do reset
    output     [  16-1: 0] axi_state_o     ,  //!< AXI state
-   output reg             axi_last_o      ,  //!< AXI final sample
+   output                 axi_last_o      ,  //!< AXI final sample
 
    output reg [  32-1: 0] err_cnt_o       ,  //!< number of missed samples
    output reg [  32-1: 0] transf_cnt_o       //!< number of successful AXI transfers
@@ -61,12 +62,20 @@ logic             dac_rd_clr;
 logic [  128-1:0] req_fifo_in; 
 logic             req_fifo_wr;
 logic             req_fifo_full;
+logic [   SL-1:0] rf_full_sr;
+
 logic [  128-1:0] req_fifo_out;
+logic [  128-1:0] req_fifo_out_r;
+
 logic             req_fifo_rd;
 logic [   SL-1:0] rf_rd_sr;
 
 logic             req_fifo_empty;
+logic             req_fifo_empty_r;
+
 logic             new_req;
+logic [   SL-1:0] new_req_sr;
+
 logic             new_req_r;
 
 logic [   DW-1:0] dat_fifo_idata; 
@@ -77,7 +86,7 @@ logic             dat_fifo_full;
 logic [AW+DW-1:0] dat_fifo_out;
 logic [   AW-1:0] dat_fifo_addr; 
 logic             dat_fifo_rden;
-logic             dat_fifo_rden_r;
+logic             df_wr_rdy;
 
 logic             dat_fifo_rd;
 logic             dat_fifo_empty;
@@ -85,6 +94,10 @@ logic             df_empty_r;
 logic             df_nempty_init;
 logic [   SL-1:0] df_rden_sr;
 logic             df_first_valid;
+logic             dac_rden;
+
+logic             last_val;
+logic             last_val_r;
 
 logic [    8-1:0] dat_fifo_lvl; 
 
@@ -92,24 +105,25 @@ logic [    8-1:0] dat_fifo_lvl;
 logic [   AW-1:0] ctrl_addr; 
 logic [   AW-1:0] ctrl_size; 
 logic [    3-1:0] ctrl_rsize; 
-logic             ctrl_val; 
 logic             ctrl_busy; 
 logic             stat_busy; 
 logic             stat_busy_r; 
-
-logic [   16-1:0] rds_cnt; 
-logic [   16-1:0] rds_cnt2; 
-logic [   16-1:0] rds_cnt3; 
 
 logic [   16-1:0] dec_cnt; 
 logic             dec_val; 
 logic [   SL-1:0] dec_val_sr; 
 logic [    2-1:0] fifo_rd_rp; 
 logic [    2-1:0] fifo_rd_rp_r; 
+logic [   16-1:0] r_cycles; 
+logic             trig_r; 
+logic [    5-1:0] rst_busy = 'h0; 
+logic             rst_r;
+logic             rst_on_pulse;
+logic             fifo_rst;
 
 
 localparam AXI_BURST_LEN    = 16;
-localparam FIFO_RESERVE     = AXI_BURST_LEN*14;
+localparam FIFO_RESERVE     = AXI_BURST_LEN*15;
 
 localparam AXI_BURST_BYTES  = AXI_BURST_LEN*DW/8;
 localparam NUM_SAMPS        = DW/16;
@@ -121,10 +135,21 @@ assign dac_rd_rsize =  3'h3;
 //
 //  request FIFO logic
 
-assign axi_state_o  =  {12'h0,dac_rd_clr,dat_fifo_rden,df_first_valid,dac_do};
-assign dac_rd_clr   = set_rst_i || (!axi_en_sr[0] && set_axi_en_i) || (!dat_fifo_rden && df_rden_sr[0]);
+assign axi_state_o  =  {dat_fifo_lvl,
+                        df_nempty_init,stat_busy,dat_fifo_empty,(|rf_full_sr),
+                        dac_rden,dat_fifo_rden,df_first_valid,dac_do};
 
+assign rst_on_pulse = set_rst_i && !rst_r;
+assign dac_rd_clr   = rst_on_pulse || (!axi_en_sr[0] && set_axi_en_i) || (!dat_fifo_rden && df_rden_sr[0]);
 
+always @(posedge dac_clk_i) // shift registers
+begin
+  rst_r <= set_rst_i;
+  if (dac_rd_clr)
+    rst_busy <= 'h1;
+  else if (rst_busy >= 1)
+    rst_busy <= rst_busy + 1;
+end
 
 always @(posedge dac_clk_i) // shift registers
 begin
@@ -132,15 +157,22 @@ begin
   df_rden_sr <= {df_rden_sr[SL-2:0], dat_fifo_rden};
   axi_en_sr  <= {axi_en_sr[SL-2:0] , set_axi_en_i };
   dec_val_sr <= {dec_val_sr[SL-2:0], dec_val      };
+  rf_full_sr <= {rf_full_sr[SL-2:0], req_fifo_full};
+  new_req_sr <= {new_req_sr[SL-2:0], new_req      };
+
   stat_busy_r <= stat_busy;
 end
 
 always @(posedge axi_sys.clk)
 begin
-  rf_rd_sr   <= {rf_rd_sr[SL-2:0]  , req_fifo_rd };
+  rf_rd_sr    <= {rf_rd_sr[SL-2:0]  , req_fifo_rd };
+
+  df_wr_rdy   <= !dat_fifo_full && !dat_fifo_wr;
+  req_fifo_empty_r <= req_fifo_empty;
+  req_fifo_rd <= !req_fifo_empty_r && !ctrl_busy && !(|rf_rd_sr) && !req_fifo_rd;
 end
 
-assign new_req = dac_do && dat_fifo_lvl <= FIFO_RESERVE && !req_fifo_full && !dac_rd_clr; // new address burst request
+assign new_req = dac_do && (!(|rf_full_sr)) && (!(new_req_sr[3:0])) && !(dac_rd_clr || |rst_busy) ; // new address burst request
 assign dac_npnt = dac_pnt + AXI_BURST_BYTES;                                              // next address
 assign buf_ovr_limit = dac_npnt >= set_axi_stop_i;                                        // buffer wrap
 
@@ -148,7 +180,6 @@ always @(posedge dac_clk_i)
 begin
   buf_final     <= set_axi_stop_i-DW/8;
   new_req_r     <= new_req;
-
   if (req_fifo_wr)
     buf_ovr_limit_r <= buf_ovr_limit;
 
@@ -167,11 +198,24 @@ end
 
 always @(posedge dac_clk_i) begin // enable writing the request buffer
   if (dac_rstn_i == 1'b0) begin
+    r_cycles <=  16'h0 ;
+    trig_r   <=   1'b0 ;
+  end else begin
+    trig_r <= trig_i;
+    if (trig_i)
+      r_cycles <= set_cyc_cnt_i ;
+    else if (!trig_r && |r_cycles && buf_ovr_limit && req_fifo_wr)
+      r_cycles <= r_cycles - 16'h1 ;
+  end
+end
+
+always @(posedge dac_clk_i) begin // enable writing the request buffer
+  if (dac_rstn_i == 1'b0) begin
     dac_do    <=  1'b0 ;
   end else begin
-    if (set_axi_en_i && trig_i && !set_rst_i && !dac_rd_clr)
+    if (set_axi_en_i && trig_i && !rst_on_pulse)
       dac_do <= 1'b1 ;
-    else if (set_rst_i || ((cyc_cnt_i==16'h1) && buf_ovr_limit_r))
+    else if (rst_on_pulse || ((r_cycles==16'h1) && buf_ovr_limit && req_fifo_wr))
       dac_do <= 1'b0 ;
   end
 end
@@ -183,18 +227,18 @@ assign req_fifo_in  = {32'h0,
                        dac_rd_rsize,
                        dac_rd_size,
                        dac_pnt};
-assign req_fifo_rd  = !req_fifo_empty && !ctrl_busy && !(|rf_rd_sr) && dat_fifo_lvl <= FIFO_RESERVE;
 
 
 // commands for AXI module
 always @(posedge axi_sys.clk) begin
-  ctrl_val <= req_fifo_rd;
   if (rf_rd_sr[0]) begin
-    ctrl_addr   <=  req_fifo_out[0*AW +: AW];
-    ctrl_size   <=  req_fifo_out[1*AW +: AW];
-    ctrl_rsize  <=  req_fifo_out[2*AW +:  3];
+    req_fifo_out_r <= req_fifo_out;
   end
 end
+
+assign ctrl_addr   =  req_fifo_out_r[0*AW +: AW];
+assign ctrl_size   =  req_fifo_out_r[1*AW +: AW];
+assign ctrl_rsize  =  req_fifo_out_r[2*AW +:  3];
 
 //---------------------------------------------------------------------------------
 //
@@ -202,7 +246,7 @@ end
 
 always @(posedge dac_clk_i) begin // FIFO empty status - latched
   df_empty_r <= dat_fifo_empty;
-  if (fifo_rst) begin
+  if (fifo_rst || ((cyc_cnt_i==16'h1) && axi_last_o)) begin
     df_nempty_init <= 1'b0;
   end else begin
     if (!dat_fifo_empty && df_empty_r)
@@ -216,37 +260,55 @@ always @(posedge dac_clk_i) begin
   end else begin
     if (dat_fifo_rden && dat_fifo_rd) // enable data to output register
       df_first_valid <= 1'b1;
-    else if (set_rst_i || ((cyc_cnt_i==16'h1) && axi_last_o))
+    else if (rst_on_pulse || ((cyc_cnt_i==16'h1) && axi_last_o))
       df_first_valid <= 1'b0;
+  end
+end
+
+always @(posedge dac_clk_i) begin
+  if (fifo_rst) begin
+    dac_rden <= 1'b0;
+  end else begin
+    if (trig_r) // just show that the receiver is enabled
+      dac_rden <= 1'b1;
+    else if (rst_on_pulse || ((cyc_cnt_i==16'h1) && axi_last_o))
+      dac_rden <= 1'b0;
   end
 end
 
 always @(posedge dac_clk_i) begin // enable reading the data FIFO
   if (dac_rstn_i == 1'b0) begin
     dat_fifo_rden   <= 1'b0;
-    dat_fifo_rden_r <= 1'b0;
   end else begin
 
     if (!dat_fifo_empty && df_empty_r && !df_nempty_init) // first time the FIFO is not empty
       dat_fifo_rden <= 1'b1;
-    else if (set_rst_i || ((cyc_cnt_i==16'h1) && axi_last_o))
+    else if (rst_on_pulse || ((cyc_cnt_i==16'h1) && axi_last_o))
       dat_fifo_rden <= 1'b0;
     
-    dat_fifo_rden_r <= dat_fifo_rden;
   end
 end
+
+reg [ 16-1:0] samp_buf [0:NUM_SAMPS-1]; // sample buffer
+
 
 always @(posedge dac_clk_i) begin // reading data from 64 bit FIFO
   if (df_first_valid)
     dac_o  <= samp_buf[fifo_rd_rp_r][14-1:0];
 
   dat_fifo_addr <= dat_fifo_out[DW +: 32];
-  axi_last_o    <= (dat_fifo_addr == buf_final) && dat_fifo_rden && dec_val && fifo_rd_rp_r == 2'h3; // end of burst
+  last_val      <= (dat_fifo_addr == buf_final) && dat_fifo_rden && dec_val && fifo_rd_rp_r == 2'h3; // end of burst
+
+  if (last_val)
+    last_val_r    <= 1'b1;
+  else if(dat_fifo_rd)
+    last_val_r    <= 1'b0;
+
 end
 
 
 assign dat_fifo_rd  = dat_fifo_rden && !dat_fifo_empty && (&fifo_rd_rp && dec_val); // just before we read the next 4 samples
-
+assign axi_last_o   = last_val && !last_val_r;
 
 always @(posedge dac_clk_i) begin // free running output decimation (holds sample for N clock cycles)
   if (dac_rstn_i == 1'b0) begin
@@ -270,12 +332,16 @@ always @(posedge dac_clk_i) begin // free running read pointer (4 to 1 selector)
   end else begin
       fifo_rd_rp_r <=fifo_rd_rp;
       if (dec_val) begin
-        fifo_rd_rp <= fifo_rd_rp + 1;
+        if (&fifo_rd_rp) begin
+          if (!dat_fifo_empty)
+            fifo_rd_rp <= fifo_rd_rp + 1;
+        end else begin
+          fifo_rd_rp <= fifo_rd_rp + 1;
+        end
       end
   end
 end
 
-reg [ 16-1:0] samp_buf [0:NUM_SAMPS-1]; // sample buffer
 
 genvar GV;
 generate
@@ -334,7 +400,6 @@ end
 //
 //  FIFO reset logic
 
-reg fifo_rst;
 always @(posedge dac_clk_i) begin
   fifo_rst <= dac_rstn_i==1'b0 || dac_rd_clr;
 end
@@ -377,7 +442,7 @@ assign dat_fifo_in = {dat_fifo_iaddr,dat_fifo_idata};
     .full           (dat_fifo_full    ),
     .dout           (dat_fifo_out     ),
     .rd_en          (dat_fifo_rd      ),
-    .rd_data_count  (dat_fifo_lvl     ), //[8-1:0]
+    .rd_data_count  (dat_fifo_lvl     ),
     .empty          (dat_fifo_empty   ),
     .wr_rst_busy    (                 ),
     .rd_rst_busy    (                 )
@@ -397,24 +462,24 @@ assign dat_fifo_in = {dat_fifo_iaddr,dat_fifo_idata};
   (
 
     // AXI master signals
-    .axi_sys     (  axi_sys    ) ,
+    .axi_sys      (  axi_sys          ) ,
 
     // configuration signals
-    .cfg_clk_i   (  dac_clk_i   ) , // config clock
-    .cfg_rstn_i  (  dac_rstn_i  ) , // config reset
+    .cfg_clk_i    (  dac_clk_i        ) , // config clock
+    .cfg_rstn_i   (  dac_rstn_i       ) , // config reset
 
-    .ctrl_addr_i       (  ctrl_addr            ) , // request start address
-    .ctrl_size_i       (  ctrl_size[4-1:0]     ) , // request size
-    .ctrl_rsize_i      (  ctrl_rsize           ) , // read size ( in bytes)
-    .ctrl_val_i        (  rf_rd_sr[1]          ) , // request transfer
+    .ctrl_addr_i  (  ctrl_addr        ) , // request start address
+    .ctrl_size_i  (  ctrl_size[4-1:0] ) , // request size
+    .ctrl_rsize_i (  ctrl_rsize       ) , // read size ( in bytes)
+    .ctrl_val_i   (  rf_rd_sr[1]      ) , // request transfer
 
     // data
-    .rd_data_o  (  dat_fifo_idata) , // read data
-    .rd_addr_o  (  dat_fifo_iaddr) , // read data
-    .rd_dval_o  (  dat_fifo_wr   ) , // read data valid
-    .rd_drdy_i  (  1'b1          ) , // read data ready
-    .ctrl_busy_o       (  ctrl_busy            ) , // busy @axi_clk
-    .stat_busy_o       (  stat_busy            )   // status @cfg_clk
+    .rd_data_o    (  dat_fifo_idata   ) , // read data
+    .rd_addr_o    (  dat_fifo_iaddr   ) , // read data
+    .rd_dval_o    (  dat_fifo_wr      ) , // read data valid
+    .rd_drdy_i    (  df_wr_rdy        ) , // read data ready
+    .ctrl_busy_o  (  ctrl_busy        ) , // busy @axi_clk
+    .stat_busy_o  (  stat_busy        )   // status @cfg_clk
   );
 
 endmodule
