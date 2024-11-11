@@ -17,12 +17,6 @@
                                         linux,default-trigger = "mmc0";
                                 };
 
-                                led-9-red {
-                                        default-state = "off";
-                                        gpios = <0x0a 0x07 0x00>;
-                                        label = "led9";
-                                        linux,default-trigger = "heartbeat";
-                                };
                         };
                 };
         };

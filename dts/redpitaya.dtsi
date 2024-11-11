@@ -11,3 +11,4 @@
 /include/ "clkc.dtsi"
 /include/ "watchdog.dtsi"
 /include/ "uio-api.dtsi"
+/include/ "led-system-red.dtsi"
