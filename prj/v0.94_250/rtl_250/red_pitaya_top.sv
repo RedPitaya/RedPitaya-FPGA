@@ -126,6 +126,7 @@ module red_pitaya_top #(
 
 // GPIO input data width
 localparam int unsigned GDW = 8;
+localparam RST_MAX = 64;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -147,6 +148,13 @@ logic                 pll_adc_10mhz;
 logic                 pll_ser_clk;
 logic                 pll_pwm_clk;
 logic                 pll_locked;
+logic                 pll_locked_r;
+logic                 fpll_locked_r,fpll_locked_r2,fpll_locked_r3;
+
+logic   [16-1:0]      rst_cnt = 'h0;
+logic                 rst_after_locked;
+logic                 rstn_pll;
+
 // fast serial signals
 logic                 ser_clk ;
 // PWM clock and reset
@@ -187,7 +195,7 @@ logic                 adc_clk_daisy;
 logic                 scope_trigo;
 
 // system bus
-sys_bus_if   ps_sys      (.clk (adc_clk2d), .rstn (adc_rstn));
+sys_bus_if   ps_sys      (.clk (fclk[0]), .rstn (frstn[0]));
 sys_bus_if   sys [8-1:0] (.clk (adc_clk2d), .rstn (adc_rstn));
 
 // GPIO interface
@@ -207,10 +215,11 @@ axi_sys_if axi3_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
 // diferential clock input
 IBUFDS i_clk (.I (adc_clk_i[1]), .IB (adc_clk_i[0]), .O (adc_clk_in));  // differential clock input
 
+assign rstn_pll = frstn[0] & ~(!fpll_locked_r2 && fpll_locked_r3);
 red_pitaya_pll pll (
   // inputs
   .clk         (adc_clk_in),  // clock
-  .rstn        (frstn[0]  ),  // reset - active low
+  .rstn        (rstn_pll  ),  // reset - active low
   // output clocks
   .clk_adc     (pll_adc_clk   ),  // ADC clock
   .clk_adc2d   (pll_adc_clk2d ),  // ADC clock divided by 2
@@ -227,19 +236,21 @@ BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
-logic [32-1:0] locked_pll_cnt, locked_pll_cnt_r, locked_pll_cnt_r2 ;
-always @(posedge fclk[0]) begin
-  if (~frstn[0])
-    locked_pll_cnt <= 'h0;
-  else if (~pll_locked)
-    locked_pll_cnt <= locked_pll_cnt + 'h1;
+always @(posedge adc_clk2d) begin
+  pll_locked_r      <= pll_locked;
+  if ((pll_locked && !pll_locked_r) || rst_cnt > 0) begin // some clk cycles after rising edge of pll_locked
+    if (rst_cnt < RST_MAX)
+      rst_cnt <= rst_cnt + 1;
+    else 
+      rst_cnt <= 'h0;
+  end else begin
+    if (~pll_locked) begin
+      rst_cnt <= 'h0;
+    end
+  end
 end
 
-always @(posedge adc_clk) begin
-  locked_pll_cnt_r  <= locked_pll_cnt;
-  locked_pll_cnt_r2 <= locked_pll_cnt_r;
-end
-
+assign rst_after_locked = |rst_cnt;
 // ADC reset (active low)
 always @(posedge adc_clk2d)
 adc_rstn <=  frstn[0] &  pll_locked & idly_rdy;
@@ -358,6 +369,7 @@ sys_bus_interconnect #(
   .SN (8),
   .SW (20)
 ) sys_bus_interconnect (
+  .pll_locked_i(pll_locked),
   .bus_m (ps_sys),
   .bus_s (sys)
 );
@@ -525,8 +537,8 @@ endgenerate
 // data loopback
 always @(posedge adc_clk)
 begin
-  adc_dat_sw[0] <= digital_loop ? dac_a[14-1:2] : adc_dat_in[1][14-1:2]; // switch adc_b->ch_a
-  adc_dat_sw[1] <= digital_loop ? dac_b[14-1:2] : adc_dat_in[0][14-1:2]; // switch adc_a->ch_b
+  adc_dat_sw[0] <= digital_loop ? dac_a_sum[14-1:2] : adc_dat_in[1][14-1:2]; // switch adc_b->ch_a
+  adc_dat_sw[1] <= digital_loop ? dac_b_sum[14-1:2] : adc_dat_in[0][14-1:2]; // switch adc_a->ch_b
 end
 
 ////////////////////////////////////////////////////////////////////////////////

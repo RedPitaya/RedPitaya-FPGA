@@ -40,7 +40,7 @@ module axi_rd_burst #(
    output      [ 32-1: 0] diags_o          , // read data @axi_clk
 
 
-   output                 ctrl_busy_o        , // status @axi_clk
+   output reg             ctrl_busy_o        , // status @axi_clk
    output reg             stat_busy_o          // status @cfg_clk
 );
 
@@ -114,15 +114,18 @@ assign rd_dval_o  = axi_sys.Rtransfer  ;
 
 always @(posedge axi_sys.clk)
 begin
+   ctrl_busy_o <= axi_busy;
    if (!axi_sys.rstn) begin
       axi_busy <= 1'b0  ;
    end
    else begin
-      axi_busy <= burst_cnt > 0 ;
+      if (ctrl_val_i)
+         axi_busy <= 1'b1;
+      else if (burst_cnt == 0 && axi_sys.Rtransfer)
+         axi_busy <= 1'b0;
    end
 end
 
-assign ctrl_busy_o = axi_busy;
 
 
 

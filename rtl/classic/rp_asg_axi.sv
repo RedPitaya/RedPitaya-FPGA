@@ -136,7 +136,7 @@ assign dac_rd_rsize =  3'h3;
 //  request FIFO logic
 
 assign axi_state_o  =  {dat_fifo_lvl,
-                        df_nempty_init,stat_busy,dat_fifo_empty,(|rf_full_sr),
+                        rst_busy,dac_rd_clr,dat_fifo_empty,(|rf_full_sr),
                         dac_rden,dat_fifo_rden,df_first_valid,dac_do};
 
 assign rst_on_pulse = set_rst_i && !rst_r;
@@ -173,7 +173,6 @@ begin
 end
 
 assign new_req = dac_do && (!(|rf_full_sr)) && (!(new_req_sr[3:0])) && !(dac_rd_clr || |rst_busy) ; // new address burst request
-assign dac_npnt = dac_pnt + AXI_BURST_BYTES;                                              // next address
 assign buf_ovr_limit = dac_npnt >= set_axi_stop_i;                                        // buffer wrap
 
 always @(posedge dac_clk_i)
@@ -183,6 +182,7 @@ begin
   if (req_fifo_wr)
     buf_ovr_limit_r <= buf_ovr_limit;
 
+  dac_npnt <= dac_pnt + AXI_BURST_BYTES; // next address
   if (dac_rd_clr) begin // address decision logic
     dac_pnt <= set_axi_start_i;
   end else begin 
@@ -404,6 +404,7 @@ always @(posedge dac_clk_i) begin
   fifo_rst <= dac_rstn_i==1'b0 || dac_rd_clr;
 end
 
+(* ASYNC_REG = "TRUE" *)
 reg dac_rd_clr_r,dac_rd_clr_r2;
 reg fifo_rst_axi;
 always @(posedge axi_sys.clk) begin

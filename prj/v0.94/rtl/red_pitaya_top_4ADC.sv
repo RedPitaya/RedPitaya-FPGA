@@ -119,6 +119,7 @@ module red_pitaya_top_4ADC #(
 
 // GPIO input data width
 localparam int unsigned GDW = 11;
+localparam RST_MAX = 64;
 
 logic [4-1:0] fclk ; //[0]-125MHz, [1]-250MHz, [2]-50MHz, [3]-200MHz
 logic [4-1:0] frstn;
@@ -143,6 +144,20 @@ logic [  2-1: 0]      pll_locked;
 logic                 adc_10mhz;
 logic                 spi_done; // ADC setup finished
 
+(* ASYNC_REG = "TRUE" *)
+logic                 spi_done_csff = 1'b0;
+(* ASYNC_REG = "TRUE" *)
+logic                 spi_done_adc  = 1'b0;
+
+logic [  2-1: 0]      pll_locked_r;
+logic [  2-1: 0]      fpll_locked_r,fpll_locked_r2,fpll_locked_r3;
+
+logic   [16-1:0]      rst_cnt0 = 'h0;
+logic   [16-1:0]      rst_cnt1 = 'h0;
+
+logic [  2-1: 0]      rst_after_locked;
+logic [  2-1: 0]      rstn_pll;
+
 // fast serial signals
 logic                 ser_clk ;
 // PWM clock and reset
@@ -156,10 +171,13 @@ assign spi_csb_o    = spi_cs;
 
 // ADC clock/reset
 logic       adc_clk_01 , adc_clk_23 ;
-logic       adc_rstn_01, adc_rstn_23;
+logic       adc_rstn_01 = 1'b0;
+logic       adc_rstn_23 = 1'b0;
 
 // stream bus type
 localparam type SBA_T = logic signed [14-1:0];
+SBA_T [MNA-1:0]          adc_dat_t;
+(* ASYNC_REG = "TRUE" *)
 SBA_T [MNA-1:0]          adc_dat, adc_dat_r;
 
 // configuration
@@ -174,9 +192,8 @@ logic                 can_on;
 
 
 // system bus
-sys_bus_if   ps_sys      (.clk (adc_clk_01), .rstn (adc_rstn_01));
+sys_bus_if   ps_sys      (.clk (fclk[0]   ), .rstn (frstn[0]   ));
 sys_bus_if   sys [8-1:0] (.clk (adc_clk_01), .rstn (adc_rstn_01));
-sys_bus_if   sys_adc_23  (.clk (adc_clk_23), .rstn (adc_rstn_23));
 
 // GPIO interface
 gpio_if #(.DW (3*GDW)) gpio ();
@@ -194,10 +211,13 @@ axi_sys_if axi3_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
 IBUFDS i_clk_01 (.I (adc_clk_i[0][1]), .IB (adc_clk_i[0][0]), .O (adc_clk_in[0]));  // differential clock input
 IBUFDS i_clk_23 (.I (adc_clk_i[1][1]), .IB (adc_clk_i[1][0]), .O (adc_clk_in[1]));  // differential clock input
 
+assign rstn_pll[0] = spi_done & frstn[0] & ~(!fpll_locked_r2[0] && fpll_locked_r3[0]);
+assign rstn_pll[1] = spi_done & frstn[0] & ~(!fpll_locked_r2[1] && fpll_locked_r3[1]);
+
 red_pitaya_pll_4adc pll_01 (
   // inputs
   .clk         (adc_clk_in[0]),  // clock
-  .rstn        (spi_done  ),  // reset - active low
+  .rstn        (rstn_pll[0]  ),  // reset - active low
   // output clocks
   .clk_adc     (pll_adc_clk[0]),  // ADC clock
   .clk_10mhz   (pll_adc_10mhz ),  // ADC divided to 10MHz
@@ -210,7 +230,7 @@ red_pitaya_pll_4adc pll_01 (
 red_pitaya_pll_4adc pll_23 (
   // inputs
   .clk         (adc_clk_in[1]),  // clock
-  .rstn        (spi_done  ),  // reset - active low
+  .rstn        (rstn_pll[1]  ),  // reset - active low
   // output clocks
   .clk_adc     (pll_adc_clk[1]),  // ADC clock
   // status outputs
@@ -224,32 +244,65 @@ BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
-logic [32-1:0] locked_pll_cnt, locked_pll_cnt_r, locked_pll_cnt_r2 ;
+
 always @(posedge fclk[0]) begin
-  if (~frstn[0])
-    locked_pll_cnt <= 'h0;
-  else if (~pll_locked)
-    locked_pll_cnt <= locked_pll_cnt + 'h1;
+  fpll_locked_r[0]   <= pll_locked[0];
+  fpll_locked_r2[0]  <= fpll_locked_r[0];
+  fpll_locked_r3[0]  <= fpll_locked_r2[0];
+
+  fpll_locked_r[1]   <= pll_locked[1];
+  fpll_locked_r2[1]  <= fpll_locked_r[1];
+  fpll_locked_r3[1]  <= fpll_locked_r2[1];
 end
 
 always @(posedge adc_clk_01) begin
-  locked_pll_cnt_r  <= locked_pll_cnt;
-  locked_pll_cnt_r2 <= locked_pll_cnt_r;
+  pll_locked_r[0] <= pll_locked[0];
+  if ((pll_locked[0] && !pll_locked_r[0]) || rst_cnt0 > 0) begin // some clk cycles after rising edge of pll_locked
+    if (rst_cnt0 < RST_MAX)
+      rst_cnt0 <= rst_cnt0 + 1;
+    else 
+      rst_cnt0 <= 'h0;
+  end else begin
+    if (~pll_locked[0]) begin
+      rst_cnt0 <= 'h0;
+    end
+  end
 end
+
+always @(posedge adc_clk_23) begin
+  pll_locked_r[1] <= pll_locked[1];
+  if ((pll_locked[1] && !pll_locked_r[1]) || rst_cnt1 > 0) begin // some clk cycles after rising edge of pll_locked
+    if (rst_cnt1 < RST_MAX)
+      rst_cnt1 <= rst_cnt1 + 1;
+    else 
+      rst_cnt1 <= 'h0;
+  end else begin
+    if (~pll_locked[1]) begin
+      rst_cnt1 <= 'h0;
+    end
+  end
+end
+
+assign rst_after_locked[0] = |rst_cnt0;
+assign rst_after_locked[1] = |rst_cnt1;
 
 wire [2-1:0] adc_clks;
 assign adc_clks={adc_clk_23, adc_clk_01};
 
-// ADC reset (active low)
-always @(posedge adc_clk_01)
-adc_rstn_01 <=  frstn[0] & spi_done & pll_locked[0];
+always @(posedge adc_clk_01) begin
+  spi_done_csff <= spi_done;
+  spi_done_adc  <= spi_done_csff;
+end
 
-always @(posedge adc_clk_23)
-adc_rstn_23 <=  frstn[0] & spi_done & pll_locked[1];
+// ADC reset (active low)
+always @(*) begin
+ adc_rstn_01 <=  frstn[0] & spi_done_adc & ~rst_after_locked[0];
+ adc_rstn_23 <=  frstn[0] & spi_done_adc & ~rst_after_locked[1];
+end
 
 // PWM reset (active low)
 always @(posedge pwm_clk)
-pwm_rstn <=  frstn[0] & spi_done & pll_locked[0];
+  pwm_rstn   <=  frstn[0] & spi_done & ~rst_after_locked[0];
 
 
 assign daisy_trig = |par_dat;
@@ -326,6 +379,7 @@ sys_bus_interconnect #(
   .SYNC_REG_OFS5 (40),
   .SYNC_REG_OFS6 (148)
 ) sys_bus_interconnect (
+  .pll_locked_i(&pll_locked),
   .bus_m (ps_sys),
   .bus_s (sys)
 );
@@ -404,17 +458,27 @@ for (GVC = 0; GVC < 4; GVC = GVC + 1) begin : channels
 end
 endgenerate
 
+always @(posedge adc_clk_01) begin // to have a register-to-register point for timing constraints
+  adc_dat_t[0] <= adc_dat_raw[0];
+  adc_dat_t[1] <= adc_dat_raw[1];
+end
+
+always @(posedge adc_clk_23) begin
+  adc_dat_t[2] <= adc_dat_raw[2];
+  adc_dat_t[3] <= adc_dat_raw[3];
+end
+
 always @(posedge adc_clk_01) begin
-  adc_dat_r[0] <= {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
-  adc_dat_r[1] <= {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
+  adc_dat_r[0] <= {adc_dat_t[0][14-1], ~adc_dat_t[0][14-2:0]};
+  adc_dat_r[1] <= {adc_dat_t[1][14-1], ~adc_dat_t[1][14-2:0]};
 
   adc_dat  [0] <= adc_dat_r[0];
   adc_dat  [1] <= adc_dat_r[1];
 end
 
 always @(posedge adc_clk_01) begin
-  adc_dat_r[2] <= {adc_dat_raw[2][14-1], ~adc_dat_raw[2][14-2:0]};
-  adc_dat_r[3] <= {adc_dat_raw[3][14-1], ~adc_dat_raw[3][14-2:0]};
+  adc_dat_r[2] <= {adc_dat_t[2][14-1], ~adc_dat_t[2][14-2:0]};
+  adc_dat_r[3] <= {adc_dat_t[3][14-1], ~adc_dat_t[3][14-2:0]};
 
   adc_dat  [2] <= adc_dat_r[2];
   adc_dat  [3] <= adc_dat_r[3];
@@ -460,7 +524,6 @@ red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
   .pll_ref_i       (adc_10mhz   ),    // reference clock
   .pll_hi_o        (pll_hi_o    ),    // PLL high
   .pll_lo_o        (pll_lo_o    ),    // PLL low
-  .diag_i          (locked_pll_cnt_r2),
   .can_on_o        (can_on   ),
 
   // Expansion connector

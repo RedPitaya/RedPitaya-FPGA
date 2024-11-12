@@ -368,6 +368,7 @@ wire              adc_rd_dv     ;
 reg               adc_we        ;
 reg               adc_we_keep   ;
 reg               adc_trig      ;
+reg               trig_dis_clr  ;
 
 reg   [ RSZ-1: 0] adc_wp_trig   ;
 reg   [ RSZ-1: 0] adc_wp_cur    ;
@@ -835,7 +836,6 @@ reg               adc_trig_an      ;
 reg               adc_trig_bp      ;
 reg               adc_trig_bn      ;
 reg               adc_trig_sw      ;
-reg               trig_dis_clr     ;
 reg   [   4-1: 0] set_trig_src     ;
 wire              ext_trig_p       ;
 wire              ext_trig_n       ;
