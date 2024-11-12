@@ -6,7 +6,9 @@
 ################################################################################
 
 set prj_name [lindex $argv 0]
+set prj_defs [lindex $argv 1]
 puts "Project name: $prj_name"
+puts "Defines: $prj_defs"
 cd prj/$prj_name
 #cd prj/$::argv 0
 
@@ -50,6 +52,7 @@ set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
 source                            $path_ip/systemZ20.tcl
+set_property verilog_define [concat Z20 $prj_defs] [current_fileset]
 
 # generate SDK files
 generate_target all [get_files    system.bd]

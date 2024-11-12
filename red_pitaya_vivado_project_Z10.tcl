@@ -39,7 +39,7 @@ set_param iconstr.diffPairPulltype {opposite}
 set part xc7z010clg400-1
 
 create_project -part $part -force redpitaya ./project
-set_property verilog_define $prj_defs [current_fileset]
+set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
 
 ################################################################################
 # create PS BD (processing system block design)

@@ -332,7 +332,7 @@ task gpio_monitor_in  (
     //$display("GPIO enable: %d, i: %d, %t", enable, i, $time);
     @(posedge adc_clk[i])
       if (axi_wrdy[i] && axi_wval[i] && enable) begin
-        $display("writing GPIO file %d,%t",i,$time);
+        //$display("writing GPIO file %d,%t",i,$time);
         if(axi_strb[i*8+0])
           $fwrite(GPIO_rfile[i], `GIFORMAT, `GIVALS0);
 

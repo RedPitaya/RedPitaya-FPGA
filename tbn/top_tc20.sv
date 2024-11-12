@@ -117,10 +117,11 @@ set_osc(.offset(offset),
 endtask: init_adc_23
 
 task init_dac(
-  int unsigned offset
+  int unsigned offset,
+  int unsigned set_buf
 );
 localparam CHA_TRIG_SRC =  3'h1;
-localparam CHA_WRAP     =  1'b0;
+localparam CHA_WRAP     =  1'b1;
 localparam CHA_ONCE     =  1'b0;
 localparam CHA_RST      =  1'b0;
 localparam CHA_ZERO     =  1'b0;
@@ -135,42 +136,41 @@ localparam CHA_AMP      = 14'h2000;
 localparam CHA_DC       = 14'h0;
 localparam CHB_AMP      = 14'h2000;
 localparam CHB_DC       = 14'h0;
-localparam CHA_SIZE     = 32'h10000;
+localparam CHA_SIZE     = 32'hFFFFFFFF;
 localparam CHA_OFFS     = 32'h0;
-localparam CHA_STEP     = 32'h3150;
+localparam CHA_STEP     = 32'h100000;
 localparam CHA_STEP_LO  = 32'h0;
-localparam CHA_NCYC     = 16'd10;
-localparam CHA_RNUM     = 16'd1;
+localparam CHA_NCYC     = 16'd2;
+localparam CHA_RNUM     = 16'd2;
 localparam CHA_RDLY     = 32'd20;
-localparam CHA_LAST     = 14'h0;
-localparam CHA_FIRST    = 14'h10;
-localparam CHB_SIZE     = 32'h800;
+localparam CHA_LAST     = 14'h200;
+localparam CHA_FIRST    = 14'h200;
+localparam CHB_SIZE     = 32'hFFFFFFFF;
 localparam CHB_OFFS     = 32'h0;
-localparam CHB_STEP     = 32'h3150;
+localparam CHB_STEP     = 32'h100000;
 localparam CHB_STEP_LO  = 32'h0;
-localparam CHB_NCYC     = 16'd3;
-localparam CHB_RNUM     = 16'd999;
+localparam CHB_NCYC     = 16'd2;
+localparam CHB_RNUM     = 16'd2;
 localparam CHB_RDLY     = 32'd20;
-localparam CHB_LAST     = 14'h100;
+localparam CHB_LAST     = 14'h200;
 localparam CHB_FIRST    = 14'h200;
 localparam DEB_LEN      = 20'h1;
 localparam NUM_SAMP     = 32'h4000;
-localparam SET_BUF      =  1'b1;
 
 set_asg_init( .offset(offset),
               .cha_trig_src(CHA_TRIG_SRC), .cha_wrap(CHA_WRAP),   .cha_once(CHA_ONCE),   .cha_rst(CHA_RST), .cha_zero(CHA_ZERO), 
               .chb_trig_src(CHB_TRIG_SRC), .chb_wrap(CHB_WRAP),   .chb_once(CHB_ONCE),   .chb_rst(CHB_RST), .chb_zero(CHB_ZERO), 
               .cha_rgate(CHA_RGATE),       .chb_rgate(CHB_RGATE),
               .cha_amp(CHA_AMP),           .cha_dc(CHA_DC),       .chb_amp(CHB_AMP),     .chb_dc(CHB_DC),
-              //.cha_size(CHA_SIZE),         .chb_size(CHB_SIZE),
-              .cha_size(NUM_SAMP<<14),     .chb_size(NUM_SAMP<<14),
+              .cha_size(CHA_SIZE),         .chb_size(CHB_SIZE),
+              //.cha_size(NUM_SAMP<<14),     .chb_size(NUM_SAMP<<14),
               .cha_offs(CHA_OFFS),         .chb_offs(CHB_OFFS),
               .cha_step(CHA_STEP),         .cha_step_lo(CHA_STEP_LO),
               .chb_step(CHB_STEP),         .chb_step_lo(CHB_STEP_LO),
               .cha_rnum(CHA_RNUM),         .cha_rdly(CHA_RDLY),   .cha_ncyc(CHA_NCYC),
               .chb_rnum(CHB_RNUM),         .chb_rdly(CHB_RDLY),   .chb_ncyc(CHB_NCYC),
               .cha_first(CHA_FIRST),       .cha_last(CHA_LAST),   .chb_first(CHB_FIRST), .chb_last(CHB_LAST),
-              .deb_len(DEB_LEN),           .num_samp(NUM_SAMP),   .set_buf(SET_BUF));
+              .deb_len(DEB_LEN),           .num_samp(NUM_SAMP),   .set_buf(set_buf));
 
 endtask: init_dac
 
@@ -286,6 +286,53 @@ task test_dac (
   axi_write(offset+'h00, init_ctrl); // write trigger*/
 endtask: test_dac
 
+task test_dac2 (
+  int unsigned offset
+);
+  int init_ctrl;
+  //int trig={13'h0, `SW_TRIG_ADC, 13'h0, `SW_TRIG_ADC };
+  int trig=1;
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_ZERO    ));
+  axi_write(offset+'h00, init_ctrl);
+
+  axi_write(offset+'h00, 32'h0);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_RST    ));
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_WRAP    )+
+                trig  );
+  axi_write(offset+'h00, init_ctrl);
+
+  #500000;
+  axi_write(offset+'h00, 32'h0);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_RST    ));
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_WRAP    )+
+                trig  );
+  axi_write(offset+'h00, init_ctrl);
+
+  #500000;
+  axi_write(offset+'h00, 32'h0);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_RST    ));
+  axi_write(offset+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_WRAP    )+
+                trig  );
+  axi_write(offset+'h00, init_ctrl);
+endtask: test_dac2
+
 task test_rand (
   int unsigned offset
 );
@@ -303,7 +350,9 @@ task daisy_trigs (
   int unsigned dat;
   // test registers
    $display("setting up daisy triggering") ;
-  axi_write(32'h40000000+'h1000, 32'h1); // reset IDELAY
+  axi_write(32'h40000000+'h1000, 32'h2); // output trigger
+  axi_write(32'h40000000+'h14  , 32'h1); // enable out_n[0]
+
  // ##100;
  // axi_write(32'h40500000+'h0, 32'h1); // reset IDELAY
  // ##100;
@@ -600,21 +649,6 @@ task wait_clks(
   end while (cnt < del);
 endtask: wait_clks
 
-task custom_test(
-);
-  logic [32-1:0] cnt;
-  cnt = 0;
-  axi_write(32'h40000000+'h34,  1);  // decimation
-  do begin
-    @(posedge top_tb.clk0);
-    top_tb.red_pitaya_top.ps.system_i.CAN0_tx_r <= $random();
-    top_tb.red_pitaya_top.ps.system_i.CAN1_tx_r <= $random();
-
-    wait_clks(32);
-    cnt <= cnt + 1;
-  end while (cnt < 10000);
-endtask: custom_test
-
 task automatic reg_wait_bit(
   int unsigned offset,
   logic[32-1:0] bit_mask  
@@ -727,26 +761,44 @@ task set_asg_init(
   axi_write(offset+32'h7C, 32'h12345678      );
 
 
-  axi_write(offset+32'h108, 32'h1000      );
-  axi_write(offset+32'h10C, 32'h2000      );
-  axi_write(offset+32'h118, 32'h3000      );
-  axi_write(offset+32'h11C, 32'h4000      );
-
-  axi_write(offset+32'h130, 32'h1          );
-  axi_write(offset+32'h134, 32'h1          );
-  
-  axi_write(offset+32'h104, 32'h1          );
-  axi_write(offset+32'h114, 32'h1          );
-
+  set_axi_asg(offset);
 
 
 if (set_buf == 1) begin
   write_buf_both(offset,   num_samp             );
 end
 
-  set_asg_conf (offset, cha_trig_src, cha_wrap, cha_once, cha_rst, cha_zero, cha_rgate, 
-                        chb_trig_src, chb_wrap, chb_once, chb_rst, chb_zero, chb_rgate);
+  //set_asg_conf (offset, cha_trig_src, cha_wrap, cha_once, cha_rst, cha_zero, cha_rgate, 
+  //                      chb_trig_src, chb_wrap, chb_once, chb_rst, chb_zero, chb_rgate);
 endtask: set_asg_init
+
+task set_axi_asg(
+  int unsigned offset
+);
+
+  axi_write(offset+32'h108, 32'h1000      );
+  axi_write(offset+32'h10C, 32'h2000      );
+  axi_write(offset+32'h118, 32'h3000      );
+  axi_write(offset+32'h11C, 32'h4000      );
+  axi_write(offset+32'h130, 32'h2          );
+  axi_write(offset+32'h134, 32'h2          );  
+
+
+  axi_write(offset+32'h104, 32'h1          );
+  axi_write(offset+32'h114, 32'h1          );
+
+  axi_write(offset+32'h04, 32'h00002000    );
+  axi_write(offset+32'h24, 32'h00002000    );
+  axi_write(offset+32'h18, 32'h2    );
+  axi_write(offset+32'h1C, 32'h4    );
+  axi_write(offset+32'h20, 32'd10    );
+  axi_write(offset+32'h38, 32'd3    );
+  axi_write(offset+32'h3c, 32'd5    );
+  axi_write(offset+32'h40, 32'd10    );
+
+  axi_write(32'h4000000c, 32'h1          );
+
+endtask: set_axi_asg
 
 task set_asg_conf(
   int            offset,
@@ -796,6 +848,68 @@ task write_buf(
 endtask: write_buf
 
 
+task custom_test (
+  int unsigned offset1,
+  int unsigned offset2
+);
+  int init_ctrl;
+  //int trig={13'h0, `SW_TRIG_ADC, 13'h0, `SW_TRIG_ADC };
+  int trig=1;
+  axi_write(32'h40000000+32'hC ,  'd1  );  // reset
+
+  axi_write(offset2+2'h0 ,  'd2  );  // reset
+  axi_write(offset2+'h14,  32'h1);  // decimation
+  axi_write(offset2+'h10,  32'h1000);  // delay after trigger
+  axi_write(offset2+'h8 ,  32'h0340);  // chA threshold
+  axi_write(offset2+'hC ,  32'h0690);  // chB threshold
+
+  axi_write(offset2+'h20,  32'h20);  // chA hysteresis
+  axi_write(offset2+'h24,  32'h29);  // chB hysteresis
+
+  for (int k=0; k<100; k++) begin
+  axi_write(offset2+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset2+'h94 , 32'h1);    // clear trigger protect
+  axi_write(offset2+'h4 , 32'h2);  // level trigger
+  set_axi_asg(offset1);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_ZERO    ));
+  axi_write(offset1+'h00, init_ctrl);
+
+  axi_write(offset1+'h00, 32'h0);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_RST    ));
+  axi_write(offset1+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_WRAP    )+
+                trig  );
+  axi_write(offset1+'h00, init_ctrl);
+  reg_wait_bit(32'h40100000,32'h10);
+  trig_samps(offset2+32'h1C);
+
+  #200000;
+  set_axi_asg(offset1);
+  axi_write(offset2+'h0 ,  'd1  );  // ARM trigger
+  axi_write(offset2+'h94 , 32'h1);    // clear trigger protect
+  axi_write(offset2+'h4 , 32'h4);  // level trigger
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_RST+16));
+  axi_write(offset1+'h00, init_ctrl);
+
+  #1000;
+  init_ctrl = ((1<< `CTRL_DAC_WRAP+16)+
+                trig*65536  );
+  axi_write(offset1+'h00, init_ctrl);
+
+  reg_wait_bit(32'h40100000,32'h10);
+  trig_samps(offset2+32'h1C);
+
+  #200000;
+  end
+endtask: custom_test
 
 ////////////////////////////////////////////////////////////////////////////////
 // Testing SATA

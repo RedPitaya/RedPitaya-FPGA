@@ -62,7 +62,7 @@ module top_tb #(
 
   parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 1000,             // how many ADC cycles (triggers) are handled
+  parameter CYCLES        = 3,             // how many ADC cycles (triggers) are handled
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
@@ -70,7 +70,7 @@ module top_tb #(
   parameter ARM_DELAY     = 200,           // delay in sending SW trigger after arming
 
   parameter MON_LEN       = 100000,         // how many samples are acquired before monitor file is closed
-
+  parameter DAC_BUF_WRITE = 0,        // write the DAC buffer or not
   realtime  DEL           = 1.0ns,    // delay between clk0 and clk1
   realtime  RP            = 100.1ns,  // ~10MHz
   realtime  TP_250        = 4.0ns     // daisy clk 250 MHz
@@ -196,7 +196,6 @@ initial begin
   trig_ext      = ~`TRIG_ACT_LVL;
   ext_trig_cnt  = 32'h0;
 end
-
 `ifdef Z10_14
 initial begin
     $display("Testing Z10_14!");
@@ -229,33 +228,37 @@ initial begin
   fork
 `ifdef STREAMING
     $display("Testing streaming!");
-    //ADR = (1 << 30) + (`STRM_SCOPE_REG_OFS << `OFS_SHIFT);
-    ADR = 32'h40200000;
+    //ADR = 32'h40000000 + (`STRM_SCOPE_REG_OFS << `OFS_SHIFT);
+    ADR = 32'h40000000 + (`STRM_ASG_REG_OFS   << `OFS_SHIFT);
+
     monitor_tcs_strm.set_monitor(MON_LEN);
     begin
       //top_tc20_strm.scope_test(ADR, CYCLES, ACK_DELAY);
-      //top_tc20_strm.test_dac(ADR, CYCLES, ACK_DELAY);
-      top_tc20_strm.test_gpio(ADR, CYCLES, ACK_DELAY);
+      top_tc20_strm.test_dac(ADR, CYCLES, ACK_DELAY);
+      //top_tc20_strm.test_gpio(ADR, CYCLES, ACK_DELAY);
 
     end    
 `else
     $display("Testing normal acq mode!");
 
     ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
-    ADR2 = `BASE_OFS + `SCOPE2_REG_OFS << `OFS_SHIFT;
+    ADR2 = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
-       top_tc20.init_adc_01(ADR);
-       top_tc20.init_adc_23(ADR2);
-       top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      top_tc20.daisy_trigs();
+      top_tc20.init_adc_01(ADR);
+      top_tc20.init_dac(ADR2, DAC_BUF_WRITE);
+
+       //top_tc20.init_adc_23(ADR2);     
+      // top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
        //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       // top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      top_tc20.custom_test(ADR2, ADR);
 
-    ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
-      top_tc20.init_dac(ADR);
-      #10000;
-      top_tc20.test_dac(ADR);
+      #1000;
+      top_tc20.test_dac2(ADR2);
+
     end
 `endif
 
@@ -267,6 +270,10 @@ initial begin
   $finish();
 end
 
+// wire [4-1:0] trg_01 = top_tb.red_pitaya_top.i_scope_0_1.adc_trig;
+// wire [4-1:0] trg_23 = top_tb.red_pitaya_top.i_scope_2_3.adc_trig;
+// wire [4-1:0] trg_xord;
+// assign trg_xord = trg_01 ^ trg_23;
 
 ////////////////////////////////////////////////////////////////////////////////
 // signal generation
@@ -374,15 +381,27 @@ tb_dac_drv
   .dac_b_o   (dac_chb )
 );
 
-
+`ifndef STREAMING
 assign gpio_p_dir =  top_tb.red_pitaya_top.exp_p_dtr;
 assign gpio_n_dir =  top_tb.red_pitaya_top.exp_n_dtr;
+`endif
 
 always @(posedge clk0) begin
   gpio_p_driver[7:6] <= gpio_n_rec[7:6];
 end
 
-
+// always @(posedge clk0) begin //
+//   if (ext_trig_cnt < 15000) begin
+//     ext_trig_cnt <= ext_trig_cnt + 1;
+//   end else begin
+//     ext_trig_cnt <= 32'h0;
+//   end
+//   if (ext_trig_cnt > 14900 && ext_trig_cnt < 15000) begin
+//     trig_ext <= 1'b1;
+//   end else begin
+//     trig_ext <= 1'b0;
+//   end
+// end
 
 initial
 begin:trig_gen
@@ -437,13 +456,14 @@ assign strm_adc_en = {NUM_ADC{1'b0}};
 
 clk_gen #(
   .CLKA_PERIOD  (  CLKA_PER ),
-  .CLKA_JIT     (  0     ),
-  .DEL          (  25     ) // in percent
+  .CLKA_JIT     (  10     ),
+  .DEL          (  15     ) // in percent
 )
 i_clgen_model
 (
   .clk_i  ( pll_in_clk ) ,
-  .clk_o  ( adc_clk0   )
+  //.clk_o  ( adc_clk0   )
+  .clka_o  ( adc_clk0   )
 );
 
 clk_gen #(

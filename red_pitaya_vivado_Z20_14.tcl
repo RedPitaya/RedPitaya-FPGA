@@ -51,7 +51,6 @@ set_param iconstr.diffPairPulltype {opposite}
 set part xc7z020clg400-1
 
 create_project -in_memory -part $part
-set_property verilog_define $prj_defs [current_fileset]
 
 ################################################################################
 # create PS BD (processing system block design)
@@ -65,7 +64,7 @@ set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
-set_property verilog_define {Z20_14} [current_fileset]
+set_property verilog_define [concat Z20_14 $prj_defs] [current_fileset]
 
 source                            $path_ip/systemZ20_14.tcl
 

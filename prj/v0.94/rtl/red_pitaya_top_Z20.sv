@@ -180,8 +180,6 @@ logic                    dac_rst;
 logic                    dac_axi_rstn;
 
 logic        [14-1:0] dac_dat_a, dac_dat_b;
-logic        [14-1:0] dac_dat_a_r, dac_dat_b_r;
-
 logic        [14-1:0] dac_a    , dac_b    ;
 logic signed [15-1:0] dac_a_sum, dac_b_sum;
 
@@ -646,7 +644,11 @@ red_pitaya_daisy i_daisy (
 `else
 IOBUF i_iobuf (.O(trig_ext), .IO(exp_p_io[0]), .I(1'b0), .T(1'b1) );
 
+logic [2-1:0] [16-1:0] adc_dat_raw;
+
 always @(posedge adc_clk) begin
+  adc_dat_raw[0] <= adc_dat_i[0];
+  adc_dat_raw[1] <= adc_dat_i[1];
   adc_dat[0] <= {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
   adc_dat[1] <= {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
 end
@@ -718,6 +720,41 @@ ODDR oddr_dac_sel          (.Q(dac_sel_o), .D1(1'b1     ), .D2(1'b0     ), .C(da
 ODDR oddr_dac_rst          (.Q(dac_rst_o), .D1(dac_rst  ), .D2(dac_rst  ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
 ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat_b), .D2(dac_dat_a), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
 
+ODDR i_adc_clk_p ( .Q(adc_clk_o[0]), .D1(1'b1), .D2(1'b0), .C(1'b0), .CE(1'b1), .R(1'b0), .S(1'b0));
+ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(1'b0), .CE(1'b1), .R(1'b0), .S(1'b0));
+
+logic rxs_clk, rxs_dat;
+IBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18")) i_IBUFGDS_clk
+(
+  .I  ( daisy_p_i[1]  ),
+  .IB ( daisy_n_i[1]  ),
+  .O  ( rxs_clk     )
+);
+
+IBUFDS #(.DIFF_TERM ("FALSE"), .IOSTANDARD ("DIFF_HSTL_I_18")) i_IBUFDS_dat
+(
+  .I  ( daisy_p_i[0]  ),
+  .IB ( daisy_n_i[0]  ),
+  .O  ( rxs_dat       )
+);
+
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_clk
+(
+  .O  ( daisy_p_o[1]  ),
+  .OB ( daisy_n_o[1]  ),
+  .I  ( 1'b0       )
+);
+
+OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_dat
+(
+  .O  ( daisy_p_o[0]  ),
+  .OB ( daisy_n_o[0]  ),
+  .I  ( 1'b0          )
+);
+
+
+assign adc_cdcs_o = 1'b1 ;
+assign dac_pwm_o  = 1'b0;
 generate
 for (genvar i=2; i<6; i++) begin: for_sys2
   sys_bus_stub sys_bus_stub_2_5 (sys[i]);

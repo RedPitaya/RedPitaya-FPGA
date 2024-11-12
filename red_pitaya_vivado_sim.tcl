@@ -66,6 +66,10 @@ create_project -part $part -force redpitaya ./sim
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
 set ::gpio_width 24
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 250000000
+set ::hp3_clk_freq 250000000
 
 set def_name "v0.94"
 set def_model "Z10_14"

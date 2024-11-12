@@ -13,8 +13,8 @@ function write_file (fname,dats)
 endfunction
 
 %Signal definition
-period=2^(16);
-tv=((1:period*2))./period;
+period=2^(14);
+tv=((1:period))./period;
 f1=2;
 f2=f1*32;
 
@@ -31,8 +31,8 @@ sig_in6=(f2*pi*tv)+0.9;
 %ADC and DAC signals must be 16bit signed integers
 %ADC signals
 %Define any signal you like, here we use 4 slightly phase shifted sine signals
-adc_sig0 = sin(sig_in1)*32768;
-adc_sig1 = sin(sig_in2)*32768;
+adc_sig0 = sin(sig_in1)*8191;
+adc_sig1 = sin(sig_in2)*8191;
 adc_sig2 = sin(sig_in3)*32768;
 adc_sig3 = sin(sig_in4)*32768;
 
@@ -53,12 +53,13 @@ hold off;
 
 
 %write signals to files
-path=fileparts(which(mfilename()));
-write_file(strcat(path,"/adc_src_ch0.bin"),adc_sig0);
-write_file(strcat(path,"/adc_src_ch1.bin"),adc_sig1);
-write_file(strcat(path,"/adc_src_ch2.bin"),adc_sig2);
-write_file(strcat(path,"/adc_src_ch3.bin"),adc_sig3);
-write_file(strcat(path,"/dac_src_ch0.bin"),dac_sig0);
-write_file(strcat(path,"/dac_src_ch1.bin"),dac_sig1);
+path=fileparts(which(mfilename()))
+% write_file(strcat(path,"/adc_src_ch0.bin"),adc_sig0);
+% write_file(strcat(path,"/adc_src_ch1.bin"),adc_sig1);
+% write_file(strcat(path,"/adc_src_ch2.bin"),adc_sig2);
+% write_file(strcat(path,"/adc_src_ch3.bin"),adc_sig3);
+% write_file(strcat(path,"/dac_src_ch0.bin"),dac_sig0);
+% write_file(strcat(path,"/dac_src_ch1.bin"),dac_sig1);
 
-
+write_file(strcat(path,"/dac_src_ch0.bin"),adc_sig0);
+write_file(strcat(path,"/dac_src_ch1.bin"),adc_sig0);

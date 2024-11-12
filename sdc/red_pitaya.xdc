@@ -213,6 +213,7 @@ set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_o]
 set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_2x]
 set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_2p]
 set_false_path -from [get_clocks pll_adc_clk] -to [get_clocks pll_dac_clk_2x]
+set_false_path -from [get_clocks adc_clk]     -to [get_clocks pll_adc_clk]
 
 set_false_path -from [get_clocks par_clk]     -to [get_clocks pll_adc_clk]
 

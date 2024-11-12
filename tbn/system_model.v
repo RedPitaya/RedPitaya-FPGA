@@ -397,7 +397,7 @@ localparam FCLK3_PER =  5000;
 //localparam FCLK2_PER =  5000;
 //localparam FCLK3_PER =  6000;
 
-localparam FCLK0_JIT = 0;
+localparam FCLK0_JIT = 100;
 localparam FCLK1_JIT = 0;
 localparam FCLK2_JIT = 0;
 localparam FCLK3_JIT = 0;
@@ -788,10 +788,11 @@ i_s_axi_hp3
   .axi_rready_i   (  S_AXI_HP3_rready       )  // read response ready
 );
 //------------------------------------------------------------------------------
-
+/*
+  `ifndef STREAMING
   axi_prot_check inst_axi_prot_check
        (.aclk(S_AXI_HP2_aclk),
-        .aresetn(axi_rst),
+        .aresetn(axi_rst),*/
         /*
         .pc_axi_awid     (  S_AXI_HP2_awid         ), // write address ID
         .pc_axi_awaddr   (  S_AXI_HP2_awaddr       ), // write address
@@ -818,6 +819,7 @@ i_s_axi_hp3
         .pc_axi_bvalid   (  S_AXI_HP2_bvalid       ), // write response valid
         .pc_axi_bready   (  S_AXI_HP2_bready       ), // write response ready
 */
+/*
         .pc_axi_awid     (   4'h0 ), // write address ID
         .pc_axi_awqos    (   4'h0 ),
         .pc_axi_awaddr   (  32'h0 ), // write address
@@ -843,8 +845,9 @@ i_s_axi_hp3
         .pc_axi_bresp    (   2'h0 ), // write response
         .pc_axi_bvalid   (   1'b0 ), // write response valid
         .pc_axi_bready   (   1'b0 ), // write response ready
+*/
           // axi read address channel
-        .pc_axi_arid     (  S_AXI_HP2_arid         ), // read address ID
+/*        .pc_axi_arid     (  S_AXI_HP2_arid         ), // read address ID
         .pc_axi_arqos    (  4'h0                   ),
         .pc_axi_araddr   (  S_AXI_HP2_araddr       ), // read address
         .pc_axi_arlen    (  S_AXI_HP2_arlen        ), // read burst length
@@ -865,6 +868,7 @@ i_s_axi_hp3
         .pc_axi_rready   (  S_AXI_HP2_rready       )  // read response ready
 
         ); // read address ready
+  `endif*/
 
 `endif
 endmodule 
