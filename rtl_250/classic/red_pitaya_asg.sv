@@ -107,6 +107,7 @@ reg   [ RSZ-1: 0] buf_a_addr   , buf_b_addr   ;
 wire  [  14-1: 0] buf_a_rdata  , buf_b_rdata  ;
 wire  [ RSZ-1: 0] buf_a_rpnt   , buf_b_rpnt   ;
 reg   [  32-1: 0] buf_a_rpnt_rd, buf_b_rpnt_rd;
+reg               trig_a_sw_r  , trig_b_sw_r  ;
 reg               trig_a_sw    , trig_b_sw    ;
 reg   [   3-1: 0] trig_a_src   , trig_b_src   ;
 wire              trig_a_done  , trig_b_done  ;
@@ -130,7 +131,6 @@ wire  [  32-1:0 ] axi_a_transf   , axi_b_transf       ;
 
 reg   [  32-1: 0] step_a_hi      , step_b_hi   ;
 reg   [  32-1: 0] step_a_lo      , step_b_lo   ;
-reg               step_lo_upd    , step_hi_upd ;
 
 red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
 (
@@ -325,11 +325,13 @@ if (sys_rstn == 1'b0) begin
    ren_dly     <=  3'h0       ;
    ack_dly     <=  1'b0       ;
 end else begin
-   trig_a_sw  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[0]  && (trig_a_src != 3'h1) ;
+   trig_a_sw_r  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[ 0] && (trig_a_src != 3'h1) ;
+   trig_a_sw    <= trig_a_sw_r;
    if (sys_wen && (sys_addr[19:0]==20'h0))
       trig_a_src <= sys_wdata[2:0] ;
 
-   trig_b_sw  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[16] && (trig_b_src != 3'h1) ;
+   trig_b_sw_r  <= sys_wen && (sys_addr[19:0]==20'h0) && sys_wdata[16] && (trig_b_src != 3'h1) ;
+   trig_b_sw    <= trig_b_sw_r;
    if (sys_wen && (sys_addr[19:0]==20'h0))
       trig_b_src <= sys_wdata[19:16] ;
 
@@ -399,16 +401,13 @@ end else begin
       buf_b_rpnt_rd <= {{32-RSZ-2{1'b0}},buf_b_rpnt,2'h0};
    end
 
-   step_hi_upd <= sys_wen && sys_addr[19:0]==20'h30;
-   step_lo_upd <= sys_wen && sys_addr[19:0]==20'h34;
-
-   if (step_hi_upd) begin
+   if (trig_a_sw_r || trig_b_sw_r) begin
       step_a_hi <= set_a_step;
-      step_b_hi <= set_b_step;
+      step_a_lo <= set_a_step_lo;
    end
 
-   if (step_lo_upd) begin
-      step_a_lo <= set_a_step_lo;
+   if (trig_a_sw_r || trig_b_sw_r) begin
+      step_b_hi <= set_b_step;
       step_b_lo <= set_b_step_lo;
    end
 
