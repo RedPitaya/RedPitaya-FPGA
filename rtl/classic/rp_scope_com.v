@@ -149,7 +149,8 @@ wire                 sys_en       ;
 wire [   4*RSZ-1: 0] adc_wp_act   ;
 wire [    4*DW-1: 0] adc_bram_in  ;
 wire [       4-1: 0] adc_we       ;
-wire [       4-1: 0] adc_dv_del;
+wire [       4-1: 0] adc_dv_del   ;
+wire [       4-1: 0] adc_dv_del_p ;
 
 assign sys_en = sys_wen | sys_ren;
 
@@ -221,6 +222,7 @@ rp_delay #(
   .axidly_val_o  ( axi_dv_del                     ),
   .axidly_dat_o  ( axi_ram_in                     ), // delayed data to AXI
 
+  .dly_valp_o    ( adc_dv_del_p[GV]               ),
   .dly_val_o     ( adc_dv_del[GV]                 ),
   .dly_dat_o     ( adc_bram_in[(GV+1)*DW-1:GV*DW] )  // delayed data to BRAM
 );
@@ -256,6 +258,7 @@ rp_trig_src #(
 
   .set_trg_src_i  ( trg_src[(GV+1)*4-1:GV*4] ),
   .set_trg_new_i  ( new_trg_src[GV]          ),
+  .dly_valp_i     ( adc_dv_del_p[GV]         ),
 
   .adc_trig_sw_i  ( adc_trig_sw[GV]   ),
   .adc_trig_p_i   ( adc_trig_p        ),
@@ -361,6 +364,7 @@ for(GM = N_CH ; GM < 4 ; GM = GM + 1) begin // pad out remaining channels
 
 assign adc_bram_in[(GM+1)*DW -1:GM*DW ] = {DW{1'b0}};
 assign adc_dv_del[GM]                   =  1'b0;
+assign adc_dv_del_p[GM]                 =  1'b0;
 
 
 assign adc_state[(GM+1)*8  -1:GM*8  ]   =  8'h0;

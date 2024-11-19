@@ -32,7 +32,7 @@ module rp_trig_src #(
 
   input       [ 4-1: 0] set_trg_src_i   ,
   input                 set_trg_new_i   ,
-
+  input                 dly_valp_i      , // delay valid - immediate pulse
 
 
   input                 adc_trig_sw_i   ,
@@ -51,11 +51,16 @@ module rp_trig_src #(
 reg   [   4-1: 0] set_trig_src     ;
 reg               adc_trg_dis      ;
 reg               adc_trig         ;
+wire              adc_trig_sw      ;
+reg               adc_trig_sw_r    ;
+
+assign adc_trig_sw   = (adc_trig_sw_r) && dly_valp_i; 
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
    adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
+   adc_trig_sw_r <= 1'b0 ;
 end else begin
    if (set_trg_new_i)
       set_trig_src <= set_trg_src_i ;
@@ -67,8 +72,13 @@ end else begin
    else if (adc_trig)
       adc_trg_dis <= 1'b1 ;
 
+   if (adc_trig_sw_i)// extend wait for next valid sample 
+      adc_trig_sw_r <= 1'b1; 
+   else if (dly_valp_i)
+      adc_trig_sw_r <= 1'b0; 
+
    case (set_trig_src & ({4{!adc_trg_dis}}))
-       4'd1 : adc_trig <= adc_trig_sw_i   ; // manual
+       4'd1 : adc_trig <= adc_trig_sw   ; // manual
        4'd2 : adc_trig <= CHN == 0 ? adc_trig_p_i[0] : trig_ch_i[0] ; // A ch rising edge
        4'd3 : adc_trig <= CHN == 0 ? adc_trig_n_i[0] : trig_ch_i[1] ; // A ch falling edge
        4'd4 : adc_trig <= CHN == 0 ? adc_trig_p_i[1] : trig_ch_i[2] ; // B ch rising edge
