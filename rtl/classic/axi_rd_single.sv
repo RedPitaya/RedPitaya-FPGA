@@ -34,8 +34,8 @@ module axi_rd_single #(
    input                  ctrl_clr_i         , // request clear
 
    // data
-   output      [ DW-1: 0] rd_data_o          , // read data @axi_clk
-   output                 rd_dval_o          , // read data valid @axi_clk
+   output reg  [ DW-1: 0] rd_data_o          , // read data @axi_clk
+   output reg             rd_dval_o          , // read data valid @axi_clk
    input                  rd_drdy_i          , // read data ready @axi_clk
 
    output                 ctrl_busy_o        , // status @axi_clk
@@ -177,12 +177,12 @@ end
 // FIFO interface
 
 assign axi_sys.rrdys = rd_drdy_i   ;
-assign rd_data_o  = axi_sys.rdata ;
-assign rd_dval_o  = axi_sys.rrdym  ;
 
-
-
-
+always @(posedge axi_sys.clk)
+begin
+   rd_data_o  <= axi_sys.rdata ;
+   rd_dval_o  <= axi_sys.rrdym  ;
+end
 
 
 
