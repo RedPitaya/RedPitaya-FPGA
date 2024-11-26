@@ -67,7 +67,7 @@ always @ (posedge axi_sys.clk)
 begin
    if (ctrl_val_i)
       rd_addr_o <= ctrl_addr_i;
-   else if (axi_sys.Rtransfer)
+   else if (rd_dval_o)
       rd_addr_o <= rd_addr_o + DWB;
 end
 
@@ -103,7 +103,7 @@ assign axi_sys.rrdys = rd_drdy_i       ;
 always @(posedge axi_sys.clk)
 begin
    rd_data_o  <= axi_sys.rdata ;
-   rd_dval_o  <= axi_sys.rrdym  ;
+   rd_dval_o  <= axi_sys.Rtransfer  ;
 end
 
 

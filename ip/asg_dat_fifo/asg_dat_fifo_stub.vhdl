@@ -1,7 +1,7 @@
 -- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
--- Date        : Tue Oct  1 14:35:22 2024
+-- Date        : Tue Nov 26 11:50:25 2024
 -- Host        : devmachine running 64-bit Ubuntu 24.04 LTS
 -- Command     : write_vhdl -force -mode synth_stub
 --               /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/ip/asg_dat_fifo/asg_dat_fifo_stub.vhdl

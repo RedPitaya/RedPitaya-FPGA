@@ -2297,11 +2297,11 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>GENtimestamp</spirit:name>
-            <spirit:value>Tue Oct 01 12:33:27 UTC 2024</spirit:value>
+            <spirit:value>Tue Nov 26 10:48:43 UTC 2024</spirit:value>
           </spirit:parameter>
           <spirit:parameter>
             <spirit:name>outputProductCRC</spirit:name>
-            <spirit:value>9:6bca317e</spirit:value>
+            <spirit:value>9:6d71d3c5</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -2315,11 +2315,11 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>GENtimestamp</spirit:name>
-            <spirit:value>Tue Oct 01 12:33:27 UTC 2024</spirit:value>
+            <spirit:value>Tue Nov 26 10:48:43 UTC 2024</spirit:value>
           </spirit:parameter>
           <spirit:parameter>
             <spirit:name>outputProductCRC</spirit:name>
-            <spirit:value>9:6bca317e</spirit:value>
+            <spirit:value>9:6d71d3c5</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -2335,11 +2335,11 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>GENtimestamp</spirit:name>
-            <spirit:value>Tue Oct 01 12:33:27 UTC 2024</spirit:value>
+            <spirit:value>Tue Nov 26 10:48:43 UTC 2024</spirit:value>
           </spirit:parameter>
           <spirit:parameter>
             <spirit:name>outputProductCRC</spirit:name>
-            <spirit:value>9:6bca317e</spirit:value>
+            <spirit:value>9:6d71d3c5</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -2353,11 +2353,11 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>GENtimestamp</spirit:name>
-            <spirit:value>Tue Oct 01 12:35:22 UTC 2024</spirit:value>
+            <spirit:value>Tue Nov 26 10:50:25 UTC 2024</spirit:value>
           </spirit:parameter>
           <spirit:parameter>
             <spirit:name>outputProductCRC</spirit:name>
-            <spirit:value>9:6bca317e</spirit:value>
+            <spirit:value>9:6d71d3c5</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -8057,11 +8057,11 @@
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_PRELOAD_LATENCY</spirit:name>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_PRELOAD_LATENCY">1</spirit:value>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_PRELOAD_LATENCY">2</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_PRELOAD_REGS</spirit:name>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_PRELOAD_REGS">0</spirit:value>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_PRELOAD_REGS">1</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="string">
         <spirit:name>C_PRIM_FIFO_TYPE</spirit:name>
@@ -8121,7 +8121,7 @@
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_USE_EMBEDDED_REG</spirit:name>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_USE_EMBEDDED_REG">0</spirit:value>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.C_USE_EMBEDDED_REG">1</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>C_USE_PIPELINE_REG</spirit:name>
@@ -9141,7 +9141,7 @@
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>Use_Embedded_Registers</spirit:name>
-      <spirit:value spirit:format="bool" spirit:resolve="user" spirit:id="PARAM_VALUE.Use_Embedded_Registers" spirit:order="11">false</spirit:value>
+      <spirit:value spirit:format="bool" spirit:resolve="user" spirit:id="PARAM_VALUE.Use_Embedded_Registers" spirit:order="11">true</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -10875,7 +10875,7 @@
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
-            <xilinx:isEnabled xilinx:resolve="dependent" xilinx:id="PARAM_ENABLEMENT.Output_Register_Type">false</xilinx:isEnabled>
+            <xilinx:isEnabled xilinx:resolve="dependent" xilinx:id="PARAM_ENABLEMENT.Output_Register_Type">true</xilinx:isEnabled>
           </xilinx:enablement>
         </xilinx:parameterInfo>
       </spirit:vendorExtensions>
@@ -10957,6 +10957,7 @@
         <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.Read_Data_Count" xilinx:valueSource="user"/>
         <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.Read_Data_Count_Width" xilinx:valueSource="user"/>
         <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.Reset_Type" xilinx:valueSource="user"/>
+        <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.Use_Embedded_Registers" xilinx:valueSource="user"/>
         <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.Write_Data_Count_Width" xilinx:valueSource="user"/>
       </xilinx:configElementInfos>
     </xilinx:coreExtensions>
