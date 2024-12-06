@@ -6,12 +6,11 @@
 ################################################################################
 
 set prj_name [lindex $argv 0]
-set prj_top "red_pitaya_top"
-set prj_dir "build"
+set prj_defs [lindex $argv 1]
 puts "Project name: $prj_name"
+puts "Defines: $prj_defs"
 cd prj/$prj_name
 #cd prj/$::argv 0
-
 
 ################################################################################
 # install UltraFast Design Methodology from TCL Store
@@ -23,12 +22,14 @@ tclapp::install -quiet ultrafast
 # define paths
 ################################################################################
 
-set path_brd brd
+set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
-set path_sdc sdc_ll
+set path_ip      ip
+set path_ip_top  ../../ip
+set path_bd  .srcs/sources_1/bd/system/hdl
+#set path_bd  .srcs/sources_1/bd/system
+set path_sdc ../../sdc_ll
 set path_sdc_prj sdc
-set path_bd  $prj_dir/redpitaya.srcs/sources_1/bd/system/hdl
 
 set path_out out
 set path_sdk sdk
@@ -41,14 +42,15 @@ file mkdir $path_sdk
 ################################################################################
 
 set_param board.repoPaths [list $path_brd]
+set_param iconstr.diffPairPulltype {opposite}
 
 ################################################################################
 # setup an in memory project
 ################################################################################
 
-set part xc7z020clg400-3
+set part xc7z020clg400-1
 
-create_project -part $part -force redpitaya $prj_dir
+create_project -in_memory -part $part
 
 ################################################################################
 # create PS BD (processing system block design)
@@ -56,6 +58,14 @@ create_project -part $part -force redpitaya $prj_dir
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::gpio_width 24
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
+
+set_property verilog_define [concat Z20_ll $prj_defs] [current_fileset]
+
 source                            $path_ip/systemZ20.tcl
 
 # generate SDK files
@@ -69,34 +79,31 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 # 3. constraints
 ################################################################################
 
-#add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
-#add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
+add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
+add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
+
+if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
-add_files                         $path_rtl
-add_files                         $path_bd
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+}
+
+add_files                               $path_rtl
+add_files                               $path_bd
+
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
+}
+
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
-
-## search for HWID parameter to select xdc
-foreach item $argv {
-  puts "Input arfguments: $argv"
-  if {[lsearch -all $item "*HWID*"] >= 0} {
-    set hwid [split $item "="]
-    if {[lindex $hwid 1] ne ""} {
-      set board [lindex $hwid 1]
-      puts "Special board: $board"
-    }
-  }
-}
-
-if {[info exists board]} {
-  puts "Special board: $board"
-  add_files -fileset constrs_1  ../../$path_sdc/red_pitaya_${board}.xdc
-} else {
-  puts "Reading standard board constraints."
-  add_files -fileset constrs_1  ../../$path_sdc/red_pitaya.xdc
-}
-
-
 
 ################################################################################
 # ser parameter containing Git hash
@@ -105,59 +112,66 @@ if {[info exists board]} {
 set gith [exec git log -1 --format="%H"]
 set_property generic "GITH=160'h$gith" [current_fileset]
 
-set_property top $prj_top [current_fileset]
-
-
-
-
 ################################################################################
 # run synthesis
 # report utilization and timing estimates
 # write checkpoint design
 ################################################################################
 
-update_compile_order -fileset sources_1
+#synth_design -top red_pitaya_top_Z20
+synth_design -top red_pitaya_top -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
 
-launch_runs synth_1
-wait_on_run synth_1
-
-set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
-file copy -force $rptFiles ./$path_out/
-
+write_checkpoint         -force   $path_out/post_synth
+report_timing_summary    -file    $path_out/post_synth_timing_summary.rpt
+report_power             -file    $path_out/post_synth_power.rpt
 
 ################################################################################
-# run placement and router
+# run placement and logic optimization
 # report utilization and timing estimates
 # write checkpoint design
 ################################################################################
 
+opt_design
+power_opt_design
+place_design
+phys_opt_design
+write_checkpoint         -force   $path_out/post_place
+report_timing_summary    -file    $path_out/post_place_timing_summary.rpt
+#write_hwdef              -file    $path_sdk/red_pitaya.hwdef
 
-launch_runs impl_1 -jobs 2
-wait_on_run impl_1
+################################################################################
+# run router
+# report actual utilization and timing,
+# write checkpoint design
+# run drc, write verilog and xdc out
+################################################################################
 
-set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]
-foreach file $rptFiles {
-   file copy -force $file ./$path_out/
-}
+route_design
+write_checkpoint         -force   $path_out/post_route
+report_timing_summary    -file    $path_out/post_route_timing_summary.rpt
+report_timing            -file    $path_out/post_route_timing.rpt -sort_by group -max_paths 100 -path_type summary
+report_clock_utilization -file    $path_out/clock_util.rpt
+report_utilization       -file    $path_out/post_route_util.rpt
+report_power             -file    $path_out/post_route_power.rpt
+report_drc               -file    $path_out/post_imp_drc.rpt
+report_io                -file    $path_out/post_imp_io.rpt
+#write_verilog            -force   $path_out/bft_impl_netlist.v
+#write_xdc -no_fixed_only -force   $path_out/bft_impl.xdc
 
+xilinx::ultrafast::report_io_reg -verbose -file $path_out/post_route_iob.rpt
 
 ################################################################################
 # generate a bitstream
 ################################################################################
 
-#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 
-launch_runs impl_1 -to_step write_bitstream
-
-open_run impl_1
 write_bitstream -force            $path_out/red_pitaya.bit
 write_bitstream -force -bin_file  $path_out/red_pitaya
-
 
 ################################################################################
 # generate system definition
 ################################################################################
-
 
 write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \

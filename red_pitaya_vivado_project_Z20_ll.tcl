@@ -6,34 +6,36 @@
 ################################################################################
 
 set prj_name [lindex $argv 0]
+set prj_defs [lindex $argv 1]
 puts "Project name: $prj_name"
+puts "Defines: $prj_defs"
 cd prj/$prj_name
-#cd prj/$::argv
-
+#cd prj/$::argv 0
 
 ################################################################################
 # define paths
 ################################################################################
 
-set path_brd brd
+set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
-set path_sdc sdc_ll
-set path_sdc_prj sdc
+set path_ip      ip
+set path_ip_top  ../../ip
 set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
-
+set path_sdc ../../sdc_ll
+set path_sdc_prj sdc
 
 ################################################################################
 # list board files
 ################################################################################
 
 set_param board.repoPaths [list $path_brd]
+set_param iconstr.diffPairPulltype {opposite}
 
 ################################################################################
 # setup an in memory project
 ################################################################################
 
-set part xc7z020clg400-3
+set part xc7z020clg400-1
 
 create_project -part $part -force redpitaya ./project
 
@@ -43,6 +45,14 @@ create_project -part $part -force redpitaya ./project
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::gpio_width 24
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
+
+set_property verilog_define [concat Z20_ll $prj_defs] [current_fileset]
+
 source                            $path_ip/systemZ20.tcl
 
 # generate SDK files
@@ -55,28 +65,28 @@ generate_target all [get_files    system.bd]
 # 3. constraints
 ################################################################################
 
+if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+}
+
 add_files                         $path_rtl
 add_files                         $path_bd
+
+set ip_files [glob -nocomplain $path_ip/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
+}
+
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
-
-## search for HWID parameter to select xdc
-foreach item $argv {
-  puts "Input arfguments: $argv"
-  if {[lsearch -all $item "*HWID*"] >= 0} {
-    set hwid [split $item "="]
-    set board [lindex $hwid 1]
-    puts "Special board: $board"
-  }
-}
-
-if {[info exists board]} {
-  puts "Special board: $board"
-  add_files -fileset constrs_1  ../../$path_sdc/red_pitaya_${board}.xdc
-} else {
-  puts "Reading standard board constraints."
-  add_files -fileset constrs_1  ../../$path_sdc/red_pitaya.xdc
-}
 
 ################################################################################
 # start gui
