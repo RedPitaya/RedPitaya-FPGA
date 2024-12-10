@@ -55,7 +55,11 @@ module red_pitaya_top_Z20 #(
   // module numbers
   parameter MNA = 2,  // number of acquisition modules
   parameter MNG = 2,  // number of generator   modules
+  `ifdef Z20_G2
+  parameter DWE = 19
+  `else
   parameter DWE = 11
+  `endif
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -107,6 +111,10 @@ module red_pitaya_top_Z20 #(
   output logic [ 2-1:0] daisy_n_o  ,
   input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
   input  logic [ 2-1:0] daisy_n_i  ,
+  `ifdef Z20_G2
+  input  logic          c1_orient_i ,
+  input  logic          c1_link_i   ,
+  `endif
   // LED
   inout  logic [ 8-1:0] led_o
 );
@@ -224,7 +232,7 @@ red_pitaya_pll pll (
   .clk_ser     (pll_ser_clk   ),  // fast serial clock
   .clk_pdm     (pll_pwm_clk   ),  // PWM clock
   // status outputs
-  .pll_locked  (pll_locked)
+  .pll_locked  (pll_locked    )
 );
 
 BUFG bufg_adc_clk     (.O (adc_clk    ), .I (pll_adc_clk   ));
@@ -449,10 +457,13 @@ logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 
 red_pitaya_hk #(.DWE(DWE)) i_hk (
   // system signals
-  .clk_i           (adc_clk ),  // clock
-  .rstn_i          (adc_rstn),  // reset - active low
+  .clk_i           (adc_clk    ),  // clock
+  .rstn_i          (adc_rstn   ),  // reset - active low
+  .fclk_i          (fclk[0]    ),  // clock
+  .frstn_i         (frstn[0]   ),  // reset - active low
+
   // LED
-  .led_o           (  led_o                      ),  // LED output
+  .led_o           (  led_o    ),  // LED output
   // global configuration
   .digital_loop    (digital_loop),
   .daisy_mode_o    (daisy_mode),
@@ -655,10 +666,12 @@ end
 
 red_pitaya_hk #(.DWE(DWE)) i_hk (
   // system signals
-  .clk_i           (adc_clk ),  // clock
-  .rstn_i          (adc_rstn),  // reset - active low
+  .clk_i           (adc_clk    ),  // clock
+  .rstn_i          (adc_rstn   ),  // reset - active low
+  .fclk_i          (fclk[0]    ),  // clock
+  .frstn_i         (frstn[0]   ),  // reset - active low
   //// LED
-  //.led_o           (  led_o                      ),  // LED output
+  //.led_o           (  led_o     ),  // LED output
   //// global configuration
   //.digital_loop    (digital_loop),
   //.daisy_mode_o    (daisy_mode),

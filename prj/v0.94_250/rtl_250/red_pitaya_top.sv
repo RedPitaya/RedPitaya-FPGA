@@ -592,10 +592,12 @@ red_pitaya_hk #(.DWE(DWE+1))
 
 i_hk (
   // system signals
-  .clk_i           (adc_clk2d),  // clock
-  .rstn_i          (adc_rstn),  // reset - active low
+  .clk_i           (adc_clk2d   ),  // clock
+  .rstn_i          (adc_rstn    ),  // reset - active low
+  .fclk_i          (fclk[0]     ),  // clock
+  .frstn_i         (frstn[0]    ),  // reset - active low
   // LED
-  .led_o           (led_hk),  // LED output
+  .led_o           (led_hk      ),  // LED output
   // idelay control
   .idly_rst_o      (idly_rst    ),
   .idly_ce_o       (idly_ce     ),

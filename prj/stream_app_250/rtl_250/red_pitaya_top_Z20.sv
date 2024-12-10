@@ -278,8 +278,10 @@ red_pitaya_hk #(.DWE(10))
 
 i_hk (
   // system signals
-  .clk_i           (clk_125),  // clock
-  .rstn_i          (rstn_hk),  // reset - active low
+  .clk_i           (clk_125    ),  // clock
+  .rstn_i          (rstn_hk    ),  // reset - active low
+  .fclk_i          (fclk[0]    ),  // clock
+  .frstn_i         (frstn[0]   ),  // reset - active low
   // LED
   .led_o           (led_hk),  // LED output
   // idelay control
