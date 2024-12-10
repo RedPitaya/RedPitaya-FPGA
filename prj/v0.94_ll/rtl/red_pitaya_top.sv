@@ -523,10 +523,12 @@ logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 
 red_pitaya_hk_ll i_hk (
   // system signals
-  .clk_i           (adc_clk ),  // clock
-  .rstn_i          (adc_rstn),  // reset - active low
+  .clk_i           (adc_clk     ),  // clock
+  .rstn_i          (adc_rstn    ),  // reset - active low
+  .fclk_i          (fclk[0]     ),  // clock
+  .frstn_i         (frstn[0]    ),  // reset - active low
   // LED
-  .led_o           ( led_o  ),  // LED output
+  .led_o           ( led_o      ),  // LED output
   // global configuration
   .digital_loop    (digital_loop),
   // SPI

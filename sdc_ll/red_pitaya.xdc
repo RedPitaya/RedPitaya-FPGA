@@ -15,8 +15,8 @@
 ### ADC
 
 # ADC data
-set_property -dict {IOSTANDARD DIFF_SSTL18_II  IOB TRUE }  [get_ports {adc_dat?_i[*][*]}]
-set_property -dict {IOSTANDARD DIFF_SSTL18_II  IOB TRUE }  [get_ports {adc_?clk_?[*]}]
+set_property -dict {IOSTANDARD DIFF_SSTL18_I  IOB TRUE }  [get_ports {adc_dat?_i[*][*]}]
+set_property -dict {IOSTANDARD DIFF_SSTL18_I  IOB TRUE }  [get_ports {adc_?clk_?[*]}]
 
 set_property PACKAGE_PIN Y6  [get_ports {adc_dclk_i[0]}] ; # ADDCLK_n
 set_property PACKAGE_PIN Y7  [get_ports {adc_dclk_i[1]}] ; # ADDCLK_p
@@ -168,7 +168,7 @@ set_property PACKAGE_PIN M15 [get_ports exp_n_io[ 7]] ; # DIO7_N
 
 
 ### SATA connector
-#set_property -dict {IOSTANDARD DIFF_SSTL18_II  IOB TRUE } [get_ports {daisy_?_?[*]}]
+#set_property -dict {IOSTANDARD DIFF_SSTL18_I  IOB TRUE } [get_ports {daisy_?_?[*]}]
 set_property -dict {IOSTANDARD LVCMOS18  IOB TRUE } [get_ports {daisy_?_?[*]}]
 
 set_property PACKAGE_PIN V6  [get_ports {daisy_p_o[0]}] ; # DAISY_IO0_P

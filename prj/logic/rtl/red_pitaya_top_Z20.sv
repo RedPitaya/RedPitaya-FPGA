@@ -299,6 +299,7 @@ sys_bus_interconnect #(
   .SN (16),
   .SW (18)
 ) sys_bus_interconnect (
+  .pll_locked_i(pll_locked),
   .bus_m (ps_sys),
   .bus_s (sys)
 );

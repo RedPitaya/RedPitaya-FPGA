@@ -15,6 +15,13 @@ set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_i[*]}]
 
 set_property PULLTYPE PULLUP [get_ports daisy_p_i[1]]
 
+set_property -dict {PACKAGE_PIN Y9  IOSTANDARD LVCMOS33} [get_ports {exp_p_io[8]}]
+set_property -dict {PACKAGE_PIN Y8  IOSTANDARD LVCMOS33} [get_ports {exp_n_io[8]}]
+set_property -dict {PACKAGE_PIN Y12 IOSTANDARD LVCMOS33} [get_ports {exp_p_io[9]}]
+set_property -dict {PACKAGE_PIN Y13 IOSTANDARD LVCMOS33} [get_ports {exp_n_io[9]}]
+set_property -dict {PACKAGE_PIN Y7  IOSTANDARD LVCMOS33} [get_ports {exp_p_io[10]}]
+set_property -dict {PACKAGE_PIN Y6  IOSTANDARD LVCMOS33} [get_ports {exp_n_io[10]}]
+
 set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff*/D}]
 set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_write_csff*/D}]
 set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_read_csff*/D}]
