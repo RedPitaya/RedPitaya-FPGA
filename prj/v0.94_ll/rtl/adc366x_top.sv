@@ -20,7 +20,7 @@ module adc366x_top
    // configuration
    input                 cfg_clk_i       ,  //!< Configuration clock
    input                 cfg_en_i        ,  //!< global module enable
-   input      [  6-1: 0] cfg_dly_i       ,  //!< delay control
+   input      [ 26-1: 0] cfg_dly_i       ,  //!< delay control
 
    // parallel ports
    input                 adc_clk_i       ,  //!< parallel clock
@@ -39,7 +39,7 @@ wire par_clk ;
 wire dly_new;
 
 sync #(.DW (1), .PULSE (1) ) i_drst (
-  .sclk_i (cfg_clk_i),  .srstn_i (cfg_en_i),  .src_i (cfg_dly_i[5] ),
+  .sclk_i (cfg_clk_i),  .srstn_i (cfg_en_i),  .src_i (cfg_dly_i[25] ),
   .dclk_i (par_clk  ),  .drstn_i (cfg_en_i),  .dst_o (    dly_new  ) );
 
 
@@ -76,11 +76,8 @@ BUFR_inst
 
 reg  [SW*PDW-1: 0] par_out   =  'h0 ;
 reg  [     3-1: 0] slip_cnt  = 3'h0 ;
-reg  [     5-1: 0] cur_dly   ;
 
-always @(posedge par_clk ) begin
-  cur_dly <= cfg_dly_i[5-1:0]  ;
-end
+
 
 generate
 for (GV=0; GV < SW; GV=GV+1) begin:ser_dat
@@ -91,6 +88,12 @@ for (GV=0; GV < SW; GV=GV+1) begin:ser_dat
   reg  [ 8-1: 0] qq   ;
   reg  [ 8-1: 0] qqq  ;
   reg            rst  ;
+
+  reg  [ 5-1: 0] cur_dly   ;
+
+  always @(posedge par_clk ) begin
+    cur_dly <= cfg_dly_i[GV*5 +: 5]  ;
+  end
 
   IDELAYE2 #(
     .CINVCTRL_SEL          ( "FALSE"     ),  // Enable dynamic clock inversion (FALSE, TRUE)
@@ -262,8 +265,8 @@ reg  [32-1: 0] par_dat_o ;
 wire           par_clk_o ;
 reg            par_dv    ;
 
-assign rawa = par_out[PDW+16-1:  PDW   ];
-assign rawb = par_out[PDW+32-1:  PDW+16];
+assign rawa = par_out[PDW+16 +: 16]; // channels were inverted
+assign rawb = par_out[PDW    +: 16];
 
 if (PDW==8) begin
  always @(posedge par_clk_o) begin

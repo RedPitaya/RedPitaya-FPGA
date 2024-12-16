@@ -173,6 +173,7 @@ logic                 scope_trigo;
 logic                 CAN0_rx, CAN0_tx;
 logic                 CAN1_rx, CAN1_tx;
 logic                 can_on;
+logic [26-1:0]        ser_ddly;
 
 
 // stream bus type
@@ -198,7 +199,7 @@ SBG_T [2-1:0]            asg_dat;
 SBA_T [2-1:0]            pid_dat;
 
 // configuration
-logic                    digital_loop;
+logic [2-1:0]            digital_loop;
 
 logic                    hk_spi_cs  ;
 logic                    hk_spi_clk ;
@@ -455,7 +456,7 @@ adc366x_top i_adc366x
    // configuration
   .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
   .cfg_en_i        (  adc_en         ),  //!< global module enable
-  .cfg_dly_i       (  6'h0           ),  //!< delay control
+  .cfg_dly_i       (  ser_ddly       ),  //!< delay control
 
    // parallel ports
   .adc_clk_i       (  adc_clk        ),  //!< parallel clock
@@ -471,13 +472,13 @@ assign hk_spi_i     = adc_sdio_io;
 assign adc_sdio_io  = hk_spi_t ? 1'bz : hk_spi_o ;
 
 assign adc_rst_o   = 1'b0 ;   // ADC reset
-assign adc_pdn_o   = 1'b1 ;   // ADC power down
+assign adc_pdn_o   = 1'b0 ;   // ADC power down
 
 
 // optional digital loop
-assign adc_dat[0] = digital_loop ? (dac_a<<<2) : adc_dat_raw[0];
-assign adc_dat[1] = digital_loop ? (dac_b<<<2) : adc_dat_raw[1];
-assign adc_dv     = digital_loop ?       1'b1  : adc_dat_rdv;
+assign adc_dat[0] = digital_loop[0] ? (dac_a<<<2) : adc_dat_raw[0];
+assign adc_dat[1] = digital_loop[0] ? (dac_b<<<2) : adc_dat_raw[1];
+assign adc_dv     = digital_loop[0] ?       1'b1  : adc_dat_rdv;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -498,13 +499,13 @@ begin
   dac_dat_a <= {dac_a[14-1], ~dac_a[14-2:0]};
   dac_dat_b <= {dac_b[14-1], ~dac_b[14-2:0]};
 
-  dac_data_o <= adc_dat_raw[0][14-1:0] ;//dac_dat_a ;
-  dac_datb_o <= adc_dat_raw[1][14-1:0] ;//dac_dat_b ;
+  dac_data_o <= digital_loop[1] ? adc_dat_raw[0][16-1 -: 14] : dac_dat_a ;
+  dac_datb_o <= digital_loop[1] ? adc_dat_raw[1][16-1 -: 14] : dac_dat_b ;
 end
 
 // DDR outputs
-ODDR oddr_dac_wrta (.Q(dac_wrta_o), .D1(1'b0  ), .D2(1'b1  ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0 ), .S(1'b0));
-ODDR oddr_dac_wrtb (.Q(dac_wrtb_o), .D1(1'b0  ), .D2(1'b1  ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0 ), .S(1'b0));
+ODDR oddr_dac_wrta (.Q(dac_wrta_o), .D1(1'b0  ), .D2(1'b1  ), .C(dac_clk_1p), .CE(1'b1), .R(1'b0 ), .S(1'b0));
+ODDR oddr_dac_wrtb (.Q(dac_wrtb_o), .D1(1'b0  ), .D2(1'b1  ), .C(dac_clk_1p), .CE(1'b1), .R(1'b0 ), .S(1'b0));
 
 
 
@@ -525,8 +526,6 @@ red_pitaya_hk_ll i_hk (
   // system signals
   .clk_i           (adc_clk     ),  // clock
   .rstn_i          (adc_rstn    ),  // reset - active low
-  .fclk_i          (fclk[0]     ),  // clock
-  .frstn_i         (frstn[0]    ),  // reset - active low
   // LED
   .led_o           ( led_o      ),  // LED output
   // global configuration
@@ -544,6 +543,10 @@ red_pitaya_hk_ll i_hk (
   .exp_n_dat_i     (exp_n_in ),
   .exp_n_dat_o     (exp_n_out),
   .exp_n_dir_o     (exp_n_dir),
+
+  .ser_ddly_o      (ser_ddly[25-1:0]),
+  .new_ddly_o      (ser_ddly[26-1]),
+
    // System bus
   .sys_addr        (sys[0].addr ),
   .sys_wdata       (sys[0].wdata),
@@ -664,8 +667,8 @@ red_pitaya_pid i_pid (
    // signals
   .clk_i           (adc_clk   ),  // clock
   .rstn_i          (adc_rstn  ),  // reset - active low
-  .dat_a_i         (adc_dat[0][16-1:16-14]),  // in 1
-  .dat_b_i         (adc_dat[1][16-1:16-14]),  // in 2
+  .dat_a_i         (adc_dat[0][16-1 -: 14]),  // in 1
+  .dat_b_i         (adc_dat[1][16-1 -: 14]),  // in 2
   .dat_a_o         (pid_dat[0]),  // out 1
   .dat_b_o         (pid_dat[1]),  // out 2
   // System bus

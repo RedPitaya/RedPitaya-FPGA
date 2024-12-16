@@ -138,12 +138,12 @@ set_property PACKAGE_PIN V15 [get_ports pll_lo_o]
 ### Expansion connector
 set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8}  [get_ports {exp_?_io[*]}]
 
-set_property PACKAGE_PIN G17 [get_ports exp_p_io[0]] ; # DIO0_P
-set_property PACKAGE_PIN G18 [get_ports exp_n_io[0]] ; # DIO0_N
-set_property PACKAGE_PIN H16 [get_ports exp_p_io[1]] ; # DIO1_P
-set_property PACKAGE_PIN H17 [get_ports exp_n_io[1]] ; # DIO1_N
-set_property PACKAGE_PIN J18 [get_ports exp_p_io[2]] ; # DIO2_P
-set_property PACKAGE_PIN H18 [get_ports exp_n_io[2]] ; # DIO2_N
+set_property PACKAGE_PIN G17 [get_ports exp_p_io[ 0]] ; # DIO0_P
+set_property PACKAGE_PIN G18 [get_ports exp_n_io[ 0]] ; # DIO0_N
+set_property PACKAGE_PIN H16 [get_ports exp_p_io[ 1]] ; # DIO1_P
+set_property PACKAGE_PIN H17 [get_ports exp_n_io[ 1]] ; # DIO1_N
+set_property PACKAGE_PIN J18 [get_ports exp_p_io[ 2]] ; # DIO2_P
+set_property PACKAGE_PIN H18 [get_ports exp_n_io[ 2]] ; # DIO2_N
 set_property PACKAGE_PIN K17 [get_ports exp_p_io[ 3]] ; # DIO3_P
 set_property PACKAGE_PIN K18 [get_ports exp_n_io[ 3]] ; # DIO3_N
 set_property PACKAGE_PIN L14 [get_ports exp_p_io[ 4]] ; # DIO4_P
@@ -154,12 +154,12 @@ set_property PACKAGE_PIN K16 [get_ports exp_p_io[ 6]] ; # DIO6_P
 set_property PACKAGE_PIN J16 [get_ports exp_n_io[ 6]] ; # DIO6_N
 set_property PACKAGE_PIN M14 [get_ports exp_p_io[ 7]] ; # DIO7_P
 set_property PACKAGE_PIN M15 [get_ports exp_n_io[ 7]] ; # DIO7_N
-#set_property PACKAGE_PIN M17 [get_ports {exp_p_io[ 8]}] ; # DIO8_P
-#set_property PACKAGE_PIN M18 [get_ports {exp_n_io[ 8]}] ; # DIO8_N
-#set_property PACKAGE_PIN N20 [get_ports {exp_p_io[ 9]}] ; # DIO9_P
-#set_property PACKAGE_PIN P20 [get_ports {exp_n_io[ 9]}] ; # DIO9_N
-#set_property PACKAGE_PIN N18 [get_ports {exp_p_io[10]}] ; # DIO10_P
-#set_property PACKAGE_PIN P19 [get_ports {exp_n_io[10]}] ; # DIO10_N
+set_property PACKAGE_PIN M17 [get_ports exp_p_io[ 8]] ; # DIO8_P
+set_property PACKAGE_PIN M18 [get_ports exp_n_io[ 8]] ; # DIO8_N
+set_property PACKAGE_PIN N20 [get_ports exp_p_io[ 9]] ; # DIO9_P
+set_property PACKAGE_PIN P20 [get_ports exp_n_io[ 9]] ; # DIO9_N
+set_property PACKAGE_PIN N18 [get_ports exp_p_io[10]] ; # DIO10_P
+set_property PACKAGE_PIN P19 [get_ports exp_n_io[10]] ; # DIO10_N
 
 #set_property PULLDOWN TRUE [get_ports {exp_p_io[0]}]
 #set_property PULLDOWN TRUE [get_ports {exp_n_io[0]}]

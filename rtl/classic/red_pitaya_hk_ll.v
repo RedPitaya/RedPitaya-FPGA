@@ -37,13 +37,17 @@ module red_pitaya_hk_ll #(
   // LED
   output reg [DWL-1:0] led_o      ,  // LED output
   // global configuration
-  output reg           digital_loop,
+  output reg [  2-1:0] digital_loop,
   //SPI
   output               spi_cs_o,
   output               spi_clk_o,
   input                spi_miso_i,
   output               spi_mosi_t,
   output               spi_mosi_o,
+
+  output reg [ 25-1:0] ser_ddly_o,  // data delay
+  output reg           new_ddly_o,  // data delay load
+
   // Expansion connector
   input      [DWE-1:0] exp_p_dat_i,  // exp. con. input data
   output reg [DWE-1:0] exp_p_dat_o,  // exp. con. output data
@@ -162,13 +166,14 @@ spi_master i_spi_adc
 
 always @(posedge clk_i)
 if (rstn_i == 1'b0) begin
+  digital_loop <= 2'h0;
   led_o        <= {DWL{1'b0}};
   exp_p_dat_o  <= {DWE{1'b0}};
   exp_p_dir_o  <= {DWE{1'b0}};
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
 end else if (sys_wen) begin
-  if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
+  if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[1:0];
 
   if (sys_addr[19:0]==20'h10)   exp_p_dir_o  <= sys_wdata[DWE-1:0];
   if (sys_addr[19:0]==20'h14)   exp_n_dir_o  <= sys_wdata[DWE-1:0];
@@ -177,6 +182,8 @@ end else if (sys_wen) begin
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
 
+  if (sys_addr[19:0]==20'h40)   ser_ddly_o   <= sys_wdata[ 25-1:0];
+
   if (sys_addr[19:0]==20'h50)   spi_wr_h     <= sys_wdata[ 16-1:0];
   if (sys_addr[19:0]==20'h54)   spi_wr_l     <= sys_wdata[ 16-1:0];
 end
@@ -184,7 +191,8 @@ end
 
 always @(posedge clk_i)
 begin
-  spi_do    <= (sys_addr[19:0]==20'h54) & sys_wen;
+  spi_do     <= (sys_addr[19:0]==20'h54) & sys_wen;
+  new_ddly_o <= (sys_addr[19:0]==20'h40) & sys_wen;
 end
 
 
@@ -203,7 +211,7 @@ end else begin
     20'h00000: begin sys_ack <= sys_en;  sys_rdata <= {                id_value          }; end
     20'h00004: begin sys_ack <= sys_en;  sys_rdata <= {                dna_value[32-1: 0]}; end
     20'h00008: begin sys_ack <= sys_en;  sys_rdata <= {{64- 57{1'b0}}, dna_value[57-1:32]}; end
-    20'h0000c: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, digital_loop      }; end
+    20'h0000c: begin sys_ack <= sys_en;  sys_rdata <= {{32-  2{1'b0}}, digital_loop      }; end
 
     20'h00010: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWE{1'b0}}, exp_p_dir_o}       ; end
     20'h00014: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWE{1'b0}}, exp_n_dir_o}       ; end
@@ -213,6 +221,8 @@ end else begin
     20'h00024: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWE{1'b0}}, exp_n_dat_i}       ; end
 
     20'h00030: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWL{1'b0}}, led_o}             ; end
+
+    20'h00040: begin sys_ack <= sys_en;  sys_rdata <= {{32- 25{1'b0}}, ser_ddly_o}        ; end
 
     20'h00050: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_h}                    ; end
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_l}                    ; end
