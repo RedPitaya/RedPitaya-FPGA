@@ -267,8 +267,10 @@ always @(posedge dac_clk_i) begin
       // delay between repetitions 
       if (set_rst_i || do_read_start)
          dly_cnt <= set_rdly_i ;
-      else if (|dly_cnt && (dly_tick == 8'd124))
-         dly_cnt <= dly_cnt - 32'h1 ;
+      else if (|dly_cnt && (dly_tick == 8'd124)) begin// last value counter takes precedent
+         if(dly_cnt > 'h1 || (dly_cnt == 'h1 && ~|last_cnt))
+            dly_cnt <= dly_cnt - 32'h1 ;
+      end
 
       // repetitions counter
       if (trig_in && !do_read)

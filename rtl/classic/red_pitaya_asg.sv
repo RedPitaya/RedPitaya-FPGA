@@ -282,8 +282,8 @@ if (dac_rstn_i == 1'b0) begin
    set_b_first <= 14'h0    ;
    set_a_last  <= 14'h0    ;
    set_b_last  <= 14'h0    ;
-   set_a_last_l  <= 32'd124   ;
-   set_b_last_l  <= 32'd124   ;
+   set_a_last_l  <= 32'd120   ;
+   set_b_last_l  <= 32'd120   ;
    set_a_step_lo <=  32'b0    ;
    set_b_step_lo <=  32'b0    ;
    set_deb_len   <=  20'd62500; //0.5 ms
