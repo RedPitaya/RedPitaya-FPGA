@@ -199,7 +199,7 @@ SBG_T [2-1:0]            asg_dat;
 SBA_T [2-1:0]            pid_dat;
 
 // configuration
-logic                    digital_loop;
+logic [2-1:0]            digital_loop;
 
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]), .rstn (frstn[0]));
@@ -413,8 +413,8 @@ assign adc_dat_raw[1] = adc_dat_i[1][16-1:2];
 
 // transform into 2's complement (negative slope)
 always @(posedge adc_clk) begin
-  adc_dat[0] <= digital_loop ? dac_a : {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
-  adc_dat[1] <= digital_loop ? dac_b : {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
+  adc_dat[0] <= digital_loop[0] ? dac_a : {adc_dat_raw[0][14-1], ~adc_dat_raw[0][14-2:0]};
+  adc_dat[1] <= digital_loop[0] ? dac_b : {adc_dat_raw[1][14-1], ~adc_dat_raw[1][14-2:0]};
 end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -432,8 +432,8 @@ assign dac_b = (^dac_b_sum[15-1:15-2]) ? {dac_b_sum[15-1], {13{~dac_b_sum[15-1]}
 // output registers + signed to unsigned (also to negative slope)
 always @(posedge dac_clk_1x)
 begin
-  dac_dat_a <= {dac_a[14-1], ~dac_a[14-2:0]};
-  dac_dat_b <= {dac_b[14-1], ~dac_b[14-2:0]};
+  dac_dat_a <= digital_loop[1] ? adc_dat_raw[0] : {dac_a[14-1], ~dac_a[14-2:0]};
+  dac_dat_b <= digital_loop[1] ? adc_dat_raw[1] : {dac_b[14-1], ~dac_b[14-2:0]};
 end
 
 // DDR outputs

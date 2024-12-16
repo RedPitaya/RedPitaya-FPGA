@@ -189,7 +189,7 @@ SBG_T [2-1:0]            asg_dat;
 SBA_T [2-1:0]            pid_dat;
 
 // configuration
-logic                    digital_loop;
+logic [2-1:0]            digital_loop;
 
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
@@ -537,8 +537,8 @@ endgenerate
 // data loopback
 always @(posedge adc_clk)
 begin
-  adc_dat_sw[0] <= digital_loop ? dac_a_sum[14-1:2] : adc_dat_in[1][14-1:2]; // switch adc_b->ch_a
-  adc_dat_sw[1] <= digital_loop ? dac_b_sum[14-1:2] : adc_dat_in[0][14-1:2]; // switch adc_a->ch_b
+  adc_dat_sw[0] <= digital_loop[0] ? dac_a_sum[14-1:2] : adc_dat_in[1][14-1:2]; // switch adc_b->ch_a
+  adc_dat_sw[1] <= digital_loop[0] ? dac_b_sum[14-1:2] : adc_dat_in[0][14-1:2]; // switch adc_a->ch_b
 end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -568,8 +568,8 @@ BUFG bufg_dac_dco    (.O (dac_dco_bufg ), .I(dac_dco_i));
 
 //always @(posedge dac_dco_bufg) begin
 always @(posedge adc_clk) begin
-  dac_dat_o[0] <= dac_dat_b ; // switch ch_b->dac_a
-  dac_dat_o[1] <= dac_dat_a ; // switch ch_a->dac_b
+  dac_dat_o[0] <= digital_loop[1] ? adc_dat_sw[1] : dac_dat_b ; // switch ch_b->dac_a
+  dac_dat_o[1] <= digital_loop[1] ? adc_dat_sw[0] : dac_dat_a ; // switch ch_a->dac_b
 end
 
 ////////////////////////////////////////////////////////////////////////////////

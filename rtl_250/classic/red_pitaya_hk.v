@@ -46,7 +46,7 @@ module red_pitaya_hk #(
   output reg [2*7-1:0] idly_inc_o,
   input      [2*5-1:0] idly_cnt_i,
   // global configuration
-  output reg           digital_loop,
+  output reg [  2-1:0] digital_loop,
   output reg [  3-1:0] daisy_mode_o,
   input                pll_sys_i,    // system clock
   input                pll_ref_i,    // reference clock
@@ -343,7 +343,7 @@ freq_meter #(
 
 always @(posedge clk_i)
 if (rstn_i == 1'b0) begin
-  digital_loop <= 1'b0 ;
+  digital_loop <= 2'h0 ;
   daisy_mode_o <= 3'h0;
   led_o        <= {DWL{1'b0}};
   exp_p_dat_o  <= {DWE{1'b0}};
@@ -353,7 +353,7 @@ if (rstn_i == 1'b0) begin
   pll_cfg_en   <= 1'b1 ;
   can_on_o     <= 1'b0;
 end else if (sys_wen) begin
-  if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
+  if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[1:0];
 
   if (sys_addr[19:0]==20'h10)   exp_p_dir_o  <= sys_wdata[DWE-1:0];
   if (sys_addr[19:0]==20'h14)   exp_n_dir_o  <= sys_wdata[DWE-1:0];
