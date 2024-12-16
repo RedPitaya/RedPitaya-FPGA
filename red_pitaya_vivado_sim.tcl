@@ -78,6 +78,9 @@ if {($prj_name == "stream_app") || ($prj_name == "stream_app_250") || ($prj_name
 set def_name "STREAMING"
 }
 
+if {($prj_name == "logic") || ($prj_name == "logic_250")} {
+set def_name "LOGIC"
+}
 if {($model == "Z20_250")} {
 set path_rtl rtl_250
 }

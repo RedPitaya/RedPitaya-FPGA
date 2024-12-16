@@ -58,7 +58,7 @@ module red_pitaya_ps (
   // GPIO
   gpio_if.m              gpio,
   // interrupts
-  input  logic  [13-1:0] irq,
+  input  logic  [12-1:0] irq,
   // system read/write channel
   sys_bus_if.m           bus,
   // stream input
@@ -94,7 +94,12 @@ assign fclk_rstn_o = fclk_rstn;
 
 BUFG fclk_buf [4-1:0] (.O(fclk_clk_o), .I(fclk_clk));
 
-system system_i (
+`ifdef SIMULATION
+system_model system_i
+`else
+system system_i 
+`endif //SIMULATION
+(
   // MIO
   .FIXED_IO_mio      (FIXED_IO_mio     ),
   .FIXED_IO_ps_clk   (FIXED_IO_ps_clk  ),

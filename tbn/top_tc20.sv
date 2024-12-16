@@ -142,7 +142,7 @@ localparam CHA_STEP     = 32'h100000;
 localparam CHA_STEP_LO  = 32'h0;
 localparam CHA_NCYC     = 16'd2;
 localparam CHA_RNUM     = 16'd2;
-localparam CHA_RDLY     = 32'd20;
+localparam CHA_RDLY     = 32'd1;
 localparam CHA_LAST     = 14'h200;
 localparam CHA_FIRST    = 14'h200;
 localparam CHB_SIZE     = 32'hFFFFFFFF;
@@ -151,7 +151,7 @@ localparam CHB_STEP     = 32'h100000;
 localparam CHB_STEP_LO  = 32'h0;
 localparam CHB_NCYC     = 16'd2;
 localparam CHB_RNUM     = 16'd2;
-localparam CHB_RDLY     = 32'd20;
+localparam CHB_RDLY     = 32'd2;
 localparam CHB_LAST     = 14'h200;
 localparam CHB_FIRST    = 14'h200;
 localparam DEB_LEN      = 20'h1;
@@ -939,6 +939,44 @@ logic        [ 32-1: 0] rdata;
 
 endtask: test_sata
 
+
+task test_la (
+  int unsigned regset
+);
+  ##10;
+
+  // configure trigger
+  axi_write(regset+'h40, 16'h0000);  // cfg_cmp_msk
+  axi_write(regset+'h44, 16'h0000);  // cfg_cmp_val
+  axi_write(regset+'h48, 16'h0001);  // cfg_edg_pos
+  axi_write(regset+'h4c, 16'h0000);  // cfg_edg_neg
+
+  axi_write(regset+'h10, 'd8 );  // cfg_pre
+  axi_write(regset+'h14, 'd16);  // cfg_pst
+  // enable LA trigger source
+  axi_write(regset+'h08, 'b0010);
+  // start acquire
+  axi_write(regset+'h00, 4'b0100);
+  ##1000;
+endtask: test_la
+
+
+task test_la_automatic (
+  int unsigned regset
+);
+  ##10;
+
+  // enable automatic mode
+  axi_write(regset+'h04, 'h2);  // cfg_aut <= 1
+  // configure trigger
+  axi_write(regset+'h10, 'd0);  // cfg_pre
+  axi_write(regset+'h14, 'd4);  // cfg_pst
+  // ignore triggers
+  axi_write(regset+'h08, 'b0000);
+  // start acquire
+  axi_write(regset+'h00, 4'b0100);
+  ##1000;
+endtask: test_la_automatic
 
 ////////////////////////////////////////////////////////////////////////////////
 // AXI4 read/write tasks

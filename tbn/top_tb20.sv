@@ -239,6 +239,12 @@ initial begin
 
     end    
 `else
+
+  `ifdef LOGIC
+    $display("Testing Logic Analyzer!");
+    top_tc20.test_la (32'h40300000);
+    top_tc20.test_la_automatic (32'h40300000);
+  `else
     $display("Testing normal acq mode!");
 
     ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
@@ -254,12 +260,12 @@ initial begin
        //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       // top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-      top_tc20.custom_test(ADR2, ADR);
+      //top_tc20.custom_test(ADR2, ADR);
 
       #1000;
       top_tc20.test_dac2(ADR2);
-
     end
+    `endif
 `endif
 
   join
@@ -382,8 +388,13 @@ tb_dac_drv
 );
 
 `ifndef STREAMING
+  `ifdef LOGIC
+assign gpio_p_dir =  8'h0;
+assign gpio_n_dir =  8'h0;
+  `else
 assign gpio_p_dir =  top_tb.red_pitaya_top.exp_p_dtr;
 assign gpio_n_dir =  top_tb.red_pitaya_top.exp_n_dtr;
+  `endif
 `endif
 
 always @(posedge clk0) begin
@@ -553,8 +564,12 @@ red_pitaya_top
 top_tc20_strm top_tc20_strm();
 monitor_tcs_strm monitor_tcs_strm();
 `else
-top_tc20 top_tc20();
-monitor_tcs_094 monitor_tcs_094();
+  `ifdef LOGIC
+  top_tc20 top_tc20();
+  `else
+  monitor_tcs_094 monitor_tcs_094();
+  top_tc20 top_tc20();
+  `endif
 `endif
 
 ////////////////////////////////////////////////////////////////////////////////
