@@ -24,9 +24,10 @@ tclapp::install -quiet ultrafast
 
 set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
-#set path_bd  .srcs/sources_1/bd/system/hdl
-set path_bd  .srcs/sources_1/bd/system
+set path_ip      ip
+set path_ip_top  ../../ip
+set path_bd  .srcs/sources_1/bd/system/hdl
+#set path_bd  .srcs/sources_1/bd/system
 set path_sdc ../../sdc
 set path_sdc_prj sdc
 
@@ -50,7 +51,6 @@ set_param iconstr.diffPairPulltype {opposite}
 set part xc7z020clg400-1
 
 create_project -in_memory -part $part
-set_property verilog_define $prj_defs [current_fileset]
 
 ################################################################################
 # create PS BD (processing system block design)
@@ -59,7 +59,12 @@ set_property verilog_define $prj_defs [current_fileset]
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
 set ::gpio_width 33
-set_property verilog_define {Z20_G2} [current_fileset]
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 250000000
+set ::hp3_clk_freq 250000000
+
+set_property verilog_define [concat Z20_G2 $prj_defs] [current_fileset]
 
 source                            $path_ip/systemZ20_G2.tcl
 
@@ -76,7 +81,12 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 
 add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
 add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
+
+if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+}
+
 add_files                               $path_rtl
 add_files                               $path_bd
 
@@ -85,8 +95,14 @@ if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
+}
 add_files -fileset constrs_1      $path_sdc/red_pitaya_Z20.xdc
-add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_G2.xdc
 
 ################################################################################
@@ -151,12 +167,7 @@ xilinx::ultrafast::report_io_reg -verbose -file $path_out/post_route_iob.rpt
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 
 write_bitstream -force            $path_out/red_pitaya.bit
-#write_bitstream -force -bin_file  $path_out/red_pitaya
-write_cfgmem    -force -format bin -interface smapx32 -disablebitswap \
-                       -loadbit "up 0x0 $path_out/red_pitaya.bit" \
-                       -file $path_out/red_pitaya.bin
-
-
+write_bitstream -force -bin_file  $path_out/red_pitaya
 
 ################################################################################
 # generate system definition
