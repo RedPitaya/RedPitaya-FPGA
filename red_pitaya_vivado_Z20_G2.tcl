@@ -102,7 +102,6 @@ add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
 if {[file isdirectory $path_ip_top/sync_fifo]} {
 add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
-add_files -fileset constrs_1      $path_sdc/red_pitaya_Z20.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_G2.xdc
 
 ################################################################################
