@@ -51,7 +51,7 @@ PLLE2_ADV #(
    .CLKOUT5_DIVIDE       ( 8         ),
    .CLKOUT5_PHASE        ( 0.000     ),
    .CLKOUT5_DUTY_CYCLE   ( 0.5       ),
-   .CLKIN1_PERIOD        ( 8.000     ),
+   .CLKIN1_PERIOD        ( 16.000    ),
    .REF_JITTER1          ( 0.010     )
 ) pll (
    // Output clocks

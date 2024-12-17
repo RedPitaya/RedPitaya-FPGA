@@ -55,11 +55,7 @@ module red_pitaya_top_Z20 #(
   // module numbers
   parameter MNA = 2,  // number of acquisition modules
   parameter MNG = 2,  // number of generator   modules
-  `ifdef Z20_G2
-  parameter DWE = 19
-  `else
   parameter DWE = 11
-  `endif
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -93,30 +89,37 @@ module red_pitaya_top_Z20 #(
   output logic           [ 2-1:0] adc_clk_o,  // optional ADC clock source (unused) [0] = p; [1] = n
   output logic                    adc_cdcs_o, // ADC clock duty cycle stabilizer
   // DAC
-  output logic [14-1:0] dac_dat_o  ,  // DAC combined data
-  output logic          dac_wrt_o  ,  // DAC write
-  output logic          dac_sel_o  ,  // DAC channel select
-  output logic          dac_clk_o  ,  // DAC clock
-  output logic          dac_rst_o  ,  // DAC reset
+  output logic [ 14-1:0] dac_dat_o  ,  // DAC combined data
+  output logic           dac_wrt_o  ,  // DAC write
+  output logic           dac_sel_o  ,  // DAC channel select
+  output logic           dac_clk_o  ,  // DAC clock
+  output logic           dac_rst_o  ,  // DAC reset
   // PWM DAC
-  output logic [ 4-1:0] dac_pwm_o  ,  // 1-bit PWM DAC
+  output logic [  4-1:0] dac_pwm_o  ,  // 1-bit PWM DAC
   // XADC
-  input  logic [ 5-1:0] vinp_i     ,  // voltages p
-  input  logic [ 5-1:0] vinn_i     ,  // voltages n
+  input  logic [  5-1:0] vinp_i     ,  // voltages p
+  input  logic [  5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
   inout  logic [DWE-1:0] exp_p_io  ,
   inout  logic [DWE-1:0] exp_n_io  ,
   // SATA connector
-  output logic [ 2-1:0] daisy_p_o  ,  // line 1 is clock capable
-  output logic [ 2-1:0] daisy_n_o  ,
-  input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
-  input  logic [ 2-1:0] daisy_n_i  ,
+  output logic [  2-1:0] daisy_p_o  ,  // line 1 is clock capable
+  output logic [  2-1:0] daisy_n_o  ,
+  input  logic [  2-1:0] daisy_p_i  ,  // line 1 is clock capable
+  input  logic [  2-1:0] daisy_n_i  ,
+
   `ifdef Z20_G2
-  input  logic          c1_orient_i ,
-  input  logic          c1_link_i   ,
+  // Additional E3 connector
+  output logic [  4-1:0] exp_e3p_o  ,  // line 3 is clock capable (SRCC)
+  output logic [  4-1:0] exp_e3n_o  ,
+  input  logic [  4-1:0] exp_e3p_i  ,  // line 3 is clock capable (MRCC)
+  input  logic [  4-1:0] exp_e3n_i  ,
+
+  input  logic           s1_orient_i ,
+  input  logic           s1_link_i   ,
   `endif
   // LED
-  inout  logic [ 8-1:0] led_o
+  inout  logic [  8-1:0] led_o
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -345,12 +348,12 @@ sys_bus_interconnect #(
   .bus_s (sys)
 );
 
-// silence unused busses
-generate
-for (genvar i=6; i<8; i++) begin: for_sys
-  sys_bus_stub sys_bus_stub_5_7 (sys[i]);
-end: for_sys
-endgenerate
+// // silence unused busses
+// generate
+// for (genvar i=6; i<8; i++) begin: for_sys
+//   sys_bus_stub sys_bus_stub_5_7 (sys[i]);
+// end: for_sys
+// endgenerate
 
 `ifndef SCOPE_ONLY
 
@@ -430,8 +433,8 @@ assign dac_b = (^dac_b_sum[15-1:15-2]) ? {dac_b_sum[15-1], {13{~dac_b_sum[15-1]}
 
 // output registers + signed to unsigned (also to negative slope)
 always @(posedge dac_clk_1x)
-begin
-  dac_dat_a <= digital_loop[1] ? {adc_dat[0][16-1], ~adc_dat[0][16-2 -: 13]} : {dac_a[14-1], ~dac_a[14-2:0]};
+begin // Loopback is for demonstration only. We avoid constraining for timing optimizations.
+  dac_dat_a <= digital_loop[1] ? {adc_dat[0][16-1], ~adc_dat[0][16-2 -: 13]} : {dac_a[14-1], ~dac_a[14-2:0]}; 
   dac_dat_b <= digital_loop[1] ? {adc_dat[1][16-1], ~adc_dat[1][16-2 -: 13]} : {dac_b[14-1], ~dac_b[14-2:0]};
 end
 
@@ -652,6 +655,56 @@ red_pitaya_daisy i_daisy (
   .sys_err_o       (  sys[5].err                 ),
   .sys_ack_o       (  sys[5].ack                 )
 );
+
+  `ifdef Z20_G2
+  // DIO11 is TX clock
+  // DIO12 is RX clock
+  // exp_e3x_o={DIO11, DIO13, DIO15, DIO17}
+  // exp_e3x_i={DIO12, DIO14, DIO16, DIO18}
+red_pitaya_daisy  #(
+  .IO_STD("LVDS_25"),
+  .N_DATS(3)
+) i_serlines_add
+(
+   // SATA connector
+  .daisy_p_o       (  exp_e3p_o                  ),  // line 3 is clock capable (SRCC)
+  .daisy_n_o       (  exp_e3n_o                  ),
+  .daisy_p_i       (  exp_e3p_i                  ),  // line 3 is clock capable (MRCC)
+  .daisy_n_i       (  exp_e3n_i                  ),
+   // Data
+  .ser_clk_i       (  ser_clk                    ),  // high speed serial
+  .dly_clk_i       (  dly_clk                    ),  // delay clock
+   // TX
+  .par_clk_i       (  adc_clk                    ),  // data paralel clock
+  .par_rstn_i      (  adc_rstn                   ),  // reset - active low
+  //.par_rdy_o       (  daisy_rx_rdy               ),
+  //.par_dv_i        (  par_dvi                    ),
+  //.par_dat_i       (  par_dati                   ),
+   // RX
+  //.par_clk_o       ( adc_clk_daisy               ),
+  //.par_rstn_o      (                             ),
+  //.par_dv_o        (                             ),
+  //.par_dat_o       ( par_dat                     ),
+
+  .sync_mode_i     (  1'b0                       ),
+  //.debug_o         (/*led_o*/                    ),
+   // System bus
+  .sys_clk_i       (  adc_clk                    ),  // clock
+  .sys_rstn_i      (  adc_rstn                   ),  // reset - active low
+  .sys_addr_i      (  sys[6].addr                ),
+  .sys_sel_i       (                             ),
+  .sys_wdata_i     (  sys[6].wdata               ),
+  .sys_wen_i       (  sys[6].wen                 ),
+  .sys_ren_i       (  sys[6].ren                 ),
+  .sys_rdata_o     (  sys[6].rdata               ),
+  .sys_err_o       (  sys[6].err                 ),
+  .sys_ack_o       (  sys[6].ack                 )
+);
+  `else
+  sys_bus_stub sys_bus_stub_6 (sys[6]);
+  `endif
+  sys_bus_stub sys_bus_stub_7 (sys[7]);
+
 `else
 IOBUF i_iobuf (.O(trig_ext), .IO(exp_p_io[0]), .I(1'b0), .T(1'b1) );
 
@@ -769,7 +822,7 @@ OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_dat
 assign adc_cdcs_o = 1'b1 ;
 assign dac_pwm_o  = 1'b0;
 generate
-for (genvar i=2; i<6; i++) begin: for_sys2
+for (genvar i=2; i<7; i++) begin: for_sys2
   sys_bus_stub sys_bus_stub_2_5 (sys[i]);
 end: for_sys2
 endgenerate

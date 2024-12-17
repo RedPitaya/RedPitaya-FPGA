@@ -34,6 +34,10 @@ module red_pitaya_hk_ll #(
   // system signals
   input                clk_i      ,  // clock
   input                rstn_i     ,  // reset - active low
+
+  input                fclk_i     ,  // clock
+  input                frstn_i    ,  // reset - active low
+
   // LED
   output reg [DWL-1:0] led_o      ,  // LED output
   // global configuration
@@ -47,6 +51,7 @@ module red_pitaya_hk_ll #(
 
   output reg [ 25-1:0] ser_ddly_o,  // data delay
   output reg           new_ddly_o,  // data delay load
+  //output reg [  5-1:0] ser_inv_o ,  // lane invert
 
   // Expansion connector
   input      [DWE-1:0] exp_p_dat_i,  // exp. con. input data
@@ -55,6 +60,8 @@ module red_pitaya_hk_ll #(
   input      [DWE-1:0] exp_n_dat_i,  //
   output reg [DWE-1:0] exp_n_dat_o,  //
   output reg [DWE-1:0] exp_n_dir_o,  //
+  output reg           can_on_o   ,
+
   // System bus
   input      [ 32-1:0] sys_addr   ,  // bus address
   input      [ 32-1:0] sys_wdata  ,  // bus write data
@@ -160,6 +167,39 @@ spi_master i_spi_adc
   .sts_spi_busy_o     (spi_bsy)   // status - spi state machine busy
 );
 
+
+//---------------------------------------------------------------------------------
+//
+//  Frequency meter
+wire [32-1: 0] fmtr_freq  ;
+
+freq_meter #(
+  .GCL  ( 32'd15625000 ), // Gate counter length - 1/8 of s, 125000000/8
+  .GCS  (  3           )  // Gate counter sections (1<<GCS)
+) i_freq_meter
+(
+  // measured clock
+  .mes_clk_i     (  clk_i        ),
+  .mes_rstn_i    (  rstn_i       ),
+  // reference clock
+  .ref_clk_i     (  fclk_i       ),
+  .ref_rstn_i    (  frstn_i      ),
+  // result
+  .freq_o        (  fmtr_freq    ),  // @ mes_clk_i
+  .freq_ref_o    (               )   // @ ref_clk_i
+);
+
+//---------------------------------------------------------------------------------
+//
+// FPGA ready signal - device is out of reset
+reg fpga_rdy;
+always @(posedge clk_i) begin
+if (rstn_i == 1'b0)
+  fpga_rdy <= 1'b0;
+else
+  fpga_rdy <= 1'b1;
+end
+
 //---------------------------------------------------------------------------------
 //
 //  System bus connection
@@ -172,6 +212,8 @@ if (rstn_i == 1'b0) begin
   exp_p_dir_o  <= {DWE{1'b0}};
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
+  can_on_o     <= 1'b0;
+  //ser_inv_o    <= 5'h8;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[1:0];
 
@@ -181,8 +223,10 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h1C)   exp_n_dat_o  <= sys_wdata[DWE-1:0];
 
   if (sys_addr[19:0]==20'h30)   led_o        <= sys_wdata[DWL-1:0];
+  if (sys_addr[19:0]==20'h34)   can_on_o     <= sys_wdata[      0];
 
   if (sys_addr[19:0]==20'h40)   ser_ddly_o   <= sys_wdata[ 25-1:0];
+  //if (sys_addr[19:0]==20'h44)   ser_inv_o    <= sys_wdata[  5-1:0];
 
   if (sys_addr[19:0]==20'h50)   spi_wr_h     <= sys_wdata[ 16-1:0];
   if (sys_addr[19:0]==20'h54)   spi_wr_l     <= sys_wdata[ 16-1:0];
@@ -221,12 +265,17 @@ end else begin
     20'h00024: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWE{1'b0}}, exp_n_dat_i}       ; end
 
     20'h00030: begin sys_ack <= sys_en;  sys_rdata <= {{32-DWL{1'b0}}, led_o}             ; end
+    20'h00034: begin sys_ack <= sys_en;  sys_rdata <= {{32-1{1'b0}},   can_on_o}          ; end
 
     20'h00040: begin sys_ack <= sys_en;  sys_rdata <= {{32- 25{1'b0}}, ser_ddly_o}        ; end
+    //20'h00044: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, ser_inv_o}         ; end
 
     20'h00050: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_h}                    ; end
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_l}                    ; end
     20'h00058: begin sys_ack <= sys_en;  sys_rdata <= {15'h0,spi_bsy,  spi_rd_l}          ; end
+
+    20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
+    20'h00104: begin sys_ack <= sys_en;  sys_rdata <= {                fmtr_freq}         ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase
