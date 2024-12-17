@@ -240,6 +240,27 @@ end
 
 //---------------------------------------------------------------------------------
 //
+//  Frequency meter
+wire [32-1: 0] fmtr_freq  ;
+
+freq_meter #(
+  .GCL  ( 32'd15625000 ), // Gate counter length - 1/8 of s, 125000000/8
+  .GCS  (  3           )  // Gate counter sections (1<<GCS)
+) i_freq_meter
+(
+  // measured clock
+  .mes_clk_i     (  clk_i        ),
+  .mes_rstn_i    (  rstn_i       ),
+  // reference clock
+  .ref_clk_i     (  fclk_i       ),
+  .ref_rstn_i    (  frstn_i      ),
+  // result
+  .freq_o        (  fmtr_freq    ),  // @ mes_clk_i
+  .freq_ref_o    (               )   // @ ref_clk_i
+);
+
+//---------------------------------------------------------------------------------
+//
 //  System bus connection
 reg [32-1:0] adc_reg_comm;
 reg          adc_reg_commv;
@@ -328,6 +349,8 @@ end else begin
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, idly_cnt_i[19:15]}   ; end
     
     20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
+    20'h00104: begin sys_ack <= sys_en;  sys_rdata <= {                fmtr_freq}         ; end
+
     20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end
     
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end

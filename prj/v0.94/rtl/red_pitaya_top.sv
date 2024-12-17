@@ -431,7 +431,7 @@ assign dac_b = (^dac_b_sum[15-1:15-2]) ? {dac_b_sum[15-1], {13{~dac_b_sum[15-1]}
 
 // output registers + signed to unsigned (also to negative slope)
 always @(posedge dac_clk_1x)
-begin
+begin // Loopback is for demonstration only. We avoid constraining for timing optimizations.
   dac_dat_a <= digital_loop[1] ? {adc_dat[0][14-1], ~adc_dat[0][14-2 -: 13]} : {dac_a[14-1], ~dac_a[14-2:0]};
   dac_dat_b <= digital_loop[1] ? {adc_dat[1][14-1], ~adc_dat[1][14-2 -: 13]} : {dac_b[14-1], ~dac_b[14-2:0]};
 end

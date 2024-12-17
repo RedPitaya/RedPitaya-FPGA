@@ -84,6 +84,12 @@ add_files                         ../../$path_rtl
 add_files                               $path_rtl
 add_files                               $path_bd
 
+
+if {$prj_name != "pyrpl"} {
+add_files                         ../../$path_rtl
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+}
+
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
@@ -97,7 +103,6 @@ if {[file isdirectory $path_ip_top/sync_fifo]} {
 add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya_Z20.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ################################################################################

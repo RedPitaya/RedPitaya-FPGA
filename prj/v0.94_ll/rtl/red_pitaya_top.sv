@@ -174,6 +174,7 @@ logic                 CAN0_rx, CAN0_tx;
 logic                 CAN1_rx, CAN1_tx;
 logic                 can_on;
 logic [26-1:0]        ser_ddly;
+logic [ 5-1:0]        ser_inv = 5'h8;
 
 
 // stream bus type
@@ -451,7 +452,7 @@ adc366x_top i_adc366x
    // serial ports
   .ser_clk_i       (  adc_dclk_in    ),  //!< RX high-speed (LVDS-bit) clock
   .ser_dat_i       (  adc_ser        ),  //!< RX high-speed data/frame
-  .ser_inv_i       (  5'b10000       ),  //!< lane invert
+  .ser_inv_i       (  ser_inv        ),  //!< lane invert
 
    // configuration
   .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
@@ -498,7 +499,7 @@ always @(posedge dac_clk_1x)
 begin
   dac_dat_a <= {dac_a[14-1], ~dac_a[14-2:0]};
   dac_dat_b <= {dac_b[14-1], ~dac_b[14-2:0]};
-
+ // Loopback is for demonstration only. We avoid constraining for timing optimizations.
   dac_data_o <= digital_loop[1] ? adc_dat_raw[0][16-1 -: 14] : dac_dat_a ;
   dac_datb_o <= digital_loop[1] ? adc_dat_raw[1][16-1 -: 14] : dac_dat_b ;
 end
@@ -526,6 +527,8 @@ red_pitaya_hk_ll i_hk (
   // system signals
   .clk_i           (adc_clk     ),  // clock
   .rstn_i          (adc_rstn    ),  // reset - active low
+  .fclk_i          (fclk[0]     ),  // clock
+  .frstn_i         (frstn[0]    ),  // reset - active low
   // LED
   .led_o           ( led_o      ),  // LED output
   // global configuration
@@ -543,10 +546,12 @@ red_pitaya_hk_ll i_hk (
   .exp_n_dat_i     (exp_n_in ),
   .exp_n_dat_o     (exp_n_out),
   .exp_n_dir_o     (exp_n_dir),
+  .can_on_o        (can_on   ),
 
   .ser_ddly_o      (ser_ddly[25-1:0]),
   .new_ddly_o      (ser_ddly[26-1]),
-
+  //.ser_inv_o       (ser_inv     ),
+  
    // System bus
   .sys_addr        (sys[0].addr ),
   .sys_wdata       (sys[0].wdata),
