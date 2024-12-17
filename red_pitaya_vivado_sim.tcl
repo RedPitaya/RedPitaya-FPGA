@@ -51,6 +51,9 @@ switch $model {
 "Z20_250" {
     set part xc7z020clg400-3
 }
+"Z20_G2" {
+    set part xc7z020clg400-1
+}
 default {
     set part xc7z010clg400-1
 }
@@ -98,6 +101,9 @@ switch $model {
 "Z20_250" {
     set def_model "Z20_250"
 }
+"Z20_G2" {
+    set def_model "Z20_G2"
+}
 default {
     set def_model "Z10_14"
 }
@@ -142,6 +148,9 @@ if {($def_name == "STREAMING")} {
     "Z20_250" {
         source ${path_tbn}/systemZ20_sim.tcl
     }
+    "Z20_G2" {
+        source ${path_tbn}/systemZ20_G2_sim.tcl
+    }
     default {
         source ${path_tbn}/systemZ10_sim.tcl
     }
@@ -160,6 +169,10 @@ if {($def_name == "STREAMING")} {
     }
     "Z20_250" {
         source ${path_ip}/systemZ20.tcl
+    }
+    "Z20_G2" {
+        set_property verilog_define {Z20_G2} [current_fileset]
+        source ${path_ip}/systemZ20_G2.tcl
     }
     default {
         source ${path_ip}/systemZ10.tcl
@@ -203,9 +216,12 @@ if {[file isdirectory $path_tbn_top/axi_prot_check]} {
 add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
 }
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
-add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
-
+# add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+# if {($def_model == "Z20_G2")} {
+#     add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_G2.xdc
+# } else {
+#     add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
+# }
 ################################################################################
 # start gui
 ################################################################################

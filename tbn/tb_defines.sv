@@ -19,6 +19,7 @@
 `define PID_REG_OFS        3
 `define AMS_REG_OFS        4
 `define DAISY_REG_OFS      5
+`define EXP_E3_REG_OFS     6
 
 `define STRM_SCOPE_REG_OFS 0
 `define STRM_ASG_REG_OFS   1

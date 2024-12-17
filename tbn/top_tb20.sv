@@ -16,6 +16,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8138,
   realtime  TP            = 8.138ns,  // 122.88 MHz
+  `define   rp_top        red_pitaya_top_Z20
   `endif
 
   `ifdef Z20_14
@@ -26,6 +27,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top
   `endif
 
   `ifdef Z10_14
@@ -36,6 +38,7 @@ module top_tb #(
   parameter DWE           = 8,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top
   `endif
 
   `ifdef Z20_4ADC
@@ -46,6 +49,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top_4ADC
   `endif
 
   `ifdef Z20_250
@@ -56,6 +60,18 @@ module top_tb #(
   parameter DWE           = 9,
   parameter CLKA_PER      = 4000,
   realtime  TP            = 4.0ns,  // 250 MHz
+  `define   rp_top        red_pitaya_top
+  `endif
+
+  `ifdef Z20_G2
+  parameter ADC_DW        = 16,
+  parameter MNG           = 2,
+  parameter TRIG_ACT_LVL  = 1,
+  parameter NUM_ADC       = 2,
+  parameter DWE           = 11,
+  parameter CLKA_PER      = 8000,
+  realtime  TP            = 8.0ns,  // 250 MHz
+  `define   rp_top        red_pitaya_top_Z20
   `endif
 
   parameter N_SAMP        = 131072-1, // size of ADC buffer file
@@ -148,14 +164,26 @@ wire            gpio_9_rec;
 
 logic [32-1:0 ] ext_trig_cnt;
 
-wire d_clko_p ;
-wire d_clko_n ;
-wire d_trigo_p;
-wire d_trigo_n;
-wire d_clki_p ;
-wire d_clki_n ;
-wire d_trigi_p;
-wire d_trigi_n;
+logic           d_clko_p ;
+logic           d_clko_n ;
+logic           d_trigo_p;
+logic           d_trigo_n;
+logic           d_clki_p ;
+logic           d_clki_n ;
+logic           d_trigi_p;
+logic           d_trigi_n;
+
+logic           e3_clko_p ;
+logic           e3_clko_n ;
+logic [  3-1:0] e3_dato_p ;
+logic [  3-1:0] e3_dato_n ;
+logic           e3_clki_p ;
+logic           e3_clki_n ;
+logic [  3-1:0] e3_dati_p ;
+logic [  3-1:0] e3_dati_n ;
+
+logic           s1_link ;
+logic           s1_orient ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Clock and reset generation
@@ -213,7 +241,7 @@ assign adc_rstn = red_pitaya_top.adc_rstn_01;
 `endif
 
 int BASE =  `BASE_OFS;
-int ADR, ADR2;
+int ADR, ADR2, ADR3;
 initial begin
   ##500;
    // top_tc.daisy_trigs();
@@ -249,11 +277,13 @@ initial begin
 
     ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
     ADR2 = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
+    ADR3 = `BASE_OFS + `EXP_E3_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
       top_tc20.daisy_trigs();
-      top_tc20.init_adc_01(ADR);
-      top_tc20.init_dac(ADR2, DAC_BUF_WRITE);
+      //top_tc20.init_adc_01(ADR);
+      //top_tc20.init_dac(ADR2, DAC_BUF_WRITE);
+      top_tc20.test_sata(ADR3);
 
        //top_tc20.init_adc_23(ADR2);     
       // top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
@@ -504,17 +534,20 @@ assign d_clki_n  = ~daisy_clk;
 assign d_trigi_p =  daisy_trig;
 assign d_trigi_n = ~daisy_trig;
 
+integer E3DEL = 100 ;
+always @ * begin
+  e3_clki_p <= #E3DEL e3_clko_p;
+  e3_clki_n <= #E3DEL e3_clko_n;
+  e3_dati_p <= #E3DEL e3_dato_p;
+  e3_dati_n <= #E3DEL e3_dato_n;
+  s1_link   <= 1'b0;
+  s1_orient <= 1'b0;
+end
 ////////////////////////////////////////////////////////////////////////////////
 // module instances
 ////////////////////////////////////////////////////////////////////////////////
 
-`ifdef Z20_16
-red_pitaya_top_Z20
-`elsif Z20_4ADC
-red_pitaya_top_4ADC
-`else
-red_pitaya_top
-`endif
+`rp_top
 #() 
 red_pitaya_top
 (
@@ -552,6 +585,15 @@ red_pitaya_top
   .adc_dat_i    (adc_drv[NUM_ADC-1:0]),
   .adc_clk_i    (inclk0),
   .adc_clk_o    (clko),
+  `endif
+
+  `ifdef Z20_G2
+  .exp_e3p_o    ({e3_clko_p,e3_dato_p}),
+  .exp_e3n_o    ({e3_clko_n,e3_dato_n}),
+  .exp_e3p_i    ({e3_clki_p,e3_dati_p}),
+  .exp_e3n_i    ({e3_clki_n,e3_dati_n}),
+  .s1_link_i    (s1_link),
+  .s1_orient_i  (s1_orient),
   `endif
   // LED
   .led_o(led));
