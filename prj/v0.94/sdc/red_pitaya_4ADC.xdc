@@ -222,3 +222,4 @@ set_max_delay -datapath_only 8.000 -from [get_pins adc_dat_t*[3][*]/C] -to [get_
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins sys_bus_interconnect/inst_sys_bus_cdc/reg_rdata*[*]/D] -to [get_pins sys_bus_interconnect/inst_sys_bus_cdc/bus_s\\.rdata*[*]/D]
+set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
