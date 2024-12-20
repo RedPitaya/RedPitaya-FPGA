@@ -61,12 +61,12 @@ create_project -in_memory -part $part
 set ::gpio_width 24
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
-set ::hp2_clk_freq 125000000
-set ::hp3_clk_freq 125000000
+set ::hp2_clk_freq 250000000
+set ::hp3_clk_freq 250000000
 
 set_property verilog_define [concat Z20_ll $prj_defs] [current_fileset]
 
-source                            $path_ip/systemZ20.tcl
+source                            $path_ip/systemZ20_14.tcl
 
 # generate SDK files
 generate_target all [get_files    system.bd]
@@ -118,8 +118,8 @@ set_property generic "GITH=160'h$gith" [current_fileset]
 # write checkpoint design
 ################################################################################
 
-#synth_design -top red_pitaya_top_Z20
-synth_design -top red_pitaya_top -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
+#synth_design -top red_pitaya_top_ll
+synth_design -top red_pitaya_top_ll -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
 
 write_checkpoint         -force   $path_out/post_synth
 report_timing_summary    -file    $path_out/post_synth_timing_summary.rpt

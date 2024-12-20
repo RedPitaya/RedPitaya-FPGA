@@ -42,6 +42,7 @@ module red_pitaya_hk_ll #(
   output reg [DWL-1:0] led_o      ,  // LED output
   // global configuration
   output reg [  2-1:0] digital_loop,
+  output reg [  3-1:0] daisy_mode_o,
   //SPI
   output               spi_cs_o,
   output               spi_clk_o,
@@ -51,7 +52,8 @@ module red_pitaya_hk_ll #(
 
   output reg [ 25-1:0] ser_ddly_o,  // data delay
   output reg           new_ddly_o,  // data delay load
-  //output reg [  5-1:0] ser_inv_o ,  // lane invert
+  output reg [  5-1:0] ser_inv_o ,  // lane invert
+  input      [  3-1:0] cfg_bslip_i,
 
   // Expansion connector
   input      [DWE-1:0] exp_p_dat_i,  // exp. con. input data
@@ -129,6 +131,17 @@ assign id_value[ 3: 0] =  4'h3; // board type  3 - low latency
 
 //---------------------------------------------------------------------------------
 //
+// FPGA ready signal - device is out of reset
+reg fpga_rdy;
+always @(posedge clk_i) begin
+if (rstn_i == 1'b0)
+  fpga_rdy <= 1'b0;
+else
+  fpga_rdy <= 1'b1;
+end
+
+//---------------------------------------------------------------------------------
+//
 //  SPI
 
 reg           spi_do         ;
@@ -189,16 +202,6 @@ freq_meter #(
   .freq_ref_o    (               )   // @ ref_clk_i
 );
 
-//---------------------------------------------------------------------------------
-//
-// FPGA ready signal - device is out of reset
-reg fpga_rdy;
-always @(posedge clk_i) begin
-if (rstn_i == 1'b0)
-  fpga_rdy <= 1'b0;
-else
-  fpga_rdy <= 1'b1;
-end
 
 //---------------------------------------------------------------------------------
 //
@@ -207,13 +210,14 @@ end
 always @(posedge clk_i)
 if (rstn_i == 1'b0) begin
   digital_loop <= 2'h0;
+  daisy_mode_o <= 3'h0;
   led_o        <= {DWL{1'b0}};
   exp_p_dat_o  <= {DWE{1'b0}};
   exp_p_dir_o  <= {DWE{1'b0}};
   exp_n_dat_o  <= {DWE{1'b0}};
   exp_n_dir_o  <= {DWE{1'b0}};
   can_on_o     <= 1'b0;
-  //ser_inv_o    <= 5'h8;
+  ser_inv_o    <= 5'h8;
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[1:0];
 
@@ -226,10 +230,11 @@ end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h34)   can_on_o     <= sys_wdata[      0];
 
   if (sys_addr[19:0]==20'h40)   ser_ddly_o   <= sys_wdata[ 25-1:0];
-  //if (sys_addr[19:0]==20'h44)   ser_inv_o    <= sys_wdata[  5-1:0];
+  if (sys_addr[19:0]==20'h44)   ser_inv_o    <= sys_wdata[  5-1:0];
 
   if (sys_addr[19:0]==20'h50)   spi_wr_h     <= sys_wdata[ 16-1:0];
   if (sys_addr[19:0]==20'h54)   spi_wr_l     <= sys_wdata[ 16-1:0];
+  if (sys_addr[19:0]==20'h1000) daisy_mode_o <= sys_wdata[  3-1:0];
 end
 
 
@@ -268,7 +273,8 @@ end else begin
     20'h00034: begin sys_ack <= sys_en;  sys_rdata <= {{32-1{1'b0}},   can_on_o}          ; end
 
     20'h00040: begin sys_ack <= sys_en;  sys_rdata <= {{32- 25{1'b0}}, ser_ddly_o}        ; end
-    //20'h00044: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, ser_inv_o}         ; end
+    20'h00044: begin sys_ack <= sys_en;  sys_rdata <= {{32-  5{1'b0}}, ser_inv_o}         ; end
+    20'h00048: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, cfg_bslip_i}       ; end
 
     20'h00050: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_h}                    ; end
     20'h00054: begin sys_ack <= sys_en;  sys_rdata <= {16'h0,spi_wr_l}                    ; end
@@ -276,6 +282,8 @@ end else begin
 
     20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
     20'h00104: begin sys_ack <= sys_en;  sys_rdata <= {                fmtr_freq}         ; end
+
+    20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end
   endcase

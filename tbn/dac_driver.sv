@@ -7,7 +7,7 @@ module dac_driver #()
   input  logic [2-1:0] [14-1:0]  dac_dat_i , // DAC combined data
   input  logic                    dac_clk_i , // DAC clock
   input  logic                    dac_rst_i , // DAC reset
-  input  logic                    dac_wrt_i , // DAC write enable
+  input  logic [2-1:0]            dac_wrt_i , // DAC write enable
   input  logic                    dac_sel_i , // DAC channel select
 
   output logic           [14-1:0] dac_a_o   ,
@@ -62,6 +62,15 @@ always @(posedge adc_clk_i) begin
     dac_cha_prev <= dac_a_o;
     dac_chb_prev <= dac_b_o;
 end
+`elsif Z20_LL
+    if (dac_wrt_i[0]) begin
+        dac_a_o <= {dac_dat_i[0][14-1],~dac_dat_i[0][14-2:0]};
+    end
+    if (dac_wrt_i[1]) begin
+        dac_b_o <= {dac_dat_i[0][14-1],~dac_dat_i[0][14-2:0]};  
+    end
+    dac_cha_prev <= dac_a_o;
+    dac_chb_prev <= dac_b_o;
 `else
 always @(posedge dac_clk_i) begin
     if (~dac_wrt_i) begin

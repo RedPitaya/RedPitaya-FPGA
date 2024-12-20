@@ -15,6 +15,12 @@ module adc_driver #(
    input  [16-1: 0] adc_data_in2 ,
    input  [16-1: 0] adc_data_in3 ,
 
+   input  logic           [ 2-1:0] adcll_dclk_i,  // ADC data clock {p,n}
+   output logic           [ 2-1:0] adcll_fclk_o,  // ADC frame clock {p,n}
+   output logic [ 2-1: 0] [ 2-1:0] adcll_data_o,  // ADC data {p,n}
+   output logic [ 2-1: 0] [ 2-1:0] adcll_datb_o,  // ADC data {p,n}
+   output logic           [ 2-1:0] adcll_dclk_o,  // ADC data clock {p,n}
+
    output logic [4-1:0][16-1:0] adc_drv_o     , 
    output logic [4-1:0][ 7-1:0] adc_drv_ddr_o , 
    output logic [4-1:0][ 7-1:0] adc_drv_p_o   , 
@@ -240,4 +246,34 @@ assign buf_rd0=buffer[buf_rp0[16-1:CNT_SHFT]];
 assign buf_rd1=buffer[buf_rp1[16-1:CNT_SHFT]];
 assign buf_rd2=buffer[buf_rp2[16-1:CNT_SHFT]];
 assign buf_rd3=buffer[buf_rp3[16-1:CNT_SHFT]];
+
+// ADC
+logic         [ 2-1:0] adc_dat1;
+logic         [ 2-1:0] adc_dat2;
+logic                  adc_fr;
+logic                  adc_odclk;
+
+model_ad366x i_ad366x
+(
+  //.sela_i  (  4'h1            ), // data select
+  //.selb_i  (  4'h2            ), // data select
+  .dat_a   (  adc_data1       ),
+  .dat_b   (  adc_data2       ),
+  .dco_i   ( !adcll_dclk_i[0] ), // data clock   -- inverted in HW
+  .dco_o   (  adc_odclk       ), // data clock   -- inverted in HW
+  .fr_o    (  adc_fr          ), // frame
+  .da_o    (  adc_dat1        ), // data
+  .db_o    (  adc_dat2        )  // data
+);
+
+
+
+
+assign adcll_dclk_o     = ~{adc_odclk,   !adc_odclk  } ;
+assign adcll_fclk_o     =  {adc_fr,      !adc_fr     } ;  // {p,n}
+assign adcll_data_o[0]  =  {adc_dat1[0], !adc_dat1[0]} ;
+assign adcll_data_o[1]  =  {adc_dat1[1], !adc_dat1[1]} ;
+assign adcll_datb_o[0]  = ~{adc_dat2[0], !adc_dat2[0]} ;  // inverted in HW
+assign adcll_datb_o[1]  =  {adc_dat2[1], !adc_dat2[1]} ;
+
 endmodule

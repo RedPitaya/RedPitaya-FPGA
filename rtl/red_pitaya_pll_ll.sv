@@ -31,27 +31,27 @@ PLLE2_ADV #(
    .BANDWIDTH            ("OPTIMIZED"),
    .COMPENSATION         ("ZHOLD"    ),
    .DIVCLK_DIVIDE        ( 1         ),
-   .CLKFBOUT_MULT        ( 16        ),
+   .CLKFBOUT_MULT        ( 8         ),
    .CLKFBOUT_PHASE       ( 0.000     ),
-   .CLKOUT0_DIVIDE       ( 4         ),  // 500MHz
+   .CLKOUT0_DIVIDE       ( 2         ), // 500 MHz
    .CLKOUT0_PHASE        ( 0.000     ),
    .CLKOUT0_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT1_DIVIDE       ( 16        ),
+   .CLKOUT1_DIVIDE       ( 8         ), // 125 MHz
    .CLKOUT1_PHASE        ( 0.000     ),
    .CLKOUT1_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT2_DIVIDE       ( 16        ),
+   .CLKOUT2_DIVIDE       ( 8         ), // 125 MHz -90 deg
    .CLKOUT2_PHASE        ( -90.000   ),
    .CLKOUT2_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT3_DIVIDE       ( 16        ),
+   .CLKOUT3_DIVIDE       ( 8         ), // 125 MHz -135 deg
    .CLKOUT3_PHASE        (-135.000   ),
    .CLKOUT3_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT4_DIVIDE       ( 8         ),  // 8->250MHz, 4->500MHz
+   .CLKOUT4_DIVIDE       ( 4         ), // 4->250MHz, 2->500MHz
    .CLKOUT4_PHASE        ( 0.000     ),
    .CLKOUT4_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT5_DIVIDE       ( 8         ),
+   .CLKOUT5_DIVIDE       ( 4         ), // 250 MHz
    .CLKOUT5_PHASE        ( 0.000     ),
    .CLKOUT5_DUTY_CYCLE   ( 0.5       ),
-   .CLKIN1_PERIOD        ( 16.000    ),
+   .CLKIN1_PERIOD        ( 8.000     ),
    .REF_JITTER1          ( 0.010     )
 ) pll (
    // Output clocks

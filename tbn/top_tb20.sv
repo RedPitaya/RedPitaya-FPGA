@@ -74,6 +74,17 @@ module top_tb #(
   `define   rp_top        red_pitaya_top_Z20
   `endif
 
+  `ifdef Z20_ll
+  parameter ADC_DW        = 14,
+  parameter MNG           = 2,
+  parameter TRIG_ACT_LVL  = 1,
+  parameter NUM_ADC       = 2,
+  parameter DWE           = 8,
+  parameter CLKA_PER      = 8000,
+  realtime  TP            = 8.0ns,  // 250 MHz
+  `define   rp_top        red_pitaya_top_ll
+  `endif
+
   parameter N_SAMP        = 131072-1, // size of ADC buffer file
 
   parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
@@ -105,11 +116,19 @@ logic [4-1:0][16-1:0] adc_drv     ;
 logic [4-1:0][ 7-1:0] adc_drv_ddr ; 
 logic [4-1:0][ 7-1:0] adc_drv_p   ; 
 logic [4-1:0][ 7-1:0] adc_drv_n   ;
+
+// ADC
+logic [ 2-1:0] [ 2-1:0] adcll_dat1;
+logic [ 2-1:0] [ 2-1:0] adcll_dat2;
+logic          [ 2-1:0] adcll_fclk;
+logic          [ 2-1:0] adcll_odclk;
+logic          [ 2-1:0] adcll_idclk;
+
 // DAC
 logic [2-1:0][14-1:0] dac_dat;     // DAC combined data
 logic                 dac_clk;     // DAC clock
 logic                 dac_rst;     // DAC reset
-logic                 dac_wrt;
+logic [2-1:0]         dac_wrt;
 logic                 dac_sel;
 logic        [14-1:0] dac_cha;
 logic        [14-1:0] dac_chb;
@@ -395,6 +414,12 @@ tb_adc_drv
    .adc_data_in2 (cnter3     ),
    .adc_data_in3 (cnter4     ),
 
+   .adcll_dclk_i (adcll_idclk),
+   .adcll_fclk_o (adcll_fclk ),
+   .adcll_data_o (adcll_dat1 ),
+   .adcll_datb_o (adcll_dat2 ),
+   .adcll_dclk_o (adcll_odclk),
+
    .adc_drv_o     (adc_drv    ), 
    .adc_drv_ddr_o (adc_drv_ddr), 
    .adc_drv_p_o   (adc_drv_p  ), 
@@ -575,6 +600,25 @@ red_pitaya_top
   .dac_dat_o    (dac_dat),
   .dac_reset_o  (dac_rst),
   .exp_9_io     (gpio_9),
+  `elsif Z20_ll
+  // ADC
+  .adc_dclk_i  (adcll_odclk ),  // ADC data clock {p,n}
+  .adc_fclk_i  (adcll_fclk  ),  // ADC frame clock {p,n}
+  .adc_data_i  (adcll_dat1  ),  // ADC data {p,n}
+  .adc_datb_i  (adcll_dat2  ),  // ADC data {p,n}
+  .adc_dclk_o  (adcll_idclk ),  // ADC data clock {p,n}
+  .adc_rst_o   (),   // ADC reset
+  .adc_pdn_o   (),   // ADC power down
+  .adc_sen_o   (),   // ADC serial en
+  .adc_sclk_o  (),  // ADC serial clock
+  .adc_sdio_io (), // ADC serial data
+
+  // DAC
+  .dac_clk_i   (inclk0),  // DAC clock
+  .dac_data_o  (dac_dat[0]),  // DAC data cha
+  .dac_datb_o  (dac_dat[1]),  // DAC data chb
+  .dac_wrta_o  (dac_wrt[0]),  // DAC write cha
+  .dac_wrtb_o  (dac_wrt[1]),  // DAC write cha
   `else        
   .dac_dat_o    (dac_dat[0]),
   .dac_wrt_o    (dac_wrt),

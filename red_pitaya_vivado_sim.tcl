@@ -54,6 +54,9 @@ switch $model {
 "Z20_G2" {
     set part xc7z020clg400-1
 }
+"Z20_ll" {
+    set part xc7z020clg400-1
+}
 default {
     set part xc7z010clg400-1
 }
@@ -104,6 +107,9 @@ switch $model {
 "Z20_G2" {
     set def_model "Z20_G2"
 }
+"Z20_ll" {
+    set def_model "Z20_ll"
+}
 default {
     set def_model "Z10_14"
 }
@@ -137,19 +143,27 @@ add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
 if {($def_name == "STREAMING")} {
     switch $def_model {
     "Z20" {
+        set_property verilog_define {Z20_xx} [current_fileset]
         source ${path_tbn}/systemZ20_sim.tcl
     }
     "Z20_14" {
+        set_property verilog_define {Z20_14 Z20_xx} [current_fileset]
         source ${path_tbn}/systemZ20_14_sim.tcl
     }
     "Z20_4" {
+        set_property verilog_define {Z20_xx} [current_fileset]
         source ${path_tbn}/systemZ20_14_sim.tcl
     }
     "Z20_250" {
         source ${path_tbn}/systemZ20_sim.tcl
     }
     "Z20_G2" {
+        set_property verilog_define {Z20_G2 Z20_xx} [current_fileset]
         source ${path_tbn}/systemZ20_G2_sim.tcl
+    }
+    "Z20_ll" {
+        set_property verilog_define {Z20_ll Z20_xx} [current_fileset]
+        source ${path_ip}/systemZ20_14.tcl
     }
     default {
         source ${path_tbn}/systemZ10_sim.tcl
@@ -158,21 +172,27 @@ if {($def_name == "STREAMING")} {
 } else {
     switch $def_model {
     "Z20" {
+        set_property verilog_define {Z20_xx} [current_fileset]
         source ${path_ip}/systemZ20.tcl
     }
     "Z20_14" {
-        set_property verilog_define {Z20_14} [current_fileset]
+        set_property verilog_define {Z20_14 Z20_xx} [current_fileset]
         source ${path_ip}/systemZ20_14.tcl
     }
     "Z20_4" {
+        set_property verilog_define {Z20_xx} [current_fileset]
         source ${path_ip}/systemZ20_14.tcl
     }
     "Z20_250" {
         source ${path_ip}/systemZ20.tcl
     }
     "Z20_G2" {
-        set_property verilog_define {Z20_G2} [current_fileset]
+        set_property verilog_define {Z20_G2 Z20_xx} [current_fileset]
         source ${path_ip}/systemZ20_G2.tcl
+    }
+    "Z20_ll" {
+        set_property verilog_define {Z20_ll Z20_xx} [current_fileset]
+        source ${path_ip}/systemZ20_14.tcl
     }
     default {
         source ${path_ip}/systemZ10.tcl
