@@ -168,8 +168,8 @@ set_property PACKAGE_PIN P19 [get_ports exp_n_io[10]] ; # DIO10_N
 
 
 ### SATA connector
-#set_property -dict {IOSTANDARD DIFF_SSTL18_I  IOB TRUE } [get_ports {daisy_?_?[*]}]
-set_property -dict {IOSTANDARD LVCMOS18  IOB TRUE } [get_ports {daisy_?_?[*]}]
+set_property -dict {IOSTANDARD DIFF_SSTL18_I  IOB TRUE } [get_ports {daisy_?_?[*]}]
+#set_property -dict {IOSTANDARD LVCMOS18  IOB TRUE } [get_ports {daisy_?_?[*]}]
 
 set_property PACKAGE_PIN V6  [get_ports {daisy_p_o[0]}] ; # DAISY_IO0_P
 set_property PACKAGE_PIN W6  [get_ports {daisy_n_o[0]}] ; # DAISY_IO0_N
@@ -199,7 +199,7 @@ set_property PACKAGE_PIN J14 [get_ports {led_o[7]}] ; # LED7
 ############################################################################
 
 create_clock -period 8.000 -name adc_dclk [get_ports {adc_dclk_i[1]}]
-create_clock -period 16.000 -name dac_clk [get_ports dac_clk_i]
+create_clock -period 8.000 -name dac_clk [get_ports dac_clk_i]
 create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
 create_generated_clock -name i_hk/dna_clk -source [get_pins pll/pll/CLKOUT1] -divide_by 16 [get_pins i_hk/dna_clk_reg/Q]
@@ -247,7 +247,20 @@ set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports
 
 
 
-
+set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff*/D}]
+set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_write_csff*/D}]
+set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_read_csff*/D}]
+set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
+set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
+set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
+set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {spi_done_csff*/D}]
+set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
+set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
+set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_do*/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
+set_false_path -from [get_pins ps/axi_slave_gp0/wr_wdata*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata*[*]*/D]
+set_false_path -from [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata*[*]*/C] -to [get_pins ps/axi_slave_gp0/axi\\.RDATA*[*]*/D]
+set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
+set_false_path -from [get_pins {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins {dac_dat_*[*]/D}]
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 
