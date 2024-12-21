@@ -415,12 +415,12 @@ logic                  adc_dat_rdv   ;
 
 
 // generating clock for ADC
-ODDR #(.DDR_CLK_EDGE ("SAME_EDGE")) ODDR_dclk (.Q(adc_dclk_out), .C(pll_adc_dclk), .R(!frstn[0]), .D1(1'b0), .D2(1'b1), .CE(1'b1), .S(1'b0)); // lanes inverted!!
+//ODDR #(.DDR_CLK_EDGE ("SAME_EDGE")) ODDR_dclk (.Q(adc_dclk_out), .C(pll_adc_dclk), .R(!frstn[0]), .D1(1'b1), .D2(1'b0), .CE(1'b1), .S(1'b0)); // lanes inverted!!
 
 assign adc_dat_p_in = {adc_datb_i[1][1], adc_datb_i[0][1], adc_data_i[1][1], adc_data_i[0][1], adc_fclk_i[1]} ;
 assign adc_dat_n_in = {adc_datb_i[1][0], adc_datb_i[0][0], adc_data_i[1][0], adc_data_i[0][0], adc_fclk_i[0]} ;
 
-OBUFDS  i_OBUFDS_adc_dco       (.I (adc_dclk_out ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
+OBUFDS  i_OBUFDS_adc_dco       (.I (pll_adc_dclk ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
 IBUFGDS i_IBUFGDS_adc_dco      (.I (adc_dclk_i[1]), .IB (adc_dclk_i[0]), .O  (adc_dclk_in)  );
 IBUFDS  i_IBUFDS_adc_dat [4:0] (.I (adc_dat_p_in),  .IB (adc_dat_n_in),  .O  (adc_ser)      );
 
@@ -429,7 +429,18 @@ IDELAYCTRL i_idelayctrl (.RDY(idly_rdy), .REFCLK(fclk[3]), .RST(!frstn[3]) );
 
 
 
-//assign adc_clk = pll_dac_clk_1x ;
+reg       adc_en;
+reg [7:0] adc_en_cnt;
+
+always @(posedge fclk[0]) begin
+  if (!frstn[0] || !fpll_locked_r3)
+    adc_en_cnt <= 8'h0;
+  else if (!adc_en_cnt[7])
+    adc_en_cnt <= adc_en_cnt + 8'h1;
+
+  adc_en <= adc_en_cnt[7];
+end
+
 
 adc366x_top i_adc366x
 (
@@ -440,7 +451,7 @@ adc366x_top i_adc366x
 
    // configuration
   .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
-  .cfg_en_i        (  ~adc_rstn      ),  //!< global module enable
+  .cfg_en_i        (  adc_en         ),  //!< global module enable
   .cfg_dly_i       (  ser_ddly       ),  //!< delay control
   .cfg_bslip_o     (  bitslip        ),
 
