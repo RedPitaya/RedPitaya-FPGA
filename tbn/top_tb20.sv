@@ -615,10 +615,11 @@ red_pitaya_top
 
   // DAC
   .dac_clk_i   (inclk0),  // DAC clock
-  .dac_data_o  (dac_dat[0]),  // DAC data cha
-  .dac_datb_o  (dac_dat[1]),  // DAC data chb
-  .dac_wrta_o  (dac_wrt[0]),  // DAC write cha
-  .dac_wrtb_o  (dac_wrt[1]),  // DAC write cha
+  // channels A and B are inverted in hardware
+  .dac_data_o  (dac_dat[1]),  // DAC data cha
+  .dac_datb_o  (dac_dat[0]),  // DAC data chb
+  .dac_wrta_o  (dac_wrt[1]),  // DAC write cha
+  .dac_wrtb_o  (dac_wrt[0]),  // DAC write chab
   `else        
   .dac_dat_o    (dac_dat[0]),
   .dac_wrt_o    (dac_wrt),

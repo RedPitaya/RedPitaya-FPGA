@@ -5,7 +5,7 @@
 // (c) Red Pitaya  http://www.redpitaya.com
 ////////////////////////////////////////////////////////////////////////////////
 
-module red_pitaya_top_Z20 #(
+module red_pitaya_top_ll #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
@@ -37,44 +37,44 @@ module red_pitaya_top_Z20 #(
   inout  logic          DDR_we_n   ,
 
   // Red Pitaya periphery
-
   // ADC
-  input  logic [MNA-1:0] [16-1:0] adc_dat_i,  // ADC data
-  input  logic           [ 2-1:0] adc_clk_i,  // ADC clock {p,n}
-  output logic           [ 2-1:0] adc_clk_o,  // optional ADC clock source (unused)
-  output logic                    adc_cdcs_o, // ADC clock duty cycle stabilizer
+  input  logic           [ 2-1:0] adc_dclk_i,  // ADC data clock {p,n}
+  input  logic           [ 2-1:0] adc_fclk_i,  // ADC frame clock {p,n}
+  input  logic [ 2-1: 0] [ 2-1:0] adc_data_i,  // ADC data {p,n}
+  input  logic [ 2-1: 0] [ 2-1:0] adc_datb_i,  // ADC data {p,n}
+  output logic           [ 2-1:0] adc_dclk_o,  // ADC data clock {p,n}
+  output logic                    adc_rst_o,   // ADC reset
+  output logic                    adc_pdn_o,   // ADC power down
+  output logic                    adc_sen_o,   // ADC serial en
+  output logic                    adc_sclk_o,  // ADC serial clock
+  inout  logic                    adc_sdio_io, // ADC serial data
+
   // DAC
-  output logic [14-1:0] dac_dat_o  ,  // DAC combined data
-  output logic          dac_wrt_o  ,  // DAC write
-  output logic          dac_sel_o  ,  // DAC channel select
-  output logic          dac_clk_o  ,  // DAC clock
-  output logic          dac_rst_o  ,  // DAC reset
-  // PDM DAC
-  output logic [ 4-1:0] dac_pwm_o  ,  // 1-bit PDM DAC
+  input  logic          dac_clk_i   ,  // DAC clock
+  output logic [14-1:0] dac_data_o  ,  // DAC data cha
+  output logic [14-1:0] dac_datb_o  ,  // DAC data chb
+  output logic          dac_wrta_o  ,  // DAC write cha
+  output logic          dac_wrtb_o  ,  // DAC write cha
+  // PWM DAC
+  output logic [ 4-1:0] dac_pwm_o  ,  // 1-bit PWM DAC
   // XADC
   input  logic [ 5-1:0] vinp_i     ,  // voltages p
   input  logic [ 5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
-  input  logic [ 8-1:0] exp_p_io   ,
-  output logic [ 8-1:0] exp_n_io   ,
-
-  `ifdef Z20_G2
-  // Additional E3 connector
-  output logic [  4-1:0] exp_e3p_o  ,  // line 3 is clock capable (SRCC)
-  output logic [  4-1:0] exp_e3n_o  ,
-  input  logic [  4-1:0] exp_e3p_i  ,  // line 3 is clock capable (MRCC)
-  input  logic [  4-1:0] exp_e3n_i  ,
-
-  input  logic           s1_orient_i ,
-  input  logic           s1_link_i   ,
-  `endif
+  inout  logic [ 8-1:0] exp_p_io   ,
+  inout  logic [ 8-1:0] exp_n_io   ,
   // SATA connector
   output logic [ 2-1:0] daisy_p_o  ,  // line 1 is clock capable
   output logic [ 2-1:0] daisy_n_o  ,
   input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
   input  logic [ 2-1:0] daisy_n_i  ,
+  // PLL
+  output logic          clk_sel_o  ,  // 1-internal 0-external
+  output logic          pll_hi_o   ,
+  output logic          pll_lo_o   ,
   // LED
   inout  logic [ 8-1:0] led_o
+
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,19 +83,26 @@ module red_pitaya_top_Z20 #(
 
 // GPIO parameter
 localparam int unsigned GDW = 8+8;
+localparam RST_MAX = 64;
 
 logic [4-1:0] fclk ;  // {200MHz, 166MHz, 142MHz, 125MHz}
 logic [4-1:0] frstn;
 
-// PLL signals
-logic                 adc_clk_in;
+logic                 dac_clk_in;
+logic                 pll_adc_dclk;
 logic                 pll_adc_clk;
 logic                 pll_dac_clk_1x;
-logic                 pll_dac_clk_2x;
-logic                 pll_dac_clk_2p;
+logic                 pll_dac_clk_1p;
 logic                 pll_ser_clk;
-logic                 pll_pdm_clk;
+logic                 pll_pwm_clk;
 logic                 pll_locked;
+logic                 pll_locked_r;
+logic                 fpll_locked_r,fpll_locked_r2,fpll_locked_r3;
+
+logic   [16-1:0]      rst_cnt = 'h0;
+logic                 rst_after_locked;
+logic                 rstn_pll;
+
 // fast serial signals
 logic                 ser_clk ;
 // PDM clock and reset
@@ -105,6 +112,21 @@ logic                 pdm_rstn;
 // ADC clock/reset
 logic                 adc_clk;
 logic                 adc_rstn;
+
+
+// SPI to ADC not instantiated. ADC setup will be done by loading v0.94
+// Will be added if required.
+logic                    hk_spi_cs  = 1'b0; 
+logic                    hk_spi_clk = 1'b0; 
+logic                    hk_spi_i   ;
+logic                    hk_spi_o   = 1'b0;
+logic                    hk_spi_t   = 1'b0;
+
+
+localparam            ADC_IDLY = 5'h2;
+logic [26-1:0]        ser_ddly = {1'b0,{5{ADC_IDLY}}};
+logic [ 5-1:0]        ser_inv  = 5'h8;
+logic                 bitslip;
 
 // stream bus type
 localparam type SBA_T = logic signed [ 16-1:0];  // acquire
@@ -137,6 +159,8 @@ logic                    dac_clk_2x;
 logic                    dac_clk_2p;
 logic                    dac_rst;
 logic [MNG-1:0] [14-1:0] dac_dat;
+logic           [14-1:0] dac_dat_a;
+logic           [14-1:0] dac_dat_b;
 
 // multiplexer configuration
 logic [MNG-1:0] mux_loop;
@@ -194,34 +218,143 @@ logic [GDW-1:0] exp_i;  // input
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
 
-// diferential clock input
-IBUFDS i_clk (.I (adc_clk_i[1]), .IB (adc_clk_i[0]), .O (adc_clk_in));  // differential clock input
 
-red_pitaya_pll pll (
+IBUF i_clk (.I (dac_clk_i), .O (dac_clk_in));
+assign rstn_pll = frstn[0] & ~(!fpll_locked_r2 && fpll_locked_r3);
+red_pitaya_pll_ll pll (
   // inputs
-  .clk         (adc_clk_in),  // clock
-  .rstn        (frstn[0]  ),  // reset - active low
+  .clk         (dac_clk_in),  // clock
+  .rstn        (rstn_pll  ),  // reset - active low
   // output clocks
-  .clk_adc     (pll_adc_clk   ),  // ADC clock
+  .clk_dclk    (pll_adc_dclk  ),  // ADC DCO clock - 250MHz
+  .clk_adc     (pll_adc_clk   ),  // ADC clock - system
   .clk_dac_1x  (pll_dac_clk_1x),  // DAC clock 125MHz
-  .clk_dac_2x  (pll_dac_clk_2x),  // DAC clock 250MHz
-  .clk_dac_2p  (pll_dac_clk_2p),  // DAC clock 250MHz -45DGR
+  .clk_dac_1p  (pll_dac_clk_1p),  // DAC clock 125MHz -90DGR
   .clk_ser     (pll_ser_clk   ),  // fast serial clock
-  .clk_pdm     (pll_pdm_clk   ),  // PDM clock
+  .clk_pdm     (pll_pwm_clk   ),  // PWM clock
   // status outputs
   .pll_locked  (pll_locked)
 );
 
 BUFG bufg_adc_clk    (.O (adc_clk   ), .I (pll_adc_clk   ));
 BUFG bufg_dac_clk_1x (.O (dac_clk_1x), .I (pll_dac_clk_1x));
-BUFG bufg_dac_clk_2x (.O (dac_clk_2x), .I (pll_dac_clk_2x));
-BUFG bufg_dac_clk_2p (.O (dac_clk_2p), .I (pll_dac_clk_2p));
+BUFG bufg_dac_clk_1p (.O (dac_clk_1p), .I (pll_dac_clk_1p));
+BUFG bufg_dac_axi_clk (.O (dac_axi_clk), .I (pll_ser_clk));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
-BUFG bufg_pdm_clk    (.O (pdm_clk   ), .I (pll_pdm_clk   ));
+BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
-// TODO: reset is a mess
+
+always @(posedge adc_clk) begin
+  pll_locked_r      <= pll_locked;
+  if ((pll_locked && !pll_locked_r) || rst_cnt > 0) begin // some clk cycles after rising edge of pll_locked
+    if (rst_cnt < RST_MAX)
+      rst_cnt <= rst_cnt + 1;
+    else 
+      rst_cnt <= 'h0;
+  end else begin
+    if (~pll_locked) begin
+      rst_cnt <= 'h0;
+    end
+  end
+end
+
+assign rst_after_locked = |rst_cnt;
+
+
+assign dac_dat_a = dac_dat[1];
+assign dac_dat_b = dac_dat[0];
+
+always @(posedge dac_clk_1x)
+begin
+  dac_data_o <= {dac_dat_a[14-1], ~dac_dat_a[14-2:2]};
+  dac_datb_o <= {dac_dat_b[14-1], ~dac_dat_b[14-2:2]};
+end
+
+// DDR outputs
+ODDR oddr_dac_wrta (.Q(dac_wrta_o), .D1(1'b0  ), .D2(1'b1  ), .C(dac_clk_1p), .CE(1'b1), .R(1'b0 ), .S(1'b0));
+ODDR oddr_dac_wrtb (.Q(dac_wrtb_o), .D1(1'b0  ), .D2(1'b1  ), .C(dac_clk_1p), .CE(1'b1), .R(1'b0 ), .S(1'b0));
+
+
+////////////////////////////////////////////////////////////////////////////////
+// ADC IO
+////////////////////////////////////////////////////////////////////////////////
+
+wire          [ 5-1:0] adc_dat_p_in  ;
+wire          [ 5-1:0] adc_dat_n_in  ;
+wire          [ 5-1:0] adc_ser       ;
+wire                   adc_dclk_in   ;
+logic [2-1:0] [16-1:0] adc_dat_raw   ;
+logic                  adc_dat_rdv   ;
+
+
+// generating clock for ADC
+
+assign adc_dat_p_in = {adc_datb_i[1][1], adc_datb_i[0][1], adc_data_i[1][1], adc_data_i[0][1], adc_fclk_i[1]} ;
+assign adc_dat_n_in = {adc_datb_i[1][0], adc_datb_i[0][0], adc_data_i[1][0], adc_data_i[0][0], adc_fclk_i[0]} ;
+
+OBUFDS  i_OBUFDS_adc_dco       (.I (pll_adc_dclk ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
+IBUFGDS i_IBUFGDS_adc_dco      (.I (adc_dclk_i[1]), .IB (adc_dclk_i[0]), .O  (adc_dclk_in)  );
+IBUFDS  i_IBUFDS_adc_dat [4:0] (.I (adc_dat_p_in),  .IB (adc_dat_n_in),  .O  (adc_ser)      );
+
+//(* IODELAY_GROUP = adc_inputs *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
+IDELAYCTRL i_idelayctrl (.RDY(idly_rdy), .REFCLK(fclk[3]), .RST(!frstn[3]) );
+
+
+
+reg       adc_en;
+reg [7:0] adc_en_cnt;
+
+always @(posedge fclk[0]) begin
+  fpll_locked_r   <= pll_locked;
+  fpll_locked_r2  <= fpll_locked_r;
+  fpll_locked_r3  <= fpll_locked_r2;
+end
+
+always @(posedge fclk[0]) begin
+  if (!frstn[0] || !fpll_locked_r3)
+    adc_en_cnt <= 8'h0;
+  else if (!adc_en_cnt[7])
+    adc_en_cnt <= adc_en_cnt + 8'h1;
+
+  adc_en <= adc_en_cnt[7];
+end
+
+
+adc366x_top i_adc366x
+(
+   // serial ports
+  .ser_clk_i       (  adc_dclk_in    ),  //!< RX high-speed (LVDS-bit) clock
+  .ser_dat_i       (  adc_ser        ),  //!< RX high-speed data/frame
+  .ser_inv_i       (  ser_inv        ),  //!< lane invert
+
+   // configuration
+  .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
+  .cfg_en_i        (  adc_en         ),  //!< global module enable
+  .cfg_dly_i       (  ser_ddly       ),  //!< delay control
+  .cfg_bslip_o     (  bitslip        ),
+
+   // parallel ports
+  .adc_clk_i       (  adc_clk        ),  //!< parallel clock
+  .adc_dat_o       (  adc_dat_raw    ),  //!< parallel data
+  .adc_dv_o        (  adc_dat_rdv    )   //!< parallel valid
+);
+
+
+// ADC SPI
+assign adc_sen_o    = hk_spi_cs;
+assign adc_sclk_o   = hk_spi_clk;
+assign hk_spi_i     = adc_sdio_io;
+assign adc_sdio_io  = hk_spi_t ? 1'bz : hk_spi_o ;
+
+assign adc_rst_o   = 1'b0 ;   // ADC reset
+assign adc_pdn_o   = 1'b0 ;   // ADC power down
+
+assign clk_sel_o = 1'bz;  // High-Z, controlled from Expansion IO
+assign pll_hi_o  = 1'b0;
+assign pll_lo_o  = 1'b1;
+
 logic top_rst;
-assign top_rst = ~frstn[0] | ~pll_locked;
+assign top_rst = ~frstn[0] | ~rst_after_locked;
 
 // ADC reset (active low)
 always_ff @(posedge adc_clk, posedge top_rst)
@@ -522,41 +655,39 @@ sys_bus_stub sys_bus_stub_6 (sys[6]);
 // Daisy dummy code
 ////////////////////////////////////////////////////////////////////////////////
 
-assign daisy_p_o = 1'bz;
-assign daisy_n_o = 1'bz;
+OBUFDS i_OBUF_0
+(
+  .O  ( daisy_p_o[0]  ),
+  .OB ( daisy_n_o[0]  ),
+  .I  ( 1'bz          )
+);
 
-`ifdef Z20_G2
-logic [4-1:0] ext_e3i;
-logic [4-1:0] ext_e3o = 4'bzzzz;
-IBUFDS i_IBUF_ext_e3 [4-1:0] (.I(exp_e3p_i), .IB(exp_e3n_i), .O(ext_e3i));
-OBUFDS o_OBUF_ext_e3 [4-1:0] (.O(exp_e3p_o), .OB(exp_e3n_o), .I(ext_e3o));
-`endif
+OBUFDS i_OBUF_1
+(
+  .O  ( daisy_p_o[1]  ),
+  .OB ( daisy_n_o[1]  ),
+  .I  ( 1'bz          )
+);
 
 
 ////////////////////////////////////////////////////////////////////////////////
 // ADC IO
 ////////////////////////////////////////////////////////////////////////////////
 
-// generating ADC clock is disabled
-assign adc_clk_o = 2'b10;
-
-// ADC clock duty cycle stabilizer is enabled
-assign adc_cdcs_o = 1'b1 ;
-
 generate
 for (genvar i=0; i<MNA; i++) begin: for_adc
 
   // local variables
-  logic signed [16-1:0] adc_dat_raw;
+  logic signed [16-1:0] adc_dat_raw_r;
 
   // IO block registers should be used here
   // lowest 2 bits reserved for 16bit ADC
   always_ff @(posedge adc_clk)
-  adc_dat_raw <= {adc_dat_i[i][16-1], ~adc_dat_i[i][16-2:0]};
+  adc_dat_raw_r <= adc_dat_raw[i];
 
   // digital loopback multiplexer
   assign str_adc[i].TVALID = 1'b1;
-  assign str_adc[i].TDATA  = mux_loop[i] ? str_dac[i].TDATA : adc_dat_raw;
+  assign str_adc[i].TDATA  = mux_loop[i] ? str_dac[i].TDATA : adc_dat_raw_r;
   assign str_adc[i].TKEEP  = mux_loop[i] ? str_dac[i].TKEEP : '1;
   assign str_adc[i].TLAST  = mux_loop[i] ? str_dac[i].TLAST : 1'b0;
 
@@ -604,14 +735,6 @@ for (genvar i=0; i<MNA; i++) begin: for_dac
 
 end: for_dac
 endgenerate
-
-// DDR outputs
-// TODO set parameter #(.DDR_CLK_EDGE ("SAME_EDGE"))
-ODDR oddr_dac_clk          (.Q(dac_clk_o), .D1(1'b0      ), .D2(1'b1      ), .C(dac_clk_2p), .CE(1'b1), .R(1'b0   ), .S(1'b0));
-ODDR oddr_dac_wrt          (.Q(dac_wrt_o), .D1(1'b0      ), .D2(1'b1      ), .C(dac_clk_2x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
-ODDR oddr_dac_sel          (.Q(dac_sel_o), .D1(1'b1      ), .D2(1'b0      ), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
-ODDR oddr_dac_rst          (.Q(dac_rst_o), .D1(dac_rst   ), .D2(dac_rst   ), .C(dac_clk_1x), .CE(1'b1), .R(1'b0   ), .S(1'b0));
-ODDR oddr_dac_dat [14-1:0] (.Q(dac_dat_o), .D1(dac_dat[0]), .D2(dac_dat[1]), .C(dac_clk_1x), .CE(1'b1), .R(dac_rst), .S(1'b0));
 
 ////////////////////////////////////////////////////////////////////////////////
 // ASG (arbitrary signal generators)
@@ -768,4 +891,4 @@ axi4_stream_pas loopback (
   .sto (axi_drx[3])
 );
 
-endmodule: red_pitaya_top_Z20
+endmodule: red_pitaya_top_ll
