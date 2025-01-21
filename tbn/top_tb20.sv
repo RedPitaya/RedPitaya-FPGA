@@ -64,14 +64,14 @@ module top_tb #(
   `endif
 
   `ifdef Z20_G2
-  parameter ADC_DW        = 16,
+  parameter ADC_DW        = 14,
   parameter MNG           = 2,
   parameter TRIG_ACT_LVL  = 1,
   parameter NUM_ADC       = 2,
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
-  realtime  TP            = 8.0ns,  // 250 MHz
-  `define   rp_top        red_pitaya_top_Z20
+  realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top
   `endif
 
   `ifdef Z20_ll
@@ -81,7 +81,7 @@ module top_tb #(
   parameter NUM_ADC       = 2,
   parameter DWE           = 8,
   parameter CLKA_PER      = 8000,
-  realtime  TP            = 8.0ns,  // 250 MHz
+  realtime  TP            = 8.0ns,  // 125 MHz
   `define   rp_top        red_pitaya_top_ll
   `endif
 

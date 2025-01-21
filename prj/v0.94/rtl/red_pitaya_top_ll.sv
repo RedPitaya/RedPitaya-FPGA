@@ -497,8 +497,8 @@ begin
   dac_dat_b <= {dac_b[14-1], ~dac_b[14-2:0]};
  // Loopback is for demonstration only. We avoid constraining for timing optimizations.
  // Channels inverted in HW
-  dac_data_o <= digital_loop[1] ? adc_dat_raw[1][16-1 -: 14] : dac_dat_b ;
-  dac_datb_o <= digital_loop[1] ? adc_dat_raw[0][16-1 -: 14] : dac_dat_a ;
+  dac_data_o <= digital_loop[1] ? {adc_dat_raw[1][16-1], ~adc_dat_raw[1][15-1 -: 13]} : dac_dat_b ;
+  dac_datb_o <= digital_loop[1] ? {adc_dat_raw[0][16-1], ~adc_dat_raw[0][15-1 -: 13]} : dac_dat_a ;
 end
 
 // DDR outputs

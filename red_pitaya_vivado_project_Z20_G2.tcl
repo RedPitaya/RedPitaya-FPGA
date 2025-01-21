@@ -44,7 +44,7 @@ create_project -part $part -force redpitaya ./project
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
 set ::gpio_width 33
-set_property verilog_define {Z20_G2} [current_fileset]
+set_property verilog_define {Z20_G2 Z20_xx} [current_fileset]
 
 source                            $path_ip/systemZ20_G2.tcl
 
@@ -67,7 +67,7 @@ if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
-add_files -fileset constrs_1      $path_sdc/red_pitaya_Z20.xdc
+add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_G2.xdc
 
@@ -79,4 +79,4 @@ import_files -force
 
 update_compile_order -fileset sources_1
 
-set_property top red_pitaya_top_Z20 [current_fileset]
+set_property top red_pitaya_top [current_fileset]
