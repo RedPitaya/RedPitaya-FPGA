@@ -8,7 +8,8 @@ create_clock -period 8.000 -name daisy_clk  [get_ports daisy_p_i[1]]
 set_property PULLTYPE PULLUP [get_ports daisy_p_i[1]]
 #set_property PULLTYPE PULLDOWN [get_ports daisy_n_i[1]]
 
-set_property IOSTANDARD LVDS_25 [get_ports {exp_e3*[*]}]
+set_property PULLTYPE PULLDOWN [get_ports exp_p_io[*]]
+set_property PULLTYPE PULLDOWN [get_ports exp_n_io[*]]
 
 ### Expansion connector - DIO12-DIO17 - to E3 Conn
 # set_property -dict {PACKAGE_PIN Y9  IOSTANDARD LVCMOS25} [get_ports {exp_p_io[8]}]
@@ -19,6 +20,7 @@ set_property IOSTANDARD LVDS_25 [get_ports {exp_e3*[*]}]
 # set_property -dict {PACKAGE_PIN Y6  IOSTANDARD LVCMOS25} [get_ports {exp_n_io[10]}]
 
 set_property IOSTANDARD LVDS_25 [get_ports {exp_e3*[*]}]
+
 
 #DIO11
 set_property PACKAGE_PIN U7  [get_ports {exp_e3p_o[3]}]
