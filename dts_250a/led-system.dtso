@@ -12,7 +12,7 @@
 
                                 led-8-yellow {
                                         default-state = "off";
-                                        gpios = <0x0a 0x00 0x00>;
+                                        gpios = <0x0a 0x06 0x00>;
                                         label = "led8";
                                         linux,default-trigger = "mmc0";
                                 };
