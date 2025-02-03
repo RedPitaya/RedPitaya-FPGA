@@ -142,6 +142,8 @@ set_property SLEW       FAST     [get_ports {exp_p_io[*]}]
 set_property SLEW       FAST     [get_ports {exp_n_io[*]}]
 set_property DRIVE      8        [get_ports {exp_p_io[*]}]
 set_property DRIVE      8        [get_ports {exp_n_io[*]}]
+set_property PULLTYPE   PULLDOWN [get_ports {exp_p_io[*]}]
+set_property PULLTYPE   PULLDOWN [get_ports {exp_n_io[*]}]
 
 set_property -dict {PACKAGE_PIN G17 IOSTANDARD LVCMOS33} [get_ports {exp_p_io[0]}]
 set_property -dict {PACKAGE_PIN G18 IOSTANDARD LVCMOS33} [get_ports {exp_n_io[0]}]

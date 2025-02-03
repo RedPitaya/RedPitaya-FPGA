@@ -20,10 +20,6 @@ set_property -dict {PACKAGE_PIN Y13 IOSTANDARD LVCMOS25} [get_ports {exp_n_io[9]
 set_property -dict {PACKAGE_PIN Y7  IOSTANDARD LVCMOS25} [get_ports {exp_p_io[10]}]
 set_property -dict {PACKAGE_PIN Y6  IOSTANDARD LVCMOS25} [get_ports {exp_n_io[10]}]
 
-set_property PULLTYPE PULLDOWN [get_ports exp_p_io[*]]
-set_property PULLTYPE PULLDOWN [get_ports exp_n_io[*]]
-
-
 set_property IOSTANDARD LVDS_25 [get_ports {exp_e3*[*]}]
 
 #DIO11

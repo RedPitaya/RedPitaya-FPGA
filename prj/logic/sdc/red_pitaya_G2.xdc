@@ -4,9 +4,6 @@ set_property IOSTANDARD LVCMOS18 [get_ports {daisy_n_o[*]}]
 set_property IOSTANDARD LVCMOS18 [get_ports {daisy_p_i[*]}]
 set_property IOSTANDARD LVCMOS18 [get_ports {daisy_n_i[*]}]
 
-set_property PULLTYPE PULLDOWN [get_ports exp_p_io[*]]
-set_property PULLTYPE PULLDOWN [get_ports exp_n_io[*]]
-
 ### Expansion connector - DIO12-DIO17 - to E3 Conn
 # set_property -dict {PACKAGE_PIN Y9  IOSTANDARD LVCMOS25} [get_ports {exp_p_io[8]}]
 # set_property -dict {PACKAGE_PIN Y8  IOSTANDARD LVCMOS25} [get_ports {exp_n_io[8]}]
