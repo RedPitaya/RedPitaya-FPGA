@@ -660,6 +660,10 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_USE_S_AXI_HP1 {1} \
    CONFIG.PCW_USE_S_AXI_HP2 {1} \
    CONFIG.PCW_USE_S_AXI_HP3 {1} \
+   CONFIG.PCW_S_AXI_HP0_ID_WIDTH {4} \
+   CONFIG.PCW_S_AXI_HP1_ID_WIDTH {4} \
+   CONFIG.PCW_S_AXI_HP2_ID_WIDTH {4} \
+   CONFIG.PCW_S_AXI_HP3_ID_WIDTH {4} \
  ] $processing_system7
 
   # Create interface connections
