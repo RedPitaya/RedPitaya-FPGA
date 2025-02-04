@@ -230,6 +230,12 @@ red_pitaya_pll pll (
   .pll_locked  (pll_locked)
 );
 
+always @(posedge fclk[0]) begin
+  fpll_locked_r   <= pll_locked;
+  fpll_locked_r2  <= fpll_locked_r;
+  fpll_locked_r3  <= fpll_locked_r2;
+end
+
 BUFG bufg_adc_clk    (.O (adc_clk   ), .I (pll_adc_clk   ));
 BUFG bufg_adc_clk2d  (.O (adc_clk2d ), .I (pll_adc_clk2d ));
 BUFG bufg_adc_10MHz  (.O (adc_10mhz ), .I (pll_adc_10mhz ));
