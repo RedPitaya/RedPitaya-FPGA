@@ -425,8 +425,8 @@ always @(posedge sys_clk_i) begin
                        rxp_dat_n[1*16 +: 16], rxp_dat[1*16 +: 16],
                        rxp_dat_n[0*16 +: 16], rxp_dat[0*16 +: 16]} ;
 
-   tst_err_cnt_sys <= tst_err_cnt   ;
-   tst_dat_cnt_sys <= tst_dat_cnt   ;
+   tst_err_cnt_sys <= {{4-N_DATS{32'h0}},tst_err_cnt}   ;
+   tst_dat_cnt_sys <= {{4-N_DATS{32'h0}},tst_dat_cnt}   ;
 
    casez (sys_addr_i[19:0])
      20'h00000 : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { {32-2{1'b0}}, cfg_rx_en, cfg_tx_en }                     ; end
