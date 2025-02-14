@@ -273,7 +273,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_EN_ENET0 {1} \
    CONFIG.PCW_EN_GPIO {1} \
    CONFIG.PCW_EN_I2C0 {1} \
-   CONFIG.PCW_EN_QSPI {1} \
+   CONFIG.PCW_EN_QSPI {0} \
    CONFIG.PCW_EN_RST1_PORT {1} \
    CONFIG.PCW_EN_RST2_PORT {1} \
    CONFIG.PCW_EN_RST3_PORT {1} \

@@ -137,8 +137,6 @@ set_property PACKAGE_PIN V15 [get_ports pll_lo_o]
 
 ### Expansion connector
 set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8}  [get_ports {exp_?_io[*]}]
-set_property PULLTYPE   PULLDOWN [get_ports {exp_p_io[*]}]
-set_property PULLTYPE   PULLDOWN [get_ports {exp_n_io[*]}]
 
 set_property PACKAGE_PIN G17 [get_ports exp_p_io[ 0]] ; # DIO0_P
 set_property PACKAGE_PIN G18 [get_ports exp_n_io[ 0]] ; # DIO0_N
