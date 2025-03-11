@@ -1129,7 +1129,7 @@ end else begin
       if (sys_addr[19:0]==20'h7C)   set_b_axi_en    <= sys_wdata[     0] ;
 
       if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
-      if (sys_addr[19:0]==20'h94)   set_filt_byp    <= sys_wdata[ 2-1:0] ;
+      if (sys_addr[19:0]==20'h98)   set_filt_byp    <= sys_wdata[ 2-1:0] ;
 
 
    end
@@ -1205,7 +1205,7 @@ end else begin
                                                                  {16- 5{1'b0}}, axi_a_state }       ; end
 
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
-     20'h00094 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}}, set_filt_byp}       ; end
+     20'h00098 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}}, set_filt_byp}       ; end
 
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_a_rd}              ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_b_rd}              ; end

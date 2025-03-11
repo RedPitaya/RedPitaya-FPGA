@@ -295,7 +295,7 @@ end else begin
     if (sys_addr[19:0]==20'h7C )   set_axi_en[1]              <= sys_wdata[     0] ;
 
     if (sys_addr[19:0]==20'h90 )   set_deb_len                <= sys_wdata[20-1:0] ;
-    if (sys_addr[19:0]==20'h94 )   set_filt_byp               <= sys_wdata[ 4-1:0] ;
+    if (sys_addr[19:0]==20'h98 )   set_filt_byp               <= sys_wdata[ 4-1:0] ;
 
     if (sys_addr[19:0]==20'h110)   set_dly[32*2-1:32*1]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h114)   set_dec[17*2-1:17*1]       <= sys_wdata[17-1:0] ;    
@@ -365,7 +365,7 @@ end else begin
                                                                 8'h0,           axi_state_i[ 8-1: 0]}           ; end
 
     20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}},  set_deb_len}                    ; end
-    20'h00094 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 4{1'b0}},  set_filt_byp}                   ; end
+    20'h00098 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 4{1'b0}},  set_filt_byp}                   ; end
 
     20'h00110 : begin sys_ack <= sys_en;          sys_rdata <=                  set_dly[32*2-1:32*1]            ; end
     20'h00114 : begin sys_ack <= sys_en;          sys_rdata <= {{32-17{1'b0}},  set_dec[17*2-1:17*1]}           ; end
