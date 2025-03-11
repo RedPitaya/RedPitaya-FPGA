@@ -74,6 +74,8 @@ module rp_scope_cfg #(
    output     [   4*25 -1: 0] set_filt_bb_o   ,
    output     [   4*25 -1: 0] set_filt_kk_o   ,
    output     [   4*25 -1: 0] set_filt_pp_o   ,
+   output     [      4 -1: 0] set_filt_byp_o  ,
+
    output     [      20-1: 0] set_deb_len_o   ,
    output     [   4*32 -1: 0] set_axi_start_o ,
    output     [   4*32 -1: 0] set_axi_stop_o  ,
@@ -111,6 +113,8 @@ reg  [ 4*18-1: 0] set_filt_aa   ;
 reg  [ 4*25-1: 0] set_filt_bb   ;
 reg  [ 4*25-1: 0] set_filt_kk   ;
 reg  [ 4*25-1: 0] set_filt_pp   ;
+reg  [    4-1: 0] set_filt_byp  ;
+
 reg  [   20-1: 0] set_deb_len   ;
 
 reg  [ 4*32-1: 0] set_axi_start ;
@@ -254,6 +258,7 @@ if (adc_rstn_i == 1'b0) begin
   set_filt_bb            <= {4{25'h0}}      ;
   set_filt_kk            <= {4{25'hFFFFFF}} ;
   set_filt_pp            <= {4{25'h0}}      ;
+  set_filt_byp           <=  4'h0           ;
 
   set_deb_len            <= {4{20'd62500}}  ;
 
@@ -290,6 +295,7 @@ end else begin
     if (sys_addr[19:0]==20'h7C )   set_axi_en[1]              <= sys_wdata[     0] ;
 
     if (sys_addr[19:0]==20'h90 )   set_deb_len                <= sys_wdata[20-1:0] ;
+    if (sys_addr[19:0]==20'h94 )   set_filt_byp               <= sys_wdata[ 4-1:0] ;
 
     if (sys_addr[19:0]==20'h110)   set_dly[32*2-1:32*1]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h114)   set_dec[17*2-1:17*1]       <= sys_wdata[17-1:0] ;    
@@ -359,6 +365,7 @@ end else begin
                                                                 8'h0,           axi_state_i[ 8-1: 0]}           ; end
 
     20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}},  set_deb_len}                    ; end
+    20'h00094 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 4{1'b0}},  set_filt_byp}                   ; end
 
     20'h00110 : begin sys_ack <= sys_en;          sys_rdata <=                  set_dly[32*2-1:32*1]            ; end
     20'h00114 : begin sys_ack <= sys_en;          sys_rdata <= {{32-17{1'b0}},  set_dec[17*2-1:17*1]}           ; end
@@ -396,6 +403,7 @@ assign set_filt_aa_o    = set_filt_aa     ;
 assign set_filt_bb_o    = set_filt_bb     ;
 assign set_filt_kk_o    = set_filt_kk     ;
 assign set_filt_pp_o    = set_filt_pp     ;
+assign set_filt_byp_o   = set_filt_byp    ;
 assign set_deb_len_o    = set_deb_len     ;
 assign set_axi_start_o  = set_axi_start   ;
 assign set_axi_stop_o   = set_axi_stop    ;

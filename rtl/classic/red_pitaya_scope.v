@@ -104,8 +104,10 @@ reg             adc_rst_do   ;
 //---------------------------------------------------------------------------------
 //  Input filtering
 wire [ 14-1: 0] adc_a_filt_in  ;
+wire [ 14-1: 0] adc_a_filtered ;
 wire [ 14-1: 0] adc_a_filt_out ;
 wire [ 14-1: 0] adc_b_filt_in  ;
+wire [ 14-1: 0] adc_b_filtered ;
 wire [ 14-1: 0] adc_b_filt_out ;
 reg  [ 18-1: 0] set_a_filt_aa  ;
 reg  [ 25-1: 0] set_a_filt_bb  ;
@@ -115,6 +117,7 @@ reg  [ 18-1: 0] set_b_filt_aa  ;
 reg  [ 25-1: 0] set_b_filt_bb  ;
 reg  [ 25-1: 0] set_b_filt_kk  ;
 reg  [ 25-1: 0] set_b_filt_pp  ;
+reg  [  2-1: 0] set_filt_byp   ;
 
 reg             filt_a_coef_wr;
 reg             filt_b_coef_wr;
@@ -132,7 +135,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
   .adc_rstn_i  ( filt_a_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_a_filt_in   ),  // ADC data
-  .adc_dat_o   ( adc_a_filt_out  ),  // ADC data
+  .adc_dat_o   ( adc_a_filtered  ),  // ADC data
    // configuration
   .cfg_aa_i    ( set_a_filt_aa   ),  // config AA coefficient
   .cfg_bb_i    ( set_a_filt_bb   ),  // config BB coefficient
@@ -145,13 +148,16 @@ red_pitaya_dfilt1 i_dfilt1_chb (
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
   .adc_rstn_i  ( filt_b_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_b_filt_in   ),  // ADC data
-  .adc_dat_o   ( adc_b_filt_out  ),  // ADC data
+  .adc_dat_o   ( adc_b_filtered  ),  // ADC data
    // configuration
   .cfg_aa_i    ( set_b_filt_aa   ),  // config AA coefficient
   .cfg_bb_i    ( set_b_filt_bb   ),  // config BB coefficient
   .cfg_kk_i    ( set_b_filt_kk   ),  // config KK coefficient
   .cfg_pp_i    ( set_b_filt_pp   )   // config PP coefficient
 );
+
+assign adc_a_filt_out = set_filt_byp[0] ? adc_a_i : adc_a_filtered ;
+assign adc_b_filt_out = set_filt_byp[1] ? adc_b_i : adc_b_filtered ;
 
 //---------------------------------------------------------------------------------
 //  Decimate input data
@@ -1090,6 +1096,7 @@ if (adc_rstn_i == 1'b0) begin
    set_deb_len   <=  20'd62500  ;
    set_a_axi_en  <=   1'b0      ;
    set_b_axi_en  <=   1'b0      ;
+   set_filt_byp  <=   2'h0      ;
 end else begin
    if (sys_wen) begin
       if (sys_addr[19:0]==20'h00)   adc_we_keep   <= sys_wdata[     3] ;
@@ -1122,7 +1129,8 @@ end else begin
       if (sys_addr[19:0]==20'h7C)   set_b_axi_en    <= sys_wdata[     0] ;
 
       if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
-      // Offset 0x94 reserved for trigger unlock bit
+      if (sys_addr[19:0]==20'h94)   set_filt_byp    <= sys_wdata[ 2-1:0] ;
+
 
    end
 end
@@ -1197,6 +1205,7 @@ end else begin
                                                                  {16- 5{1'b0}}, axi_a_state }       ; end
 
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
+     20'h00094 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}}, set_filt_byp}       ; end
 
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_a_rd}              ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_b_rd}              ; end

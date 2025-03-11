@@ -115,6 +115,7 @@ wire [   4*18 -1: 0] set_filt_aa    ;
 wire [   4*25 -1: 0] set_filt_bb    ;
 wire [   4*25 -1: 0] set_filt_kk    ;
 wire [   4*25 -1: 0] set_filt_pp    ;
+wire [      4 -1: 0] set_filt_byp   ;
 wire [      20-1: 0] set_deb_len    ;
 wire [   4*32 -1: 0] set_axi_start  ;
 wire [   4*32 -1: 0] set_axi_stop   ;
@@ -162,6 +163,8 @@ genvar GV;
 generate
 for(GV = 0 ; GV < N_CH ; GV = GV + 1) begin
 wire [ DW-1: 0] adc_filt_in  ;
+wire [ DW-1: 0] adc_filtered ;
+
 wire [ DW-1: 0] adc_dec_in   ;
 wire [ DW-1: 0] adc_dly_in   ;
 wire [ DW-1: 0] axi_ram_in   ;
@@ -177,7 +180,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
   .adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
   .adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
   .adc_dat_i   ( adc_filt_in   ),  // ADC raw data
-  .adc_dat_o   ( adc_dec_in    ),  // filtered data
+  .adc_dat_o   ( adc_filtered  ),  // filtered data
    // configuration
   .cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
   .cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
@@ -185,6 +188,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
   .cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
 );
 
+adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
 rp_decim #(
   .DW  (  DW    )
@@ -465,6 +469,7 @@ rp_scope_cfg #(
   .set_filt_bb_o    ( set_filt_bb     ),
   .set_filt_kk_o    ( set_filt_kk     ),
   .set_filt_pp_o    ( set_filt_pp     ),
+  .set_filt_byp_o   ( set_filt_byp    ),
   .set_deb_len_o    ( set_deb_len     ),
   .set_axi_start_o  ( set_axi_start   ),
   .set_axi_stop_o   ( set_axi_stop    ),
