@@ -188,7 +188,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
   .cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
 );
 
-adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
+assign adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
 rp_decim #(
   .DW  (  DW    )
