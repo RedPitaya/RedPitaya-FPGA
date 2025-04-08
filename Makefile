@@ -10,8 +10,8 @@
 #   2. Memtest (stand alone memory test) ELF binary.
 #   4. Linux device tree source (dts).
 
-PRJ   ?= logic
-MODEL ?= Z10
+PRJ   ?= v0.94
+MODEL ?= Z20_G2
 HWID  ?= ""
 DEFINES ?= ""
 DTS_VER ?= 2017.2
