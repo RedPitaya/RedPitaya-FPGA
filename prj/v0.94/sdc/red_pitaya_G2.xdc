@@ -67,3 +67,18 @@ set_false_path -from [get_pins ps/axi_slave_gp0/wr_wdata*[*]/C] -to [get_pins sy
 set_false_path -from [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata*[*]*/C] -to [get_pins ps/axi_slave_gp0/axi\\.RDATA*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
 set_false_path -from [get_pins {adc_dat*[*][*]/C}] -to [get_pins {dac_dat_*[*]/D}]
+
+set_data_check --from exp_e3p_i[0] --to exp_e3n_i[0] 0.5
+set_data_check --from exp_e3p_i[1] --to exp_e3n_i[1] 0.5
+set_data_check --from exp_e3p_i[2] --to exp_e3n_i[2] 0.5
+set_data_check --from exp_e3p_i[3] --to exp_e3n_i[3] 0.5
+set_data_check --from exp_e3p_o[0] --to exp_e3n_o[0] 0.5
+set_data_check --from exp_e3p_o[1] --to exp_e3n_o[1] 0.5
+set_data_check --from exp_e3p_o[2] --to exp_e3n_o[2] 0.5
+set_data_check --from exp_e3p_o[3] --to exp_e3n_o[3] 0.5
+set_data_check --from daisy_p_o[0] --to daisy_n_o[0] 0.5
+set_data_check --from daisy_p_o[1] --to daisy_n_o[1] 0.5
+set_data_check --from daisy_p_i[0] --to daisy_n_i[0] 0.5
+set_data_check --from daisy_p_i[1] --to daisy_n_i[1] 0.5
+
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
