@@ -58,6 +58,8 @@ module red_pitaya_asg_ch #(
    input     [RSZ+15: 0] set_size_i      ,  //!< set table data size
    input     [  32-1: 0] set_step_i      ,  //!< set pointer step
    input     [  32-1: 0] set_step_lo_i   ,  //!< set pointer step, low frequency
+   output    [  32-1: 0] get_step_o      ,  //!< get pointer step
+   output    [  32-1: 0] get_step_lo_o   ,  //!< get pointer step, low frequency
    input     [  32-1: 0] set_ofs_i       ,  //!< set reset offset
    input                 set_rst_i       ,  //!< set FSM to reset
    input                 set_once_i      ,  //!< set only once  -- not used
@@ -200,6 +202,10 @@ reg  [  32-1: 0] dly_cnt      ;
 reg  [   8-1: 0] dly_tick     ;
 reg  [  32-1: 0] last_cnt     ;
 
+reg  [  32-1: 0] set_step      ;  
+reg  [  32-1: 0] set_step_lo      ;  
+
+
 reg              dac_rep      ;
 wire             dac_trig     ;
 reg              dac_trigr    ;
@@ -237,15 +243,17 @@ end
 // state machine
 always @(posedge dac_clk_i) begin
    if (dac_rstn_i == 1'b0) begin
-      cyc_cnt   <= 16'h0 ;
-      rep_cnt   <= 16'h0 ;
-      dly_cnt   <= 32'h0 ;
-      dly_tick  <=  8'h0 ;
-      dac_do    <=  1'b0 ;
-      dac_rep   <=  1'b0 ;
-      trig_in   <=  1'b0 ;
-      dac_pntp  <= {PNT_SIZE{1'b0}} ;
-      dac_trigr <=  1'b0 ;
+      cyc_cnt      <= 16'h0 ;
+      rep_cnt      <= 16'h0 ;
+      dly_cnt      <= 32'h0 ;
+      dly_tick     <=  8'h0 ;
+      dac_do       <=  1'b0 ;
+      dac_rep      <=  1'b0 ;
+      trig_in      <=  1'b0 ;
+      dac_pntp     <= {PNT_SIZE{1'b0}} ;
+      dac_trigr    <=  1'b0 ;
+      set_step     <= 32'h0 ; 
+      set_step_lo  <= 32'h0 ;
    end
    else begin
       // make 1us tick
@@ -288,6 +296,11 @@ always @(posedge dac_clk_i) begin
        default : trig_in <= 1'b0        ;
       endcase
 
+       if (trig_in) begin
+          set_step <= set_step_i;
+          set_step_lo <= set_step_lo_i;
+       end
+
       // in cycle mode
       if (dac_trig && !set_rst_i && !set_axi_en_i)
          dac_do <= 1'b1 ;
@@ -320,8 +333,11 @@ end else begin
    end
 end
 
-assign dac_npnt = dac_pnt + {set_step_i[RSZ+15:0],set_step_lo_i};
+assign dac_npnt = dac_pnt + {set_step[RSZ+15:0],set_step_lo};
 assign trig_done_o = !dac_rep && trig_in;
+// output frequency on trigger
+assign get_step_o = set_step;
+assign get_step_lo_o = set_step_lo;
 
 //---------------------------------------------------------------------------------
 //

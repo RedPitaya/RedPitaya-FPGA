@@ -142,8 +142,10 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
   .buf_rpnt_o      (buf_a_rpnt       ),  // buffer current read pointer
   // configuration
   .set_size_i      (set_a_size       ),  // set table data size
-  .set_step_i      (step_a_hi        ),  // set pointer step
-  .set_step_lo_i   (step_a_lo        ),  // set pointer step
+  .set_step_i      (set_a_step       ),  // set pointer step
+  .set_step_lo_i   (set_a_step_lo    ),  // set pointer step
+  .get_step_o      (step_a_hi        ),  // get pointer step
+  .get_step_lo_o   (step_a_lo        ),  // get pointer step
   .set_ofs_i       (set_a_ofs        ),  // set reset offset
   .set_rst_i       (set_a_rst        ),  // set FMS to reset
   .set_once_i      (set_a_once       ),  // set only once
@@ -192,8 +194,10 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chB
   .buf_rpnt_o      (buf_b_rpnt       ),  // buffer current read pointer
   // configuration
   .set_size_i      (set_b_size       ),  // set table data size
-  .set_step_i      (step_b_hi        ),  // set pointer step
-  .set_step_lo_i   (step_b_lo        ),  // set pointer step
+  .set_step_i      (set_b_step       ),  // set pointer step
+  .set_step_lo_i   (set_b_step_lo    ),  // set pointer step
+  .get_step_o      (step_b_hi        ),  // get pointer step
+  .get_step_lo_o   (step_b_lo        ),  // get pointer step, low frequency
   .set_ofs_i       (set_b_ofs        ),  // set reset offset
   .set_rst_i       (set_b_rst        ),  // set FMS to reset
   .set_once_i      (set_b_once       ),  // set only once
@@ -292,11 +296,6 @@ if (dac_rstn_i == 1'b0) begin
    rand_a_en     <=  1'b0     ;
    rand_b_en     <=  1'b0     ;
 
-   step_a_hi     <= 32'h0     ;
-   step_b_hi     <= 32'h0     ;
-   step_a_lo     <= 32'h0     ;
-   step_b_lo     <= 32'h0     ;
-
    set_a_axi_en    <= 1'b0 ;
    set_a_axi_start <= 32'h0;
    set_a_axi_stop  <= 32'h0;
@@ -381,15 +380,6 @@ end else begin
       buf_b_rpnt_rd <= {{32-RSZ-2{1'b0}},buf_b_rpnt,2'h0};
    end
 
-   if (trig_a_sw_r || trig_b_sw_r) begin
-      step_a_hi <= set_a_step;
-      step_a_lo <= set_a_step_lo;
-   end
-
-   if (trig_a_sw_r || trig_b_sw_r) begin
-      step_b_hi <= set_b_step;
-      step_b_lo <= set_b_step_lo;
-   end
 
    ren_dly <= {ren_dly[3-2:0], sys_ren};
    ack_dly <=  ren_dly[3-1] || sys_wen ;
