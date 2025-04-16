@@ -14,7 +14,7 @@ PRJ   ?= v0.94
 MODEL ?= Z20_G2
 HWID  ?= ""
 DEFINES ?= ""
-DTS_VER ?= 2017.2
+DTS_VER ?= 2022.1
 
 # build artefacts
 FPGA_BIT    = prj/$(PRJ)/out/red_pitaya.bit
