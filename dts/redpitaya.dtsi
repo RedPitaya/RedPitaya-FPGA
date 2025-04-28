@@ -12,3 +12,4 @@
 /include/ "watchdog.dtsi"
 /include/ "uio-api.dtsi"
 /include/ "led-system-red.dtsi"
+/include/ "qspi.dtsi"
