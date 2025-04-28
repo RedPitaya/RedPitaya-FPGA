@@ -12,6 +12,7 @@ cd prj/$prj_name
 set path_sdk sdk
 
 hsi open_hw_design $path_sdk/red_pitaya.sysdef
+#hsi::open_hw_design $path_sdk/red_pitaya.sysdef
 
 set ver 2017.2
 

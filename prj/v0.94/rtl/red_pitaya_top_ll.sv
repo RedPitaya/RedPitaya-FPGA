@@ -55,7 +55,8 @@ module red_pitaya_top_ll #(
   // module numbers
   int unsigned MNA = 2,  // number of acquisition modules
   int unsigned MNG = 2,  // number of generator   modules
-  parameter    DWE = 8
+  parameter    DWE = 8,
+  parameter ADC_DW=14
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -605,7 +606,9 @@ assign CAN1_rx = can_on & exp_p_in[6];
 ////////////////////////////////////////////////////////////////////////////////
 
 
-red_pitaya_scope i_scope (
+red_pitaya_scope #(
+   .ADC_DW(ADC_DW))
+i_scope (
   // ADC
   .adc_a_i       (adc_dat[0]  ),  // CH 1
   .adc_b_i       (adc_dat[1]  ),  // CH 2

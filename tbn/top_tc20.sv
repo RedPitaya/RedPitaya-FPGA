@@ -73,6 +73,59 @@ set_osc(.offset(offset),
         .chb_axi_trgdly(CHB_AXI_TDLY), .chb_axi_en(CHB_AXI_EN));
 endtask: init_adc_01
 
+task init_adc_02(
+  int unsigned offset
+);
+localparam CHA_THR      = 32'd100;
+localparam CHB_THR      = 32'd100;
+localparam TRG_SRC      =  3'h0;
+localparam TRG_DLY      = 32'h100;
+localparam TRG_DEB      = 32'd100;
+localparam ADCTRG_DEB   = 32'd1000;
+localparam DEC          = 32'd1;
+localparam DEC_AVG      =  1'b1;
+localparam CHA_HYST     = 32'd10;
+localparam CHB_HYST     = 32'd10;
+localparam CHA_OFFSET   = 32'h0000;
+localparam CHA_GAIN     = 32'h8000;
+localparam CHA_AA       = 32'h7D93;
+localparam CHA_BB       = 32'h497C7;
+localparam CHA_KK       = 32'hD9999A;
+localparam CHA_PP       = 32'h2666;
+localparam CHB_OFFSET   = 32'h0000;
+localparam CHB_GAIN     = 32'h8000;
+localparam CHB_AA       = 32'h7D93;
+localparam CHB_BB       = 32'h497C7;
+localparam CHB_KK       = 32'hD9999A;
+localparam CHB_PP       = 32'h2666;
+localparam CHA_AXI_LADR = 32'h100000;
+localparam CHA_AXI_HADR = 32'h110000;
+localparam CHA_AXI_TDLY = 32'h800;
+localparam CHA_AXI_EN   =  1'b1;
+localparam CHB_AXI_LADR = 32'h200000;
+localparam CHB_AXI_HADR = 32'h210000;
+localparam CHB_AXI_TDLY = 32'h800;
+localparam CHB_AXI_EN   =  1'b1;
+
+set_osc(.offset(offset),    
+        .cha_thr(CHA_THR),             .chb_thr(CHB_THR),  
+        .trig_src(TRG_SRC),            .trig_dly(TRG_DLY),           .trig_deb(TRG_DEB),  .adctrig_deb(ADCTRG_DEB),
+        .dec(DEC),                     .dec_avg(DEC_AVG),
+        .cha_hyst(CHA_HYST),           .chb_hyst(CHB_HYST),
+        .cha_aa(CHA_AA),               .cha_bb(CHA_BB),              .cha_kk(CHA_KK),     .cha_pp(CHA_PP),
+        .chb_aa(CHB_AA),               .chb_bb(CHB_BB),              .chb_kk(CHB_KK),     .chb_pp(CHB_PP),
+        .cha_axi_ladr(CHA_AXI_LADR),   .cha_axi_hadr(CHA_AXI_HADR),
+        .cha_axi_trgdly(CHA_AXI_TDLY), .cha_axi_en(CHA_AXI_EN),
+        .chb_axi_ladr(CHB_AXI_LADR),   .chb_axi_hadr(CHB_AXI_HADR),
+        .chb_axi_trgdly(CHB_AXI_TDLY), .chb_axi_en(CHB_AXI_EN));
+set_osc_cal(.offset(offset),
+            .cal_a_ofs(CHA_OFFSET),
+            .cal_a_gain(CHA_GAIN),
+            .cal_b_ofs(CHB_OFFSET),
+            .cal_b_gain(CHB_GAIN));
+
+endtask: init_adc_02
+
 task init_adc_23(
   int unsigned offset
 );
@@ -454,6 +507,33 @@ task set_osc(
 
 endtask: set_osc
 
+task set_osc_cal(
+  int offset,
+  int cal_a_ofs,
+  int cal_a_gain,
+  int cal_b_ofs,
+  int cal_b_gain
+);
+  axi_write(offset+'h120, cal_a_ofs);  // offset
+  axi_write(offset+'h124, cal_a_gain);  // gain
+  axi_write(offset+'h130, cal_b_ofs);  // offset
+  axi_write(offset+'h134, cal_b_gain);  // gain
+endtask: set_osc_cal
+
+
+task set_osc_filt(
+  int offset,
+  int filt_aa,
+  int filt_bb,
+  int filt_kk,
+  int filt_pp
+);
+  axi_write(offset+'h30, filt_aa);  // AA factor
+  axi_write(offset+'h34, filt_bb);  // BB factor
+  axi_write(offset+'h38, filt_kk);  // KK factor
+  axi_write(offset+'h3C, filt_pp);  // PP factor
+
+endtask: set_osc_filt
 
 task test_osc(
   int offset,
@@ -847,6 +927,11 @@ task write_buf(
   end
 endtask: write_buf
 
+task custom_test1 (
+  int unsigned offset1
+);
+  axi_write(offset1+'h00, 32'h8);
+endtask: custom_test1
 
 task custom_test (
   int unsigned offset1,

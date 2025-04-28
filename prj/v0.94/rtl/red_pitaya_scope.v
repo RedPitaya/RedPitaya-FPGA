@@ -20,17 +20,17 @@
  * application. It consists from three main parts.
  *
  *
- *                /--------\      /-----------\            /-----\
- *   ADC CHA ---> | DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
- *                \--------/      \-----------/     |      \-----/
- *                                                  ˇ         ^
- *                                              /------\      |
- *   ext trigger -----------------------------> | TRIG | -----+
- *                                              \------/      |
- *                                                  ^         ˇ
- *                /--------\      /-----------\     |      /-----\
- *   ADC CHB ---> | DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
- *                \--------/      \-----------/            \-----/ 
+ *                /--------\     /--------\      /-----------\            /-----\
+ *   ADC CHA ---> | CALIB1 | --->| DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
+ *                \--------/     \--------/      \-----------/     |      \-----/
+ *                                                                 ˇ         ^
+ *                                                             /------\      |
+ *   ext trigger --------------------------------------------> | TRIG | -----+
+ *                                                             \------/      |
+ *                                                                 ^         ˇ
+ *                /--------\     /--------\      /-----------\     |      /-----\
+ *   ADC CHB ---> | CALIB1 | --->| DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
+ *                \--------/     \--------/      \-----------/            \-----/ 
  *
  *
  * Input data is optionaly averaged and decimated via average filter.
@@ -49,7 +49,8 @@
 
 module red_pitaya_scope #(
   parameter CHN = 0 ,
-  parameter RSZ = 14  // RAM size 2^RSZ
+  parameter RSZ = 14,  // RAM size 2^RSZ
+  parameter ADC_DW = 14
 )(
    // ADC
    input                 adc_clk_i       ,  // ADC clock
@@ -103,12 +104,14 @@ reg             adc_rst_do   ;
 
 //---------------------------------------------------------------------------------
 //  Input filtering
-wire [ 14-1: 0] adc_a_filt_in  ;
-wire [ 14-1: 0] adc_a_filtered ;
-wire [ 14-1: 0] adc_a_filt_out ;
-wire [ 14-1: 0] adc_b_filt_in  ;
-wire [ 14-1: 0] adc_b_filtered ;
-wire [ 14-1: 0] adc_b_filt_out ;
+wire [ 16-1: 0] adc_a_calib_in  ;
+wire [ 16-1: 0] adc_a_filt_out ;
+wire [ 16-1: 0] calib_a_tdata_out  ;
+wire [ 14-1: 0] filt_a_tdata  ;
+wire [ 16-1: 0] adc_b_calib_in  ;
+wire [ 16-1: 0] adc_b_filt_out ;
+wire [ 16-1: 0] calib_b_tdata_out  ;
+wire [ 14-1: 0] filt_b_tdata  ;
 reg  [ 18-1: 0] set_a_filt_aa  ;
 reg  [ 25-1: 0] set_a_filt_bb  ;
 reg  [ 25-1: 0] set_a_filt_kk  ;
@@ -118,46 +121,132 @@ reg  [ 25-1: 0] set_b_filt_bb  ;
 reg  [ 25-1: 0] set_b_filt_kk  ;
 reg  [ 25-1: 0] set_b_filt_pp  ;
 reg  [  2-1: 0] set_filt_byp   ;
+// added to store calibration data
+reg  [ 16-1: 0] set_a_calib_offset  ;
+reg  [ 16-1: 0] set_a_calib_gain  ;
+reg  [ 16-1: 0] set_b_calib_offset  ;
+reg  [ 16-1: 0] set_b_calib_gain  ;
 
 reg             filt_a_coef_wr;
 reg             filt_b_coef_wr;
 wire            filt_a_rstn;
 wire            filt_b_rstn;
 
-assign adc_a_filt_in = adc_a_i ;
-assign adc_b_filt_in = adc_b_i ;
+wire            filt_a_tvalid;
+wire            filt_b_tvalid;
+wire            calib_a_tvalid;
+reg             calib_a_tready;
+wire            calib_b_tvalid ;
+reg             calib_b_tready;
+
+reg             calib_a_coef_wr;
+reg             calib_b_coef_wr;
+wire            calib_a_rstn;
+wire            calib_b_rstn;
+
+// TODO still to define some parameters with ADC_DW to support 
+// both 14 and 16 bit
+
+wire  adc_sign_a = adc_a_i[ADC_DW-1];
+wire  adc_sign_b = adc_b_i[ADC_DW-1];
+
+assign adc_a_calib_in = {adc_a_i[ADC_DW-1:0], {(16-ADC_DW){adc_sign_a}}};
+assign adc_b_calib_in = {adc_b_i[ADC_DW-1:0], {(16-ADC_DW){adc_sign_b}}};
 
 assign filt_a_rstn = adc_rstn_i && filt_a_coef_wr;
 assign filt_b_rstn = adc_rstn_i && filt_b_coef_wr;
 
-red_pitaya_dfilt1 i_dfilt1_cha (
+osc_filter #(
+  .AXIS_DATA_BITS(16) )
+i_dfilt1_cha (
    // ADC
-  .adc_clk_i   ( adc_clk_i       ),  // ADC clock
-  .adc_rstn_i  ( filt_a_rstn     ),  // ADC reset - active low
-  .adc_dat_i   ( adc_a_filt_in   ),  // ADC data
-  .adc_dat_o   ( adc_a_filtered  ),  // ADC data
+  .clk             ( adc_clk_i       ),  // ADC clock
+  .rst_n           ( filt_a_rstn     ),  // ADC reset - active low
+
+  .s_axis_tdata    ( calib_a_tdata_out  ),  
+  .s_axis_tvalid   ( calib_a_tvalid ),
+  .s_axis_tready   (),
+  
+  .m_axis_tdata    ( adc_a_filt_out ),
+  .m_axis_tvalid   (filt_a_tvalid),
+  .m_axis_tready   (),
    // configuration
-  .cfg_aa_i    ( set_a_filt_aa   ),  // config AA coefficient
-  .cfg_bb_i    ( set_a_filt_bb   ),  // config BB coefficient
-  .cfg_kk_i    ( set_a_filt_kk   ),  // config KK coefficient
-  .cfg_pp_i    ( set_a_filt_pp   )   // config PP coefficient
+  .cfg_bypass      ( set_filt_byp[0] ),
+  .cfg_coeff_aa    ( set_a_filt_aa   ),  // config AA coefficient
+  .cfg_coeff_bb    ( set_a_filt_bb   ),  // config BB coefficient
+  .cfg_coeff_kk    ( set_a_filt_kk   ),  // config KK coefficient
+  .cfg_coeff_pp    ( set_a_filt_pp   )   // config PP coefficient
 );
 
-red_pitaya_dfilt1 i_dfilt1_chb (
+osc_filter #(
+  .AXIS_DATA_BITS(16) )
+i_dfilt1_chb (
    // ADC
-  .adc_clk_i   ( adc_clk_i       ),  // ADC clock
-  .adc_rstn_i  ( filt_b_rstn     ),  // ADC reset - active low
-  .adc_dat_i   ( adc_b_filt_in   ),  // ADC data
-  .adc_dat_o   ( adc_b_filtered  ),  // ADC data
+  .clk             ( adc_clk_i       ),  // ADC clock
+  .rst_n           ( filt_b_rstn     ),  // ADC reset - active low
+
+  .s_axis_tdata    ( calib_b_tdata_out   ),  
+  .s_axis_tvalid   ( calib_b_tvalid ),
+  .s_axis_tready   (),
+  
+  .m_axis_tdata    (adc_b_filt_out),
+  .m_axis_tvalid   (filt_b_tvalid),
+  .m_axis_tready   (),
    // configuration
-  .cfg_aa_i    ( set_b_filt_aa   ),  // config AA coefficient
-  .cfg_bb_i    ( set_b_filt_bb   ),  // config BB coefficient
-  .cfg_kk_i    ( set_b_filt_kk   ),  // config KK coefficient
-  .cfg_pp_i    ( set_b_filt_pp   )   // config PP coefficient
+  .cfg_bypass      (set_filt_byp[1] ),
+  .cfg_coeff_aa    ( set_b_filt_aa   ),  // config AA coefficient
+  .cfg_coeff_bb    ( set_b_filt_bb   ),  // config BB coefficient
+  .cfg_coeff_kk    ( set_b_filt_kk   ),  // config KK coefficient
+  .cfg_coeff_pp    ( set_b_filt_pp   )   // config PP coefficient
 );
 
-assign adc_a_filt_out = set_filt_byp[0] ? adc_a_i : adc_a_filtered ;
-assign adc_b_filt_out = set_filt_byp[1] ? adc_b_i : adc_b_filtered ;
+///////////////////////////////////////////////////////////
+// Name : Calibration
+//
+////////////////////////////////////////////////////////////
+
+assign calib_a_rstn = adc_rstn_i && calib_a_coef_wr;
+assign calib_b_rstn = adc_rstn_i && calib_b_coef_wr;
+
+
+osc_calib #(
+  .AXIS_DATA_BITS(16) )
+i_calib_a (
+  .clk              (adc_clk_i),
+  .rst_n            (calib_a_rstn),
+
+  .s_axis_tdata     (adc_a_calib_in),
+  .s_axis_tvalid    (1'b1),
+  .s_axis_tready    (),
+  
+  .m_axis_tdata     (calib_a_tdata_out),
+  .m_axis_tvalid    (calib_a_tvalid),
+  .m_axis_tready    (calib_a_tready),
+  // Config
+  .cfg_calib_offset (set_a_calib_offset),
+  .cfg_calib_gain   (set_a_calib_gain)
+);
+
+osc_calib #(
+  .AXIS_DATA_BITS(16) )
+i_calib_b (
+  .clk              (adc_clk_i),
+  .rst_n            (calib_b_rstn),
+
+  .s_axis_tdata     (adc_b_calib_in),
+  .s_axis_tvalid    (1'b1),
+  .s_axis_tready    (),
+
+  .m_axis_tdata     (calib_b_tdata_out),
+  .m_axis_tvalid    (calib_b_tvalid),
+  .m_axis_tready    (calib_b_tready),
+  // Config
+  .cfg_calib_offset (set_b_calib_offset),
+  .cfg_calib_gain   (set_b_calib_gain)
+);
+
+assign filt_a_tdata = adc_a_filt_out[16-1:16-ADC_DW];
+assign filt_b_tdata = adc_b_filt_out[16-1:16-ADC_DW];
 
 
 //---------------------------------------------------------------------------------
@@ -317,17 +406,17 @@ if (adc_rstn_i == 1'b0) begin
 end else begin
    if (dec_valid || adc_arm_do) begin // start again or arm
       adc_dec_cnt <= 17'h1    ;              
-      adc_a_sum   <= $signed(adc_a_filt_out) ;
-      adc_b_sum   <= $signed(adc_b_filt_out) ;
+      adc_a_sum   <= $signed(filt_a_tdata) ;
+      adc_b_sum   <= $signed(filt_b_tdata) ;
    end else begin
       adc_dec_cnt <= adc_dec_cnt + 17'h1 ;
-      adc_a_sum   <= $signed(adc_a_sum) + $signed(adc_a_filt_out) ;
-      adc_b_sum   <= $signed(adc_b_sum) + $signed(adc_b_filt_out) ;
+      adc_a_sum   <= $signed(adc_a_sum) + $signed(filt_a_tdata) ;
+      adc_b_sum   <= $signed(adc_b_sum) + $signed(filt_b_tdata) ;
    end
    adc_dv_r <= {adc_dv_r[3-1:0], adc_dv};
 
    case (set_dec & {17{set_avg_en}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
-      17'h0     : begin adc_a_dat <= adc_a_filt_out;       adc_b_dat <= adc_b_filt_out;       adc_dv <= dec_valid;  end // if averaging is disabled
+      17'h0     : begin adc_a_dat <= filt_a_tdata;       adc_b_dat <= filt_b_tdata;       adc_dv <= dec_valid;  end // if averaging is disabled
       17'h1     : begin adc_a_dat <= adc_a_sum[15+0 :  0]; adc_b_dat <= adc_b_sum[15+0 :  0]; adc_dv <= dec_valid;  end
       17'h2     : begin adc_a_dat <= adc_a_sum[15+1 :  1]; adc_b_dat <= adc_b_sum[15+1 :  1]; adc_dv <= dec_valid;  end
       17'h4     : begin adc_a_dat <= adc_a_sum[15+2 :  2]; adc_b_dat <= adc_b_sum[15+2 :  2]; adc_dv <= dec_valid;  end
@@ -342,7 +431,7 @@ end else begin
       17'd12, 
       17'd13, 
       17'd14, 
-      17'd15    : begin adc_a_dat <= adc_a_filt_out;       adc_b_dat <= adc_b_filt_out;       adc_dv <= dec_valid;  end // no division for any other decimation factor
+      17'd15    : begin adc_a_dat <= filt_a_tdata;       adc_b_dat <= filt_b_tdata;       adc_dv <= dec_valid;  end // no division for any other decimation factor
       default   : begin adc_a_dat <= a_dat_div;            adc_b_dat <= b_dat_div;            adc_dv <= adc_dv_div; end
    endcase
 end
@@ -709,8 +798,6 @@ assign axi_b_trig       = axi_b_fifo_o[64] && axi_b_fifo_rdr;
 assign axi_b_sel        = axi_b_fifo_o[66:65];
 assign axi_b_val_byte_f = axi_b_fifo_o[74:67];
 
-
-
 always @(posedge axi1_clk_o) begin
    if (axi1_rstn_o == 1'b0) begin
       axi_b_dat_sel <=  2'h0 ;
@@ -916,7 +1003,6 @@ always @(posedge adc_clk_i) begin
 end
 
 
-
 always @(posedge adc_clk_i) begin //delay to trigger
    case (last_src)
        4'd2,
@@ -1083,26 +1169,30 @@ assign trig_ext_asg_o = {asg_trig_n, asg_trig_p, ext_trig_n, ext_trig_p};
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
-   adc_we_keep   <=   1'b0      ;
-   set_a_tresh   <=  14'd5000   ;
-   set_b_tresh   <= -14'd5000   ;
-   set_dly       <=  32'd0      ;
-   set_dec       <=  17'd1      ;
-   set_a_hyst    <=  14'd20     ;
-   set_b_hyst    <=  14'd20     ;
-   set_avg_en    <=   1'b1      ;
-   set_a_filt_aa <=  18'h0      ;
-   set_a_filt_bb <=  25'h0      ;
-   set_a_filt_kk <=  25'hFFFFFF ;
-   set_a_filt_pp <=  25'h0      ;
-   set_b_filt_aa <=  18'h0      ;
-   set_b_filt_bb <=  25'h0      ;
-   set_b_filt_kk <=  25'hFFFFFF ;
-   set_b_filt_pp <=  25'h0      ;
-   set_deb_len   <=  20'd62500  ;
-   set_a_axi_en  <=   1'b0      ;
-   set_b_axi_en  <=   1'b0      ;
-   set_filt_byp  <=   2'h0      ;
+   adc_we_keep         <=   1'b0      ;
+   set_a_tresh         <=  14'd5000   ;
+   set_b_tresh         <= -14'd5000   ;
+   set_dly             <=  32'd0      ;
+   set_dec             <=  17'd1      ;
+   set_a_hyst          <=  14'd20     ;
+   set_b_hyst          <=  14'd20     ;
+   set_avg_en          <=   1'b1      ;
+   set_a_filt_aa       <=  18'h0      ;
+   set_a_filt_bb       <=  25'h0      ;
+   set_a_filt_kk       <=  25'hFFFFFF ;
+   set_a_filt_pp       <=  25'h0      ;
+   set_b_filt_aa       <=  18'h0      ;
+   set_b_filt_bb       <=  25'h0      ;
+   set_b_filt_kk       <=  25'hFFFFFF ;
+   set_b_filt_pp       <=  25'h0      ;
+   set_deb_len         <=  20'd62500  ;
+   set_a_axi_en        <=   1'b0      ;
+   set_b_axi_en        <=   1'b0      ;
+   set_filt_byp        <=   2'h0      ;
+   set_a_calib_offset  <=  16'h0      ;
+   set_a_calib_gain    <=  16'h8000   ;
+   set_b_calib_offset  <=  16'h0      ;
+   set_b_calib_gain    <=  16'h8000   ;
 end else begin
    if (sys_wen) begin
       if (sys_addr[19:0]==20'h00)   adc_we_keep   <= sys_wdata[     3] ;
@@ -1137,16 +1227,27 @@ end else begin
       if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
       if (sys_addr[19:0]==20'h98)   set_filt_byp    <= sys_wdata[ 2-1:0] ;
 
+      // data for calibration of two channel
+      if (sys_addr[19:0]==20'h120)   set_a_calib_offset <= sys_wdata[16-1:0] ;
+      if (sys_addr[19:0]==20'h124)   set_a_calib_gain   <= sys_wdata[16-1:0] ;
+      if (sys_addr[19:0]==20'h130)   set_b_calib_offset <= sys_wdata[16-1:0] ;
+      if (sys_addr[19:0]==20'h134)   set_b_calib_gain   <= sys_wdata[16-1:0] ;
+
+
    end
 end
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
-   filt_a_coef_wr <= 1'b1;
-   filt_b_coef_wr <= 1'b1;
+   filt_a_coef_wr  <= 1'b1;
+   filt_b_coef_wr  <= 1'b1;
+   calib_a_coef_wr <= 1'b1;
+   calib_b_coef_wr <= 1'b1;
 end else begin
    filt_a_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h3);
    filt_b_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h4);
+   calib_a_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h3);
+   calib_b_coef_wr <= ~(sys_wen && sys_addr[7:4] == 4'h4);
 end
 
 wire sys_en;
@@ -1211,6 +1312,12 @@ end else begin
 
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
      20'h00098 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}}, set_filt_byp}       ; end
+
+     // data for calibration of two channel
+     20'h00120 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}}, set_a_calib_offset} ; end
+     20'h00124 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}}, set_a_calib_gain}   ; end
+     20'h00130 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}}, set_b_calib_offset} ; end
+     20'h00134 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}}, set_b_calib_gain} ; end
 
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_a_rd}              ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_b_rd}              ; end

@@ -82,24 +82,30 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
 add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
 
+add_files                               $path_rtl
+add_files                               $path_bd
+
 if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
 add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 }
-
-add_files                               $path_rtl
-add_files                               $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
+if {$prj_name == "v0.94"} {
+    remove_files ../../$path_rtl/classic/red_pitaya_scope.v
+}
+
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+#generate_target all [get_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci]
 add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
+#generate_target all [get_files $path_ip_top/sync_fifo/sync_fifo.xci]
 add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_G2.xdc

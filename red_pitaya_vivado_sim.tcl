@@ -10,6 +10,7 @@ set model [lindex $argv 1]
 set defines [lindex $argv 2]
 
 puts "Project name: $prj_name"
+puts "model name: $model"
 cd prj/$prj_name
 #cd prj/$::argv 0
 
@@ -214,6 +215,9 @@ generate_target all [get_files    system.bd]
 
 add_files                         ../../$path_rtl
 add_files                         $path_rtl
+if {$prj_name == "v0.94"} {
+    remove_files ../../$path_rtl/classic/red_pitaya_scope.v
+}
 add_files                         $path_bd
 add_files                         $path_tbn
 add_files                         $path_tbn_top
@@ -223,6 +227,7 @@ set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
 }
+
 
 if {[file isdirectory $path_ip/asg_dat_fifo]} {
 add_files $path_ip/asg_dat_fifo/asg_dat_fifo.xci

@@ -66,13 +66,18 @@ generate_target all [get_files    system.bd]
 # 3. constraints
 ################################################################################
 
+add_files                         $path_rtl
+add_files                         $path_bd
+
 if {$prj_name != "pyrpl"} {
 add_files                         ../../$path_rtl
 add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 }
 
-add_files                         $path_rtl
-add_files                         $path_bd
+if {$prj_name == "v0.94"} {
+remove_files ../../$path_rtl/classic/red_pitaya_scope.v
+}
+
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {

@@ -11,6 +11,7 @@
 #   4. Linux device tree source (dts).
 
 PRJ   ?= v0.94
+#PRJ   ?= stream_app
 MODEL ?= Z20_G2
 HWID  ?= ""
 DEFINES ?= ""

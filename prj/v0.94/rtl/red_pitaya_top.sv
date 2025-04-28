@@ -62,8 +62,10 @@ module red_pitaya_top #(
   parameter DDW     = 14,
 `ifdef Z20_122
   parameter ADW=ADW_122,
+  parameter ADC_DW=ADW_122,
 `else
   parameter ADW=ADW_125,
+  parameter ADC_DW=ADW_125,
 `endif
 `ifdef Z20_xx
   parameter DWE=DWE_Z20
@@ -544,7 +546,9 @@ assign CAN1_rx = can_on & exp_p_in[6];
 ////////////////////////////////////////////////////////////////////////////////
 
 
-red_pitaya_scope i_scope (
+red_pitaya_scope #(
+  .ADC_DW(ADC_DW))
+i_scope (
   // ADC
   .adc_a_i       (adc_dat[0]  ),  // CH 1
   .adc_b_i       (adc_dat[1]  ),  // CH 2
