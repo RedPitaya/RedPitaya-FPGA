@@ -1,14 +1,14 @@
 // Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
-// Date        : Tue Oct  1 14:37:10 2024
-// Host        : devmachine running 64-bit Ubuntu 24.04 LTS
+// Date        : Tue Apr 29 15:34:49 2025
+// Host        : alen-hpzbookpower running 64-bit EndeavourOS Linux
 // Command     : write_verilog -force -mode funcsim
-//               /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/ip/sync_fifo/sync_fifo_sim_netlist.v
+//               /home/alenlu/projects/redpitaya2/redpitaya-fpga/ip/sync_fifo/sync_fifo_sim_netlist.v
 // Design      : sync_fifo
 // Purpose     : This verilog netlist is a functional simulation representation of the design and should not be modified
 //               or synthesized. This netlist cannot be used for SDF annotated simulation.
-// Device      : xc7z010clg400-1
+// Device      : xc7z020clg400-1
 // --------------------------------------------------------------------------------
 `timescale 1 ps / 1 ps
 
@@ -27,14 +27,14 @@ module sync_fifo
     wr_rst_busy,
     rd_rst_busy);
   input rst;
-  (* x_interface_info = "xilinx.com:signal:clock:1.0 write_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME write_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0" *) input wr_clk;
-  (* x_interface_info = "xilinx.com:signal:clock:1.0 read_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME read_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0" *) input rd_clk;
-  (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA" *) input [127:0]din;
-  (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_EN" *) input wr_en;
-  (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_EN" *) input rd_en;
-  (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_DATA" *) output [127:0]dout;
-  (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE FULL" *) output full;
-  (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY" *) output empty;
+  (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 write_clk CLK" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME write_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0" *) input wr_clk;
+  (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 read_clk CLK" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME read_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0" *) input rd_clk;
+  (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA" *) input [127:0]din;
+  (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_EN" *) input wr_en;
+  (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_EN" *) input rd_en;
+  (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_DATA" *) output [127:0]dout;
+  (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE FULL" *) output full;
+  (* X_INTERFACE_INFO = "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY" *) output empty;
   output wr_rst_busy;
   output rd_rst_busy;
 
@@ -374,7 +374,7 @@ module sync_fifo
   (* C_WR_PNTR_WIDTH_WRCH = "4" *) 
   (* C_WR_RESPONSE_LATENCY = "1" *) 
   (* KEEP_HIERARCHY = "soft" *) 
-  sync_fifo_fifo_generator_v13_2_5 U0
+  sync_fifofifo_generator_v13_2_5 U0
        (.almost_empty(NLW_U0_almost_empty_UNCONNECTED),
         .almost_full(NLW_U0_almost_full_UNCONNECTED),
         .axi_ar_data_count(NLW_U0_axi_ar_data_count_UNCONNECTED[4:0]),
@@ -612,7 +612,7 @@ endmodule
 (* REG_OUTPUT = "1" *) (* SIM_ASSERT_CHK = "0" *) (* SIM_LOSSLESS_GRAY_CHK = "0" *) 
 (* VERSION = "0" *) (* WIDTH = "4" *) (* XPM_MODULE = "TRUE" *) 
 (* keep_hierarchy = "true" *) (* xpm_cdc = "GRAY" *) 
-module sync_fifo_xpm_cdc_gray
+module sync_fifoxpm_cdc_gray
    (src_clk,
     src_in_bin,
     dest_clk,
@@ -799,7 +799,7 @@ endmodule
 (* REG_OUTPUT = "1" *) (* SIM_ASSERT_CHK = "0" *) (* SIM_LOSSLESS_GRAY_CHK = "0" *) 
 (* VERSION = "0" *) (* WIDTH = "4" *) (* XPM_MODULE = "TRUE" *) 
 (* keep_hierarchy = "true" *) (* xpm_cdc = "GRAY" *) 
-module sync_fifo_xpm_cdc_gray__2
+module sync_fifoxpm_cdc_gray__2
    (src_clk,
     src_in_bin,
     dest_clk,
@@ -985,7 +985,7 @@ endmodule
 (* DEST_SYNC_FF = "5" *) (* INIT_SYNC_FF = "0" *) (* ORIG_REF_NAME = "xpm_cdc_single" *) 
 (* SIM_ASSERT_CHK = "0" *) (* SRC_INPUT_REG = "0" *) (* VERSION = "0" *) 
 (* XPM_MODULE = "TRUE" *) (* keep_hierarchy = "true" *) (* xpm_cdc = "SINGLE" *) 
-module sync_fifo_xpm_cdc_single
+module sync_fifoxpm_cdc_single
    (src_clk,
     src_in,
     dest_clk,
@@ -1050,7 +1050,7 @@ endmodule
 (* DEST_SYNC_FF = "5" *) (* INIT_SYNC_FF = "0" *) (* ORIG_REF_NAME = "xpm_cdc_single" *) 
 (* SIM_ASSERT_CHK = "0" *) (* SRC_INPUT_REG = "0" *) (* VERSION = "0" *) 
 (* XPM_MODULE = "TRUE" *) (* keep_hierarchy = "true" *) (* xpm_cdc = "SINGLE" *) 
-module sync_fifo_xpm_cdc_single__2
+module sync_fifoxpm_cdc_single__2
    (src_clk,
     src_in,
     dest_clk,
@@ -1116,7 +1116,7 @@ endmodule
 (* INIT_SYNC_FF = "0" *) (* ORIG_REF_NAME = "xpm_cdc_sync_rst" *) (* SIM_ASSERT_CHK = "0" *) 
 (* VERSION = "0" *) (* XPM_MODULE = "TRUE" *) (* keep_hierarchy = "true" *) 
 (* xpm_cdc = "SYNC_RST" *) 
-module sync_fifo_xpm_cdc_sync_rst
+module sync_fifoxpm_cdc_sync_rst
    (src_rst,
     dest_clk,
     dest_rst);
@@ -1190,7 +1190,7 @@ endmodule
 (* INIT_SYNC_FF = "0" *) (* ORIG_REF_NAME = "xpm_cdc_sync_rst" *) (* SIM_ASSERT_CHK = "0" *) 
 (* VERSION = "0" *) (* XPM_MODULE = "TRUE" *) (* keep_hierarchy = "true" *) 
 (* xpm_cdc = "SYNC_RST" *) 
-module sync_fifo_xpm_cdc_sync_rst__2
+module sync_fifoxpm_cdc_sync_rst__2
    (src_rst,
     dest_clk,
     dest_rst);
@@ -1261,7 +1261,7 @@ module sync_fifo_xpm_cdc_sync_rst__2
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_generic_cstr" *) 
-module sync_fifo_blk_mem_gen_generic_cstr
+module sync_fifoblk_mem_gen_generic_cstr
    (ENA_dly_D,
     dout,
     POR_B,
@@ -1303,7 +1303,7 @@ module sync_fifo_blk_mem_gen_generic_cstr
   wire rd_clk;
   wire wr_clk;
 
-  sync_fifo_blk_mem_gen_prim_width \ramloop[0].ram.r 
+  sync_fifoblk_mem_gen_prim_width \ramloop[0].ram.r 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -1314,7 +1314,7 @@ module sync_fifo_blk_mem_gen_generic_cstr
         .ram_rstram_b(ram_rstram_b),
         .rd_clk(rd_clk),
         .wr_clk(wr_clk));
-  sync_fifo_blk_mem_gen_prim_width__parameterized0 \ramloop[1].ram.r 
+  sync_fifoblk_mem_gen_prim_width__parameterized0 \ramloop[1].ram.r 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -1331,7 +1331,7 @@ module sync_fifo_blk_mem_gen_generic_cstr
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_prim_width" *) 
-module sync_fifo_blk_mem_gen_prim_width
+module sync_fifoblk_mem_gen_prim_width
    (dout,
     rd_clk,
     wr_clk,
@@ -1364,7 +1364,7 @@ module sync_fifo_blk_mem_gen_prim_width
   wire rd_clk;
   wire wr_clk;
 
-  sync_fifo_blk_mem_gen_prim_wrapper \prim_noinit.ram 
+  sync_fifoblk_mem_gen_prim_wrapper \prim_noinit.ram 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_1 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -1378,7 +1378,7 @@ module sync_fifo_blk_mem_gen_prim_width
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_prim_width" *) 
-module sync_fifo_blk_mem_gen_prim_width__parameterized0
+module sync_fifoblk_mem_gen_prim_width__parameterized0
    (ENA_dly_D,
     dout,
     POR_B,
@@ -1545,7 +1545,7 @@ module sync_fifo_blk_mem_gen_prim_width__parameterized0
         .D(\SAFETY_CKT_GEN.RSTB_SHFT_REG_reg[3]_srl3_n_0 ),
         .Q(\SAFETY_CKT_GEN.RSTB_SHFT_REG_reg_n_0_[4] ),
         .R(1'b0));
-  sync_fifo_blk_mem_gen_prim_wrapper__parameterized0 \prim_noinit.ram 
+  sync_fifoblk_mem_gen_prim_wrapper__parameterized0 \prim_noinit.ram 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_1 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -1559,7 +1559,7 @@ module sync_fifo_blk_mem_gen_prim_width__parameterized0
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_prim_wrapper" *) 
-module sync_fifo_blk_mem_gen_prim_wrapper
+module sync_fifoblk_mem_gen_prim_wrapper
    (dout,
     rd_clk,
     wr_clk,
@@ -1811,7 +1811,7 @@ module sync_fifo_blk_mem_gen_prim_wrapper
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_prim_wrapper" *) 
-module sync_fifo_blk_mem_gen_prim_wrapper__parameterized0
+module sync_fifoblk_mem_gen_prim_wrapper__parameterized0
    (dout,
     rd_clk,
     wr_clk,
@@ -2079,7 +2079,7 @@ module sync_fifo_blk_mem_gen_prim_wrapper__parameterized0
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_top" *) 
-module sync_fifo_blk_mem_gen_top
+module sync_fifoblk_mem_gen_top
    (ENA_dly_D,
     dout,
     POR_B,
@@ -2121,7 +2121,7 @@ module sync_fifo_blk_mem_gen_top
   wire rd_clk;
   wire wr_clk;
 
-  sync_fifo_blk_mem_gen_generic_cstr \valid.cstr 
+  sync_fifoblk_mem_gen_generic_cstr \valid.cstr 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -2138,7 +2138,7 @@ module sync_fifo_blk_mem_gen_top
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_v8_4_4" *) 
-module sync_fifo_blk_mem_gen_v8_4_4
+module sync_fifoblk_mem_gen_v8_4_4
    (ENA_dly_D,
     dout,
     POR_B,
@@ -2180,7 +2180,7 @@ module sync_fifo_blk_mem_gen_v8_4_4
   wire rd_clk;
   wire wr_clk;
 
-  sync_fifo_blk_mem_gen_v8_4_4_synth inst_blk_mem_gen
+  sync_fifoblk_mem_gen_v8_4_4_synth inst_blk_mem_gen
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -2197,7 +2197,7 @@ module sync_fifo_blk_mem_gen_v8_4_4
 endmodule
 
 (* ORIG_REF_NAME = "blk_mem_gen_v8_4_4_synth" *) 
-module sync_fifo_blk_mem_gen_v8_4_4_synth
+module sync_fifoblk_mem_gen_v8_4_4_synth
    (ENA_dly_D,
     dout,
     POR_B,
@@ -2239,7 +2239,7 @@ module sync_fifo_blk_mem_gen_v8_4_4_synth
   wire rd_clk;
   wire wr_clk;
 
-  sync_fifo_blk_mem_gen_top \gnbram.gnativebmg.native_blk_mem_gen 
+  sync_fifoblk_mem_gen_top \gnbram.gnativebmg.native_blk_mem_gen 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -2256,7 +2256,7 @@ module sync_fifo_blk_mem_gen_v8_4_4_synth
 endmodule
 
 (* ORIG_REF_NAME = "clk_x_pntrs" *) 
-module sync_fifo_clk_x_pntrs
+module sync_fifoclk_x_pntrs
    (\dest_out_bin_ff_reg[3] ,
     RD_PNTR_WR,
     \dest_out_bin_ff_reg[2] ,
@@ -2335,7 +2335,7 @@ module sync_fifo_clk_x_pntrs
   (* WIDTH = "4" *) 
   (* XPM_CDC = "GRAY" *) 
   (* XPM_MODULE = "TRUE" *) 
-  sync_fifo_xpm_cdc_gray rd_pntr_cdc_inst
+  sync_fifoxpm_cdc_gray rd_pntr_cdc_inst
        (.dest_clk(wr_clk),
         .dest_out_bin(RD_PNTR_WR),
         .src_clk(rd_clk),
@@ -2350,7 +2350,7 @@ module sync_fifo_clk_x_pntrs
   (* WIDTH = "4" *) 
   (* XPM_CDC = "GRAY" *) 
   (* XPM_MODULE = "TRUE" *) 
-  sync_fifo_xpm_cdc_gray__2 wr_pntr_cdc_inst
+  sync_fifoxpm_cdc_gray__2 wr_pntr_cdc_inst
        (.dest_clk(rd_clk),
         .dest_out_bin(WR_PNTR_RD),
         .src_clk(wr_clk),
@@ -2358,7 +2358,7 @@ module sync_fifo_clk_x_pntrs
 endmodule
 
 (* ORIG_REF_NAME = "fifo_generator_ramfifo" *) 
-module sync_fifo_fifo_generator_ramfifo
+module sync_fifofifo_generator_ramfifo
    (\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg ,
     wr_rst_busy,
     dout,
@@ -2417,7 +2417,7 @@ module sync_fifo_fifo_generator_ramfifo
   wire [3:0]wr_pntr_rd;
   wire wr_rst_busy;
 
-  sync_fifo_clk_x_pntrs \gntv_or_sync_fifo.gcx.clkx 
+  sync_fifoclk_x_pntrs \gntv_or_sync_fifo.gcx.clkx 
        (.Q(wr_pntr_plus1),
         .RD_PNTR_WR(rd_pntr_wr),
         .WR_PNTR_RD(wr_pntr_rd),
@@ -2431,7 +2431,7 @@ module sync_fifo_fifo_generator_ramfifo
         .\src_gray_ff_reg[3] (wr_pntr),
         .\src_gray_ff_reg[3]_0 (rd_pntr),
         .wr_clk(wr_clk));
-  sync_fifo_rd_logic \gntv_or_sync_fifo.gl0.rd 
+  sync_fiford_logic \gntv_or_sync_fifo.gl0.rd 
        (.Q(rd_pntr_plus1),
         .SS(\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg ),
         .WR_PNTR_RD(wr_pntr_rd),
@@ -2441,7 +2441,7 @@ module sync_fifo_fifo_generator_ramfifo
         .ram_empty_i_reg(\gntv_or_sync_fifo.gcx.clkx_n_6 ),
         .rd_clk(rd_clk),
         .rd_en(rd_en));
-  sync_fifo_wr_logic \gntv_or_sync_fifo.gl0.wr 
+  sync_fifowr_logic \gntv_or_sync_fifo.gl0.wr 
        (.E(ram_wr_en),
         .ENA_I(\gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENA_I ),
         .ENA_dly_D(\gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENA_dly_D ),
@@ -2456,7 +2456,7 @@ module sync_fifo_fifo_generator_ramfifo
         .ram_full_fb_i_reg_0(rstblk_n_4),
         .wr_clk(wr_clk),
         .wr_en(wr_en));
-  sync_fifo_memory \gntv_or_sync_fifo.mem 
+  sync_fifomemory \gntv_or_sync_fifo.mem 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (rd_pntr),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (wr_pntr),
         .E(ram_wr_en),
@@ -2470,7 +2470,7 @@ module sync_fifo_fifo_generator_ramfifo
         .ram_rstram_b(\gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ram_rstram_b ),
         .rd_clk(rd_clk),
         .wr_clk(wr_clk));
-  sync_fifo_reset_blk_ramfifo rstblk
+  sync_fiforeset_blk_ramfifo rstblk
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (empty_fb_i),
         .ENB_I(\gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENB_I ),
         .ENB_dly_D(\gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENB_dly_D ),
@@ -2492,7 +2492,7 @@ module sync_fifo_fifo_generator_ramfifo
 endmodule
 
 (* ORIG_REF_NAME = "fifo_generator_top" *) 
-module sync_fifo_fifo_generator_top
+module sync_fifofifo_generator_top
    (SS,
     wr_rst_busy,
     dout,
@@ -2528,7 +2528,7 @@ module sync_fifo_fifo_generator_top
   wire wr_en;
   wire wr_rst_busy;
 
-  sync_fifo_fifo_generator_ramfifo \grf.rf 
+  sync_fifofifo_generator_ramfifo \grf.rf 
        (.din(din),
         .dout(dout),
         .empty(empty),
@@ -2610,7 +2610,7 @@ endmodule
 (* C_WR_PNTR_WIDTH_AXIS = "10" *) (* C_WR_PNTR_WIDTH_RACH = "4" *) (* C_WR_PNTR_WIDTH_RDCH = "10" *) 
 (* C_WR_PNTR_WIDTH_WACH = "4" *) (* C_WR_PNTR_WIDTH_WDCH = "10" *) (* C_WR_PNTR_WIDTH_WRCH = "4" *) 
 (* C_WR_RESPONSE_LATENCY = "1" *) (* ORIG_REF_NAME = "fifo_generator_v13_2_5" *) 
-module sync_fifo_fifo_generator_v13_2_5
+module sync_fifofifo_generator_v13_2_5
    (backup,
     backup_marker,
     clk,
@@ -3597,7 +3597,7 @@ module sync_fifo_fifo_generator_v13_2_5
        (.G(\<const0> ));
   VCC VCC
        (.P(\<const1> ));
-  sync_fifo_fifo_generator_v13_2_5_synth inst_fifo_gen
+  sync_fifofifo_generator_v13_2_5_synth inst_fifo_gen
        (.din(din),
         .dout(dout),
         .empty(empty),
@@ -3612,7 +3612,7 @@ module sync_fifo_fifo_generator_v13_2_5
 endmodule
 
 (* ORIG_REF_NAME = "fifo_generator_v13_2_5_synth" *) 
-module sync_fifo_fifo_generator_v13_2_5_synth
+module sync_fifofifo_generator_v13_2_5_synth
    (\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg ,
     wr_rst_busy,
     dout,
@@ -3648,7 +3648,7 @@ module sync_fifo_fifo_generator_v13_2_5_synth
   wire wr_en;
   wire wr_rst_busy;
 
-  sync_fifo_fifo_generator_top \gconvfifo.rf 
+  sync_fifofifo_generator_top \gconvfifo.rf 
        (.SS(\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg ),
         .din(din),
         .dout(dout),
@@ -3663,7 +3663,7 @@ module sync_fifo_fifo_generator_v13_2_5_synth
 endmodule
 
 (* ORIG_REF_NAME = "memory" *) 
-module sync_fifo_memory
+module sync_fifomemory
    (ENA_dly_D,
     dout,
     POR_B,
@@ -3705,7 +3705,7 @@ module sync_fifo_memory
   wire rd_clk;
   wire wr_clk;
 
-  sync_fifo_blk_mem_gen_v8_4_4 \gbm.gbmg.gbmga.ngecc.bmg 
+  sync_fifoblk_mem_gen_v8_4_4 \gbm.gbmg.gbmga.ngecc.bmg 
        (.\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram ),
         .\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 (\DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0 ),
         .E(E),
@@ -3722,7 +3722,7 @@ module sync_fifo_memory
 endmodule
 
 (* ORIG_REF_NAME = "rd_bin_cntr" *) 
-module sync_fifo_rd_bin_cntr
+module sync_fiford_bin_cntr
    (\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg ,
     \gc0.count_d1_reg[3]_0 ,
     Q,
@@ -3875,7 +3875,7 @@ module sync_fifo_rd_bin_cntr
 endmodule
 
 (* ORIG_REF_NAME = "rd_logic" *) 
-module sync_fifo_rd_logic
+module sync_fiford_logic
    (empty,
     out,
     Q,
@@ -3909,7 +3909,7 @@ module sync_fifo_rd_logic
   wire [3:3]rd_pntr_plus1;
   wire rpntr_n_0;
 
-  sync_fifo_rd_status_flags_as \gras.rsts 
+  sync_fiford_status_flags_as \gras.rsts 
        (.E(ram_rd_en),
         .Q(rd_pntr_plus1),
         .WR_PNTR_RD(WR_PNTR_RD[3]),
@@ -3919,7 +3919,7 @@ module sync_fifo_rd_logic
         .ram_empty_i_reg_0(rpntr_n_0),
         .rd_clk(rd_clk),
         .rd_en(rd_en));
-  sync_fifo_rd_bin_cntr rpntr
+  sync_fiford_bin_cntr rpntr
        (.E(ram_rd_en),
         .Q({rd_pntr_plus1,Q}),
         .SS(SS),
@@ -3932,7 +3932,7 @@ module sync_fifo_rd_logic
 endmodule
 
 (* ORIG_REF_NAME = "rd_status_flags_as" *) 
-module sync_fifo_rd_status_flags_as
+module sync_fiford_status_flags_as
    (empty,
     out,
     ram_empty_fb_i_reg_0,
@@ -4003,7 +4003,7 @@ module sync_fifo_rd_status_flags_as
 endmodule
 
 (* ORIG_REF_NAME = "reset_blk_ramfifo" *) 
-module sync_fifo_reset_blk_ramfifo
+module sync_fiforeset_blk_ramfifo
    (\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_wr_rst_ic_reg_0 ,
     SS,
     wr_rst_busy,
@@ -4318,7 +4318,7 @@ module sync_fifo_reset_blk_ramfifo
   (* VERSION = "0" *) 
   (* XPM_CDC = "SINGLE" *) 
   (* XPM_MODULE = "TRUE" *) 
-  sync_fifo_xpm_cdc_single \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_rrst_wr 
+  sync_fifoxpm_cdc_single \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_rrst_wr 
        (.dest_clk(wr_clk),
         .dest_out(sckt_rd_rst_wr),
         .src_clk(rd_clk),
@@ -4331,7 +4331,7 @@ module sync_fifo_reset_blk_ramfifo
   (* VERSION = "0" *) 
   (* XPM_CDC = "SINGLE" *) 
   (* XPM_MODULE = "TRUE" *) 
-  sync_fifo_xpm_cdc_single__2 \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_wrst_rd 
+  sync_fifoxpm_cdc_single__2 \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_wrst_rd 
        (.dest_clk(rd_clk),
         .dest_out(dest_out),
         .src_clk(wr_clk),
@@ -4345,7 +4345,7 @@ module sync_fifo_reset_blk_ramfifo
   (* VERSION = "0" *) 
   (* XPM_CDC = "SYNC_RST" *) 
   (* XPM_MODULE = "TRUE" *) 
-  sync_fifo_xpm_cdc_sync_rst \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_sync_rst_inst_wrst 
+  sync_fifoxpm_cdc_sync_rst \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_sync_rst_inst_wrst 
        (.dest_clk(rd_clk),
         .dest_rst(arst_sync_rd_rst),
         .src_rst(rst));
@@ -4358,7 +4358,7 @@ module sync_fifo_reset_blk_ramfifo
   (* VERSION = "0" *) 
   (* XPM_CDC = "SYNC_RST" *) 
   (* XPM_MODULE = "TRUE" *) 
-  sync_fifo_xpm_cdc_sync_rst__2 \ngwrdrst.grst.g7serrst.gsckt_wrst.xpm_cdc_sync_rst_inst_wrst 
+  sync_fifoxpm_cdc_sync_rst__2 \ngwrdrst.grst.g7serrst.gsckt_wrst.xpm_cdc_sync_rst_inst_wrst 
        (.dest_clk(wr_clk),
         .dest_rst(dest_rst),
         .src_rst(rst));
@@ -4375,7 +4375,7 @@ module sync_fifo_reset_blk_ramfifo
 endmodule
 
 (* ORIG_REF_NAME = "wr_bin_cntr" *) 
-module sync_fifo_wr_bin_cntr
+module sync_fifowr_bin_cntr
    (\gic0.gc0.count_d1_reg[2]_0 ,
     Q,
     \gic0.gc0.count_d1_reg[3]_0 ,
@@ -4541,7 +4541,7 @@ module sync_fifo_wr_bin_cntr
 endmodule
 
 (* ORIG_REF_NAME = "wr_logic" *) 
-module sync_fifo_wr_logic
+module sync_fifowr_logic
    (full,
     ENA_I,
     ram_full_fb_i_reg,
@@ -4587,7 +4587,7 @@ module sync_fifo_wr_logic
   wire wr_en;
   wire [3:3]wr_pntr_plus2;
 
-  sync_fifo_wr_status_flags_as \gwas.wsts 
+  sync_fifowr_status_flags_as \gwas.wsts 
        (.E(E),
         .ENA_I(ENA_I),
         .ENA_dly_D(ENA_dly_D),
@@ -4598,7 +4598,7 @@ module sync_fifo_wr_logic
         .ram_full_fb_i_reg_1(ram_full_fb_i_reg_0),
         .wr_clk(wr_clk),
         .wr_en(wr_en));
-  sync_fifo_wr_bin_cntr wpntr
+  sync_fifowr_bin_cntr wpntr
        (.E(E),
         .Q({wr_pntr_plus2,Q}),
         .RD_PNTR_WR(RD_PNTR_WR[2:0]),
@@ -4610,7 +4610,7 @@ module sync_fifo_wr_logic
 endmodule
 
 (* ORIG_REF_NAME = "wr_status_flags_as" *) 
-module sync_fifo_wr_status_flags_as
+module sync_fifowr_status_flags_as
    (full,
     ENA_I,
     ram_full_fb_i_reg_0,

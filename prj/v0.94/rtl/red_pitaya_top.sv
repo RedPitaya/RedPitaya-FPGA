@@ -137,7 +137,7 @@ module red_pitaya_top #(
   input  logic           s1_link_i   ,
   `endif
   // LED
-  inout  logic [  8-1:0] led_o
+  output  logic [  8-1:0] led_o
 );
 
 ////////////////////////////////////////////////////////////////////////////////

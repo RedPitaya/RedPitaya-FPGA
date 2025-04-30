@@ -1,13 +1,13 @@
 // Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
-// Date        : Tue Oct  1 14:37:10 2024
-// Host        : devmachine running 64-bit Ubuntu 24.04 LTS
+// Date        : Tue Apr 29 15:34:48 2025
+// Host        : alen-hpzbookpower running 64-bit EndeavourOS Linux
 // Command     : write_verilog -force -mode synth_stub
-//               /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/ip/sync_fifo/sync_fifo_stub.v
+//               /home/alenlu/projects/redpitaya2/redpitaya-fpga/ip/sync_fifo/sync_fifo_stub.v
 // Design      : sync_fifo
 // Purpose     : Stub declaration of top-level module interface
-// Device      : xc7z010clg400-1
+// Device      : xc7z020clg400-1
 // --------------------------------------------------------------------------------
 
 // This empty module with port declaration file causes synthesis tools to infer a black box for IP.

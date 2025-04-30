@@ -68,32 +68,7 @@ set_false_path -from [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/
 set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
 set_false_path -from [get_pins {adc_dat*[*][*]/C}] -to [get_pins {dac_dat_*[*]/D}]
 
-#create_clock -name e3 -period 4.000 [get_ports exp_e3*[*]]
-#create_clock -name daisy -period 4.000 [get_ports {daisy*[*]}]
-#set_data_check --from exp_e3p_i[0] --to exp_e3n_i[0] 0.5
-#set_data_check --from exp_e3p_i[1] --to exp_e3n_i[1] 0.5
-#set_data_check --from exp_e3p_i[2] --to exp_e3n_i[2] 0.5
-#set_data_check --from exp_e3p_i[3] --to exp_e3n_i[3] 0.5
-#set_data_check --from exp_e3p_o[0] --to exp_e3n_o[0] 0.5
-#set_data_check --from exp_e3p_o[1] --to exp_e3n_o[1] 0.5
-#set_data_check --from exp_e3p_o[2] --to exp_e3n_o[2] 0.5
-#set_data_check --from exp_e3p_o[3] --to exp_e3n_o[3] 0.5
-#set_data_check --from daisy_p_o[0] --to daisy_n_o[0] 0.5
-#set_data_check --from daisy_p_o[1] --to daisy_n_o[1] 0.5
-#set_data_check --from daisy_p_i[0] --to daisy_n_i[0] 0.5
-#set_data_check --from daisy_p_i[1] --to daisy_n_i[1] 0.5
-#
-set_max_delay --from exp_e3p_i[0] --to exp_e3n_i[0] -datapath_only 0.5
-set_max_delay --from exp_e3p_i[1] --to exp_e3n_i[1] -datapath_only 0.5
-set_max_delay --from exp_e3p_i[2] --to exp_e3n_i[2] -datapath_only 0.5
-set_max_delay --from exp_e3p_i[3] --to exp_e3n_i[3] -datapath_only 0.5
-set_max_delay --from exp_e3p_o[0] --to exp_e3n_o[0] -datapath_only 0.5
-set_max_delay --from exp_e3p_o[1] --to exp_e3n_o[1] -datapath_only 0.5
-set_max_delay --from exp_e3p_o[2] --to exp_e3n_o[2] -datapath_only 0.5
-set_max_delay --from exp_e3p_o[3] --to exp_e3n_o[3] -datapath_only 0.5
-set_max-delay --from daisy_p_o[0] --to daisy_n_o[0] -datapath_only 0.5
-set_max-delay --from daisy_p_o[1] --to daisy_n_o[1] -datapath_only 0.5
-set_max-delay --from daisy_p_i[0] --to daisy_n_i[0] -datapath_only 0.5
-set_max-delay --from daisy_p_i[1] --to daisy_n_i[1] -datapath_only 0.5
+# constrain for clock capable line on E3, to preven loop test error
+create_clock -name e3_3i -period 4.000 [get_ports exp_e3*_i[3]]
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]

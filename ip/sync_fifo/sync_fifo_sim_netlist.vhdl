@@ -1,20 +1,20 @@
 -- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
--- Date        : Tue Oct  1 14:37:10 2024
--- Host        : devmachine running 64-bit Ubuntu 24.04 LTS
+-- Date        : Tue Apr 29 15:34:49 2025
+-- Host        : alen-hpzbookpower running 64-bit EndeavourOS Linux
 -- Command     : write_vhdl -force -mode funcsim
---               /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/ip/sync_fifo/sync_fifo_sim_netlist.vhdl
+--               /home/alenlu/projects/redpitaya2/redpitaya-fpga/ip/sync_fifo/sync_fifo_sim_netlist.vhdl
 -- Design      : sync_fifo
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
--- Device      : xc7z010clg400-1
+-- Device      : xc7z020clg400-1
 -- --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_xpm_cdc_gray is
+entity sync_fifoxpm_cdc_gray is
   port (
     src_clk : in STD_LOGIC;
     src_in_bin : in STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -22,30 +22,30 @@ entity sync_fifo_xpm_cdc_gray is
     dest_out_bin : out STD_LOGIC_VECTOR ( 3 downto 0 )
   );
   attribute DEST_SYNC_FF : integer;
-  attribute DEST_SYNC_FF of sync_fifo_xpm_cdc_gray : entity is 2;
+  attribute DEST_SYNC_FF of sync_fifoxpm_cdc_gray : entity is 2;
   attribute INIT_SYNC_FF : integer;
-  attribute INIT_SYNC_FF of sync_fifo_xpm_cdc_gray : entity is 0;
+  attribute INIT_SYNC_FF of sync_fifoxpm_cdc_gray : entity is 0;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_xpm_cdc_gray : entity is "xpm_cdc_gray";
+  attribute ORIG_REF_NAME of sync_fifoxpm_cdc_gray : entity is "xpm_cdc_gray";
   attribute REG_OUTPUT : integer;
-  attribute REG_OUTPUT of sync_fifo_xpm_cdc_gray : entity is 1;
+  attribute REG_OUTPUT of sync_fifoxpm_cdc_gray : entity is 1;
   attribute SIM_ASSERT_CHK : integer;
-  attribute SIM_ASSERT_CHK of sync_fifo_xpm_cdc_gray : entity is 0;
+  attribute SIM_ASSERT_CHK of sync_fifoxpm_cdc_gray : entity is 0;
   attribute SIM_LOSSLESS_GRAY_CHK : integer;
-  attribute SIM_LOSSLESS_GRAY_CHK of sync_fifo_xpm_cdc_gray : entity is 0;
+  attribute SIM_LOSSLESS_GRAY_CHK of sync_fifoxpm_cdc_gray : entity is 0;
   attribute VERSION : integer;
-  attribute VERSION of sync_fifo_xpm_cdc_gray : entity is 0;
+  attribute VERSION of sync_fifoxpm_cdc_gray : entity is 0;
   attribute WIDTH : integer;
-  attribute WIDTH of sync_fifo_xpm_cdc_gray : entity is 4;
+  attribute WIDTH of sync_fifoxpm_cdc_gray : entity is 4;
   attribute XPM_MODULE : string;
-  attribute XPM_MODULE of sync_fifo_xpm_cdc_gray : entity is "TRUE";
+  attribute XPM_MODULE of sync_fifoxpm_cdc_gray : entity is "TRUE";
   attribute keep_hierarchy : string;
-  attribute keep_hierarchy of sync_fifo_xpm_cdc_gray : entity is "true";
+  attribute keep_hierarchy of sync_fifoxpm_cdc_gray : entity is "true";
   attribute xpm_cdc : string;
-  attribute xpm_cdc of sync_fifo_xpm_cdc_gray : entity is "GRAY";
-end sync_fifo_xpm_cdc_gray;
+  attribute xpm_cdc of sync_fifoxpm_cdc_gray : entity is "GRAY";
+end sync_fifoxpm_cdc_gray;
 
-architecture STRUCTURE of sync_fifo_xpm_cdc_gray is
+architecture STRUCTURE of sync_fifoxpm_cdc_gray is
   signal async_path : STD_LOGIC_VECTOR ( 3 downto 0 );
   signal binval : STD_LOGIC_VECTOR ( 2 downto 0 );
   signal \dest_graysync_ff[0]\ : STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -279,7 +279,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity \sync_fifo_xpm_cdc_gray__2\ is
+entity \sync_fifoxpm_cdc_gray__2\ is
   port (
     src_clk : in STD_LOGIC;
     src_in_bin : in STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -287,30 +287,30 @@ entity \sync_fifo_xpm_cdc_gray__2\ is
     dest_out_bin : out STD_LOGIC_VECTOR ( 3 downto 0 )
   );
   attribute DEST_SYNC_FF : integer;
-  attribute DEST_SYNC_FF of \sync_fifo_xpm_cdc_gray__2\ : entity is 2;
+  attribute DEST_SYNC_FF of \sync_fifoxpm_cdc_gray__2\ : entity is 2;
   attribute INIT_SYNC_FF : integer;
-  attribute INIT_SYNC_FF of \sync_fifo_xpm_cdc_gray__2\ : entity is 0;
+  attribute INIT_SYNC_FF of \sync_fifoxpm_cdc_gray__2\ : entity is 0;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of \sync_fifo_xpm_cdc_gray__2\ : entity is "xpm_cdc_gray";
+  attribute ORIG_REF_NAME of \sync_fifoxpm_cdc_gray__2\ : entity is "xpm_cdc_gray";
   attribute REG_OUTPUT : integer;
-  attribute REG_OUTPUT of \sync_fifo_xpm_cdc_gray__2\ : entity is 1;
+  attribute REG_OUTPUT of \sync_fifoxpm_cdc_gray__2\ : entity is 1;
   attribute SIM_ASSERT_CHK : integer;
-  attribute SIM_ASSERT_CHK of \sync_fifo_xpm_cdc_gray__2\ : entity is 0;
+  attribute SIM_ASSERT_CHK of \sync_fifoxpm_cdc_gray__2\ : entity is 0;
   attribute SIM_LOSSLESS_GRAY_CHK : integer;
-  attribute SIM_LOSSLESS_GRAY_CHK of \sync_fifo_xpm_cdc_gray__2\ : entity is 0;
+  attribute SIM_LOSSLESS_GRAY_CHK of \sync_fifoxpm_cdc_gray__2\ : entity is 0;
   attribute VERSION : integer;
-  attribute VERSION of \sync_fifo_xpm_cdc_gray__2\ : entity is 0;
+  attribute VERSION of \sync_fifoxpm_cdc_gray__2\ : entity is 0;
   attribute WIDTH : integer;
-  attribute WIDTH of \sync_fifo_xpm_cdc_gray__2\ : entity is 4;
+  attribute WIDTH of \sync_fifoxpm_cdc_gray__2\ : entity is 4;
   attribute XPM_MODULE : string;
-  attribute XPM_MODULE of \sync_fifo_xpm_cdc_gray__2\ : entity is "TRUE";
+  attribute XPM_MODULE of \sync_fifoxpm_cdc_gray__2\ : entity is "TRUE";
   attribute keep_hierarchy : string;
-  attribute keep_hierarchy of \sync_fifo_xpm_cdc_gray__2\ : entity is "true";
+  attribute keep_hierarchy of \sync_fifoxpm_cdc_gray__2\ : entity is "true";
   attribute xpm_cdc : string;
-  attribute xpm_cdc of \sync_fifo_xpm_cdc_gray__2\ : entity is "GRAY";
-end \sync_fifo_xpm_cdc_gray__2\;
+  attribute xpm_cdc of \sync_fifoxpm_cdc_gray__2\ : entity is "GRAY";
+end \sync_fifoxpm_cdc_gray__2\;
 
-architecture STRUCTURE of \sync_fifo_xpm_cdc_gray__2\ is
+architecture STRUCTURE of \sync_fifoxpm_cdc_gray__2\ is
   signal async_path : STD_LOGIC_VECTOR ( 3 downto 0 );
   signal binval : STD_LOGIC_VECTOR ( 2 downto 0 );
   signal \dest_graysync_ff[0]\ : STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -544,7 +544,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_xpm_cdc_single is
+entity sync_fifoxpm_cdc_single is
   port (
     src_clk : in STD_LOGIC;
     src_in : in STD_LOGIC;
@@ -552,26 +552,26 @@ entity sync_fifo_xpm_cdc_single is
     dest_out : out STD_LOGIC
   );
   attribute DEST_SYNC_FF : integer;
-  attribute DEST_SYNC_FF of sync_fifo_xpm_cdc_single : entity is 5;
+  attribute DEST_SYNC_FF of sync_fifoxpm_cdc_single : entity is 5;
   attribute INIT_SYNC_FF : integer;
-  attribute INIT_SYNC_FF of sync_fifo_xpm_cdc_single : entity is 0;
+  attribute INIT_SYNC_FF of sync_fifoxpm_cdc_single : entity is 0;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_xpm_cdc_single : entity is "xpm_cdc_single";
+  attribute ORIG_REF_NAME of sync_fifoxpm_cdc_single : entity is "xpm_cdc_single";
   attribute SIM_ASSERT_CHK : integer;
-  attribute SIM_ASSERT_CHK of sync_fifo_xpm_cdc_single : entity is 0;
+  attribute SIM_ASSERT_CHK of sync_fifoxpm_cdc_single : entity is 0;
   attribute SRC_INPUT_REG : integer;
-  attribute SRC_INPUT_REG of sync_fifo_xpm_cdc_single : entity is 0;
+  attribute SRC_INPUT_REG of sync_fifoxpm_cdc_single : entity is 0;
   attribute VERSION : integer;
-  attribute VERSION of sync_fifo_xpm_cdc_single : entity is 0;
+  attribute VERSION of sync_fifoxpm_cdc_single : entity is 0;
   attribute XPM_MODULE : string;
-  attribute XPM_MODULE of sync_fifo_xpm_cdc_single : entity is "TRUE";
+  attribute XPM_MODULE of sync_fifoxpm_cdc_single : entity is "TRUE";
   attribute keep_hierarchy : string;
-  attribute keep_hierarchy of sync_fifo_xpm_cdc_single : entity is "true";
+  attribute keep_hierarchy of sync_fifoxpm_cdc_single : entity is "true";
   attribute xpm_cdc : string;
-  attribute xpm_cdc of sync_fifo_xpm_cdc_single : entity is "SINGLE";
-end sync_fifo_xpm_cdc_single;
+  attribute xpm_cdc of sync_fifoxpm_cdc_single : entity is "SINGLE";
+end sync_fifoxpm_cdc_single;
 
-architecture STRUCTURE of sync_fifo_xpm_cdc_single is
+architecture STRUCTURE of sync_fifoxpm_cdc_single is
   signal syncstages_ff : STD_LOGIC_VECTOR ( 4 downto 0 );
   attribute RTL_KEEP : string;
   attribute RTL_KEEP of syncstages_ff : signal is "true";
@@ -642,7 +642,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity \sync_fifo_xpm_cdc_single__2\ is
+entity \sync_fifoxpm_cdc_single__2\ is
   port (
     src_clk : in STD_LOGIC;
     src_in : in STD_LOGIC;
@@ -650,26 +650,26 @@ entity \sync_fifo_xpm_cdc_single__2\ is
     dest_out : out STD_LOGIC
   );
   attribute DEST_SYNC_FF : integer;
-  attribute DEST_SYNC_FF of \sync_fifo_xpm_cdc_single__2\ : entity is 5;
+  attribute DEST_SYNC_FF of \sync_fifoxpm_cdc_single__2\ : entity is 5;
   attribute INIT_SYNC_FF : integer;
-  attribute INIT_SYNC_FF of \sync_fifo_xpm_cdc_single__2\ : entity is 0;
+  attribute INIT_SYNC_FF of \sync_fifoxpm_cdc_single__2\ : entity is 0;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of \sync_fifo_xpm_cdc_single__2\ : entity is "xpm_cdc_single";
+  attribute ORIG_REF_NAME of \sync_fifoxpm_cdc_single__2\ : entity is "xpm_cdc_single";
   attribute SIM_ASSERT_CHK : integer;
-  attribute SIM_ASSERT_CHK of \sync_fifo_xpm_cdc_single__2\ : entity is 0;
+  attribute SIM_ASSERT_CHK of \sync_fifoxpm_cdc_single__2\ : entity is 0;
   attribute SRC_INPUT_REG : integer;
-  attribute SRC_INPUT_REG of \sync_fifo_xpm_cdc_single__2\ : entity is 0;
+  attribute SRC_INPUT_REG of \sync_fifoxpm_cdc_single__2\ : entity is 0;
   attribute VERSION : integer;
-  attribute VERSION of \sync_fifo_xpm_cdc_single__2\ : entity is 0;
+  attribute VERSION of \sync_fifoxpm_cdc_single__2\ : entity is 0;
   attribute XPM_MODULE : string;
-  attribute XPM_MODULE of \sync_fifo_xpm_cdc_single__2\ : entity is "TRUE";
+  attribute XPM_MODULE of \sync_fifoxpm_cdc_single__2\ : entity is "TRUE";
   attribute keep_hierarchy : string;
-  attribute keep_hierarchy of \sync_fifo_xpm_cdc_single__2\ : entity is "true";
+  attribute keep_hierarchy of \sync_fifoxpm_cdc_single__2\ : entity is "true";
   attribute xpm_cdc : string;
-  attribute xpm_cdc of \sync_fifo_xpm_cdc_single__2\ : entity is "SINGLE";
-end \sync_fifo_xpm_cdc_single__2\;
+  attribute xpm_cdc of \sync_fifoxpm_cdc_single__2\ : entity is "SINGLE";
+end \sync_fifoxpm_cdc_single__2\;
 
-architecture STRUCTURE of \sync_fifo_xpm_cdc_single__2\ is
+architecture STRUCTURE of \sync_fifoxpm_cdc_single__2\ is
   signal syncstages_ff : STD_LOGIC_VECTOR ( 4 downto 0 );
   attribute RTL_KEEP : string;
   attribute RTL_KEEP of syncstages_ff : signal is "true";
@@ -740,35 +740,35 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_xpm_cdc_sync_rst is
+entity sync_fifoxpm_cdc_sync_rst is
   port (
     src_rst : in STD_LOGIC;
     dest_clk : in STD_LOGIC;
     dest_rst : out STD_LOGIC
   );
   attribute DEF_VAL : string;
-  attribute DEF_VAL of sync_fifo_xpm_cdc_sync_rst : entity is "1'b1";
+  attribute DEF_VAL of sync_fifoxpm_cdc_sync_rst : entity is "1'b1";
   attribute DEST_SYNC_FF : integer;
-  attribute DEST_SYNC_FF of sync_fifo_xpm_cdc_sync_rst : entity is 5;
+  attribute DEST_SYNC_FF of sync_fifoxpm_cdc_sync_rst : entity is 5;
   attribute INIT : string;
-  attribute INIT of sync_fifo_xpm_cdc_sync_rst : entity is "1";
+  attribute INIT of sync_fifoxpm_cdc_sync_rst : entity is "1";
   attribute INIT_SYNC_FF : integer;
-  attribute INIT_SYNC_FF of sync_fifo_xpm_cdc_sync_rst : entity is 0;
+  attribute INIT_SYNC_FF of sync_fifoxpm_cdc_sync_rst : entity is 0;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_xpm_cdc_sync_rst : entity is "xpm_cdc_sync_rst";
+  attribute ORIG_REF_NAME of sync_fifoxpm_cdc_sync_rst : entity is "xpm_cdc_sync_rst";
   attribute SIM_ASSERT_CHK : integer;
-  attribute SIM_ASSERT_CHK of sync_fifo_xpm_cdc_sync_rst : entity is 0;
+  attribute SIM_ASSERT_CHK of sync_fifoxpm_cdc_sync_rst : entity is 0;
   attribute VERSION : integer;
-  attribute VERSION of sync_fifo_xpm_cdc_sync_rst : entity is 0;
+  attribute VERSION of sync_fifoxpm_cdc_sync_rst : entity is 0;
   attribute XPM_MODULE : string;
-  attribute XPM_MODULE of sync_fifo_xpm_cdc_sync_rst : entity is "TRUE";
+  attribute XPM_MODULE of sync_fifoxpm_cdc_sync_rst : entity is "TRUE";
   attribute keep_hierarchy : string;
-  attribute keep_hierarchy of sync_fifo_xpm_cdc_sync_rst : entity is "true";
+  attribute keep_hierarchy of sync_fifoxpm_cdc_sync_rst : entity is "true";
   attribute xpm_cdc : string;
-  attribute xpm_cdc of sync_fifo_xpm_cdc_sync_rst : entity is "SYNC_RST";
-end sync_fifo_xpm_cdc_sync_rst;
+  attribute xpm_cdc of sync_fifoxpm_cdc_sync_rst : entity is "SYNC_RST";
+end sync_fifoxpm_cdc_sync_rst;
 
-architecture STRUCTURE of sync_fifo_xpm_cdc_sync_rst is
+architecture STRUCTURE of sync_fifoxpm_cdc_sync_rst is
   signal syncstages_ff : STD_LOGIC_VECTOR ( 4 downto 0 );
   attribute RTL_KEEP : string;
   attribute RTL_KEEP of syncstages_ff : signal is "true";
@@ -854,35 +854,35 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity \sync_fifo_xpm_cdc_sync_rst__2\ is
+entity \sync_fifoxpm_cdc_sync_rst__2\ is
   port (
     src_rst : in STD_LOGIC;
     dest_clk : in STD_LOGIC;
     dest_rst : out STD_LOGIC
   );
   attribute DEF_VAL : string;
-  attribute DEF_VAL of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is "1'b1";
+  attribute DEF_VAL of \sync_fifoxpm_cdc_sync_rst__2\ : entity is "1'b1";
   attribute DEST_SYNC_FF : integer;
-  attribute DEST_SYNC_FF of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is 5;
+  attribute DEST_SYNC_FF of \sync_fifoxpm_cdc_sync_rst__2\ : entity is 5;
   attribute INIT : string;
-  attribute INIT of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is "1";
+  attribute INIT of \sync_fifoxpm_cdc_sync_rst__2\ : entity is "1";
   attribute INIT_SYNC_FF : integer;
-  attribute INIT_SYNC_FF of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is 0;
+  attribute INIT_SYNC_FF of \sync_fifoxpm_cdc_sync_rst__2\ : entity is 0;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is "xpm_cdc_sync_rst";
+  attribute ORIG_REF_NAME of \sync_fifoxpm_cdc_sync_rst__2\ : entity is "xpm_cdc_sync_rst";
   attribute SIM_ASSERT_CHK : integer;
-  attribute SIM_ASSERT_CHK of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is 0;
+  attribute SIM_ASSERT_CHK of \sync_fifoxpm_cdc_sync_rst__2\ : entity is 0;
   attribute VERSION : integer;
-  attribute VERSION of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is 0;
+  attribute VERSION of \sync_fifoxpm_cdc_sync_rst__2\ : entity is 0;
   attribute XPM_MODULE : string;
-  attribute XPM_MODULE of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is "TRUE";
+  attribute XPM_MODULE of \sync_fifoxpm_cdc_sync_rst__2\ : entity is "TRUE";
   attribute keep_hierarchy : string;
-  attribute keep_hierarchy of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is "true";
+  attribute keep_hierarchy of \sync_fifoxpm_cdc_sync_rst__2\ : entity is "true";
   attribute xpm_cdc : string;
-  attribute xpm_cdc of \sync_fifo_xpm_cdc_sync_rst__2\ : entity is "SYNC_RST";
-end \sync_fifo_xpm_cdc_sync_rst__2\;
+  attribute xpm_cdc of \sync_fifoxpm_cdc_sync_rst__2\ : entity is "SYNC_RST";
+end \sync_fifoxpm_cdc_sync_rst__2\;
 
-architecture STRUCTURE of \sync_fifo_xpm_cdc_sync_rst__2\ is
+architecture STRUCTURE of \sync_fifoxpm_cdc_sync_rst__2\ is
   signal syncstages_ff : STD_LOGIC_VECTOR ( 4 downto 0 );
   attribute RTL_KEEP : string;
   attribute RTL_KEEP of syncstages_ff : signal is "true";
@@ -968,7 +968,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_blk_mem_gen_prim_wrapper is
+entity sync_fifoblk_mem_gen_prim_wrapper is
   port (
     dout : out STD_LOGIC_VECTOR ( 71 downto 0 );
     rd_clk : in STD_LOGIC;
@@ -982,10 +982,10 @@ entity sync_fifo_blk_mem_gen_prim_wrapper is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_blk_mem_gen_prim_wrapper : entity is "blk_mem_gen_prim_wrapper";
-end sync_fifo_blk_mem_gen_prim_wrapper;
+  attribute ORIG_REF_NAME of sync_fifoblk_mem_gen_prim_wrapper : entity is "blk_mem_gen_prim_wrapper";
+end sync_fifoblk_mem_gen_prim_wrapper;
 
-architecture STRUCTURE of sync_fifo_blk_mem_gen_prim_wrapper is
+architecture STRUCTURE of sync_fifoblk_mem_gen_prim_wrapper is
   signal \NLW_DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASCADEOUTA_UNCONNECTED\ : STD_LOGIC;
   signal \NLW_DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_CASCADEOUTB_UNCONNECTED\ : STD_LOGIC;
   signal \NLW_DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_DBITERR_UNCONNECTED\ : STD_LOGIC;
@@ -1247,7 +1247,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity \sync_fifo_blk_mem_gen_prim_wrapper__parameterized0\ is
+entity \sync_fifoblk_mem_gen_prim_wrapper__parameterized0\ is
   port (
     dout : out STD_LOGIC_VECTOR ( 55 downto 0 );
     rd_clk : in STD_LOGIC;
@@ -1261,10 +1261,10 @@ entity \sync_fifo_blk_mem_gen_prim_wrapper__parameterized0\ is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of \sync_fifo_blk_mem_gen_prim_wrapper__parameterized0\ : entity is "blk_mem_gen_prim_wrapper";
-end \sync_fifo_blk_mem_gen_prim_wrapper__parameterized0\;
+  attribute ORIG_REF_NAME of \sync_fifoblk_mem_gen_prim_wrapper__parameterized0\ : entity is "blk_mem_gen_prim_wrapper";
+end \sync_fifoblk_mem_gen_prim_wrapper__parameterized0\;
 
-architecture STRUCTURE of \sync_fifo_blk_mem_gen_prim_wrapper__parameterized0\ is
+architecture STRUCTURE of \sync_fifoblk_mem_gen_prim_wrapper__parameterized0\ is
   signal \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_n_12\ : STD_LOGIC;
   signal \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_n_20\ : STD_LOGIC;
   signal \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_n_28\ : STD_LOGIC;
@@ -1552,7 +1552,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_rd_bin_cntr is
+entity sync_fiford_bin_cntr is
   port (
     \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\ : out STD_LOGIC;
     \gc0.count_d1_reg[3]_0\ : out STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -1565,10 +1565,10 @@ entity sync_fifo_rd_bin_cntr is
     rd_clk : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_rd_bin_cntr : entity is "rd_bin_cntr";
-end sync_fifo_rd_bin_cntr;
+  attribute ORIG_REF_NAME of sync_fiford_bin_cntr : entity is "rd_bin_cntr";
+end sync_fiford_bin_cntr;
 
-architecture STRUCTURE of sync_fifo_rd_bin_cntr is
+architecture STRUCTURE of sync_fiford_bin_cntr is
   signal \^q\ : STD_LOGIC_VECTOR ( 3 downto 0 );
   signal \^gc0.count_d1_reg[3]_0\ : STD_LOGIC_VECTOR ( 3 downto 0 );
   signal \plusOp__0\ : STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -1745,7 +1745,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_rd_status_flags_as is
+entity sync_fiford_status_flags_as is
   port (
     empty : out STD_LOGIC;
     \out\ : out STD_LOGIC;
@@ -1758,10 +1758,10 @@ entity sync_fifo_rd_status_flags_as is
     WR_PNTR_RD : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_rd_status_flags_as : entity is "rd_status_flags_as";
-end sync_fifo_rd_status_flags_as;
+  attribute ORIG_REF_NAME of sync_fiford_status_flags_as : entity is "rd_status_flags_as";
+end sync_fiford_status_flags_as;
 
-architecture STRUCTURE of sync_fifo_rd_status_flags_as is
+architecture STRUCTURE of sync_fiford_status_flags_as is
   signal ram_empty_fb_i : STD_LOGIC;
   attribute DONT_TOUCH : boolean;
   attribute DONT_TOUCH of ram_empty_fb_i : signal is std.standard.true;
@@ -1825,7 +1825,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_wr_bin_cntr is
+entity sync_fifowr_bin_cntr is
   port (
     \gic0.gc0.count_d1_reg[2]_0\ : out STD_LOGIC;
     Q : out STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -1837,10 +1837,10 @@ entity sync_fifo_wr_bin_cntr is
     wr_clk : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_wr_bin_cntr : entity is "wr_bin_cntr";
-end sync_fifo_wr_bin_cntr;
+  attribute ORIG_REF_NAME of sync_fifowr_bin_cntr : entity is "wr_bin_cntr";
+end sync_fifowr_bin_cntr;
 
-architecture STRUCTURE of sync_fifo_wr_bin_cntr is
+architecture STRUCTURE of sync_fifowr_bin_cntr is
   signal \^q\ : STD_LOGIC_VECTOR ( 3 downto 0 );
   signal \^gic0.gc0.count_d1_reg[3]_0\ : STD_LOGIC_VECTOR ( 0 to 0 );
   signal plusOp : STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -2039,7 +2039,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_wr_status_flags_as is
+entity sync_fifowr_status_flags_as is
   port (
     full : out STD_LOGIC;
     ENA_I : out STD_LOGIC;
@@ -2053,10 +2053,10 @@ entity sync_fifo_wr_status_flags_as is
     RD_PNTR_WR : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_wr_status_flags_as : entity is "wr_status_flags_as";
-end sync_fifo_wr_status_flags_as;
+  attribute ORIG_REF_NAME of sync_fifowr_status_flags_as : entity is "wr_status_flags_as";
+end sync_fifowr_status_flags_as;
 
-architecture STRUCTURE of sync_fifo_wr_status_flags_as is
+architecture STRUCTURE of sync_fifowr_status_flags_as is
   signal ram_full_fb_i : STD_LOGIC;
   attribute DONT_TOUCH : boolean;
   attribute DONT_TOUCH of ram_full_fb_i : signal is std.standard.true;
@@ -2129,7 +2129,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_blk_mem_gen_prim_width is
+entity sync_fifoblk_mem_gen_prim_width is
   port (
     dout : out STD_LOGIC_VECTOR ( 71 downto 0 );
     rd_clk : in STD_LOGIC;
@@ -2143,12 +2143,12 @@ entity sync_fifo_blk_mem_gen_prim_width is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_blk_mem_gen_prim_width : entity is "blk_mem_gen_prim_width";
-end sync_fifo_blk_mem_gen_prim_width;
+  attribute ORIG_REF_NAME of sync_fifoblk_mem_gen_prim_width : entity is "blk_mem_gen_prim_width";
+end sync_fifoblk_mem_gen_prim_width;
 
-architecture STRUCTURE of sync_fifo_blk_mem_gen_prim_width is
+architecture STRUCTURE of sync_fifoblk_mem_gen_prim_width is
 begin
-\prim_noinit.ram\: entity work.sync_fifo_blk_mem_gen_prim_wrapper
+\prim_noinit.ram\: entity work.sync_fifoblk_mem_gen_prim_wrapper
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_1\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -2166,7 +2166,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity \sync_fifo_blk_mem_gen_prim_width__parameterized0\ is
+entity \sync_fifoblk_mem_gen_prim_width__parameterized0\ is
   port (
     ENA_dly_D : out STD_LOGIC;
     dout : out STD_LOGIC_VECTOR ( 55 downto 0 );
@@ -2183,10 +2183,10 @@ entity \sync_fifo_blk_mem_gen_prim_width__parameterized0\ is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of \sync_fifo_blk_mem_gen_prim_width__parameterized0\ : entity is "blk_mem_gen_prim_width";
-end \sync_fifo_blk_mem_gen_prim_width__parameterized0\;
+  attribute ORIG_REF_NAME of \sync_fifoblk_mem_gen_prim_width__parameterized0\ : entity is "blk_mem_gen_prim_width";
+end \sync_fifoblk_mem_gen_prim_width__parameterized0\;
 
-architecture STRUCTURE of \sync_fifo_blk_mem_gen_prim_width__parameterized0\ is
+architecture STRUCTURE of \sync_fifoblk_mem_gen_prim_width__parameterized0\ is
   signal ENB_dly : STD_LOGIC;
   signal \SAFETY_CKT_GEN.ENA_NO_REG.ENA_dly_reg_srl2_i_1_n_0\ : STD_LOGIC;
   signal \SAFETY_CKT_GEN.ENA_NO_REG.ENA_dly_reg_srl2_n_0\ : STD_LOGIC;
@@ -2354,7 +2354,7 @@ begin
       Q => \SAFETY_CKT_GEN.RSTB_SHFT_REG_reg_n_0_[4]\,
       R => '0'
     );
-\prim_noinit.ram\: entity work.\sync_fifo_blk_mem_gen_prim_wrapper__parameterized0\
+\prim_noinit.ram\: entity work.\sync_fifoblk_mem_gen_prim_wrapper__parameterized0\
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_1\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -2372,7 +2372,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_clk_x_pntrs is
+entity sync_fifoclk_x_pntrs is
   port (
     \dest_out_bin_ff_reg[3]\ : out STD_LOGIC;
     RD_PNTR_WR : out STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -2389,10 +2389,10 @@ entity sync_fifo_clk_x_pntrs is
     \src_gray_ff_reg[3]_0\ : in STD_LOGIC_VECTOR ( 3 downto 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_clk_x_pntrs : entity is "clk_x_pntrs";
-end sync_fifo_clk_x_pntrs;
+  attribute ORIG_REF_NAME of sync_fifoclk_x_pntrs : entity is "clk_x_pntrs";
+end sync_fifoclk_x_pntrs;
 
-architecture STRUCTURE of sync_fifo_clk_x_pntrs is
+architecture STRUCTURE of sync_fifoclk_x_pntrs is
   signal \^rd_pntr_wr\ : STD_LOGIC_VECTOR ( 3 downto 0 );
   signal \^wr_pntr_rd\ : STD_LOGIC_VECTOR ( 3 downto 0 );
   attribute DEST_SYNC_FF : integer;
@@ -2464,14 +2464,14 @@ ram_full_i_i_5: unisim.vcomponents.LUT3
       I2 => \out\,
       O => \dest_out_bin_ff_reg[3]\
     );
-rd_pntr_cdc_inst: entity work.sync_fifo_xpm_cdc_gray
+rd_pntr_cdc_inst: entity work.sync_fifoxpm_cdc_gray
      port map (
       dest_clk => wr_clk,
       dest_out_bin(3 downto 0) => \^rd_pntr_wr\(3 downto 0),
       src_clk => rd_clk,
       src_in_bin(3 downto 0) => \src_gray_ff_reg[3]_0\(3 downto 0)
     );
-wr_pntr_cdc_inst: entity work.\sync_fifo_xpm_cdc_gray__2\
+wr_pntr_cdc_inst: entity work.\sync_fifoxpm_cdc_gray__2\
      port map (
       dest_clk => rd_clk,
       dest_out_bin(3 downto 0) => \^wr_pntr_rd\(3 downto 0),
@@ -2483,7 +2483,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_rd_logic is
+entity sync_fiford_logic is
   port (
     empty : out STD_LOGIC;
     \out\ : out STD_LOGIC;
@@ -2496,16 +2496,16 @@ entity sync_fifo_rd_logic is
     WR_PNTR_RD : in STD_LOGIC_VECTOR ( 3 downto 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_rd_logic : entity is "rd_logic";
-end sync_fifo_rd_logic;
+  attribute ORIG_REF_NAME of sync_fiford_logic : entity is "rd_logic";
+end sync_fiford_logic;
 
-architecture STRUCTURE of sync_fifo_rd_logic is
+architecture STRUCTURE of sync_fiford_logic is
   signal \gras.rsts_n_2\ : STD_LOGIC;
   signal ram_rd_en : STD_LOGIC;
   signal rd_pntr_plus1 : STD_LOGIC_VECTOR ( 3 to 3 );
   signal rpntr_n_0 : STD_LOGIC;
 begin
-\gras.rsts\: entity work.sync_fifo_rd_status_flags_as
+\gras.rsts\: entity work.sync_fiford_status_flags_as
      port map (
       E(0) => ram_rd_en,
       Q(0) => rd_pntr_plus1(3),
@@ -2517,7 +2517,7 @@ begin
       rd_clk => rd_clk,
       rd_en => rd_en
     );
-rpntr: entity work.sync_fifo_rd_bin_cntr
+rpntr: entity work.sync_fiford_bin_cntr
      port map (
       E(0) => ram_rd_en,
       Q(3) => rd_pntr_plus1(3),
@@ -2535,7 +2535,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_reset_blk_ramfifo is
+entity sync_fiforeset_blk_ramfifo is
   port (
     \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_wr_rst_ic_reg_0\ : out STD_LOGIC;
     SS : out STD_LOGIC_VECTOR ( 0 to 0 );
@@ -2557,10 +2557,10 @@ entity sync_fifo_reset_blk_ramfifo is
     rd_en : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_reset_blk_ramfifo : entity is "reset_blk_ramfifo";
-end sync_fifo_reset_blk_ramfifo;
+  attribute ORIG_REF_NAME of sync_fiforeset_blk_ramfifo : entity is "reset_blk_ramfifo";
+end sync_fiforeset_blk_ramfifo;
 
-architecture STRUCTURE of sync_fifo_reset_blk_ramfifo is
+architecture STRUCTURE of sync_fiforeset_blk_ramfifo is
   signal \^ss\ : STD_LOGIC_VECTOR ( 0 to 0 );
   signal arst_sync_rd_rst : STD_LOGIC;
   signal dest_out : STD_LOGIC;
@@ -2987,27 +2987,27 @@ i_9: unisim.vcomponents.LUT1
       Q => wr_rst_rd_ext(1),
       R => '0'
     );
-\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_rrst_wr\: entity work.sync_fifo_xpm_cdc_single
+\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_rrst_wr\: entity work.sync_fifoxpm_cdc_single
      port map (
       dest_clk => wr_clk,
       dest_out => sckt_rd_rst_wr,
       src_clk => rd_clk,
       src_in => \^ss\(0)
     );
-\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_wrst_rd\: entity work.\sync_fifo_xpm_cdc_single__2\
+\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_single_inst_wrst_rd\: entity work.\sync_fifoxpm_cdc_single__2\
      port map (
       dest_clk => rd_clk,
       dest_out => dest_out,
       src_clk => wr_clk,
       src_in => \^ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_wr_rst_ic_reg_0\
     );
-\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_sync_rst_inst_wrst\: entity work.sync_fifo_xpm_cdc_sync_rst
+\ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.xpm_cdc_sync_rst_inst_wrst\: entity work.sync_fifoxpm_cdc_sync_rst
      port map (
       dest_clk => rd_clk,
       dest_rst => arst_sync_rd_rst,
       src_rst => rst
     );
-\ngwrdrst.grst.g7serrst.gsckt_wrst.xpm_cdc_sync_rst_inst_wrst\: entity work.\sync_fifo_xpm_cdc_sync_rst__2\
+\ngwrdrst.grst.g7serrst.gsckt_wrst.xpm_cdc_sync_rst_inst_wrst\: entity work.\sync_fifoxpm_cdc_sync_rst__2\
      port map (
       dest_clk => wr_clk,
       dest_rst => dest_rst,
@@ -3031,7 +3031,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_wr_logic is
+entity sync_fifowr_logic is
   port (
     full : out STD_LOGIC;
     ENA_I : out STD_LOGIC;
@@ -3049,15 +3049,15 @@ entity sync_fifo_wr_logic is
     \gic0.gc0.count_d2_reg[0]\ : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_wr_logic : entity is "wr_logic";
-end sync_fifo_wr_logic;
+  attribute ORIG_REF_NAME of sync_fifowr_logic : entity is "wr_logic";
+end sync_fifowr_logic;
 
-architecture STRUCTURE of sync_fifo_wr_logic is
+architecture STRUCTURE of sync_fifowr_logic is
   signal \^e\ : STD_LOGIC_VECTOR ( 0 to 0 );
   signal wr_pntr_plus2 : STD_LOGIC_VECTOR ( 3 to 3 );
 begin
   E(0) <= \^e\(0);
-\gwas.wsts\: entity work.sync_fifo_wr_status_flags_as
+\gwas.wsts\: entity work.sync_fifowr_status_flags_as
      port map (
       E(0) => \^e\(0),
       ENA_I => ENA_I,
@@ -3070,7 +3070,7 @@ begin
       wr_clk => wr_clk,
       wr_en => wr_en
     );
-wpntr: entity work.sync_fifo_wr_bin_cntr
+wpntr: entity work.sync_fifowr_bin_cntr
      port map (
       E(0) => \^e\(0),
       Q(3) => wr_pntr_plus2(3),
@@ -3087,7 +3087,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_blk_mem_gen_generic_cstr is
+entity sync_fifoblk_mem_gen_generic_cstr is
   port (
     ENA_dly_D : out STD_LOGIC;
     dout : out STD_LOGIC_VECTOR ( 127 downto 0 );
@@ -3104,12 +3104,12 @@ entity sync_fifo_blk_mem_gen_generic_cstr is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_blk_mem_gen_generic_cstr : entity is "blk_mem_gen_generic_cstr";
-end sync_fifo_blk_mem_gen_generic_cstr;
+  attribute ORIG_REF_NAME of sync_fifoblk_mem_gen_generic_cstr : entity is "blk_mem_gen_generic_cstr";
+end sync_fifoblk_mem_gen_generic_cstr;
 
-architecture STRUCTURE of sync_fifo_blk_mem_gen_generic_cstr is
+architecture STRUCTURE of sync_fifoblk_mem_gen_generic_cstr is
 begin
-\ramloop[0].ram.r\: entity work.sync_fifo_blk_mem_gen_prim_width
+\ramloop[0].ram.r\: entity work.sync_fifoblk_mem_gen_prim_width
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -3122,7 +3122,7 @@ begin
       rd_clk => rd_clk,
       wr_clk => wr_clk
     );
-\ramloop[1].ram.r\: entity work.\sync_fifo_blk_mem_gen_prim_width__parameterized0\
+\ramloop[1].ram.r\: entity work.\sync_fifoblk_mem_gen_prim_width__parameterized0\
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -3143,7 +3143,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_blk_mem_gen_top is
+entity sync_fifoblk_mem_gen_top is
   port (
     ENA_dly_D : out STD_LOGIC;
     dout : out STD_LOGIC_VECTOR ( 127 downto 0 );
@@ -3160,12 +3160,12 @@ entity sync_fifo_blk_mem_gen_top is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_blk_mem_gen_top : entity is "blk_mem_gen_top";
-end sync_fifo_blk_mem_gen_top;
+  attribute ORIG_REF_NAME of sync_fifoblk_mem_gen_top : entity is "blk_mem_gen_top";
+end sync_fifoblk_mem_gen_top;
 
-architecture STRUCTURE of sync_fifo_blk_mem_gen_top is
+architecture STRUCTURE of sync_fifoblk_mem_gen_top is
 begin
-\valid.cstr\: entity work.sync_fifo_blk_mem_gen_generic_cstr
+\valid.cstr\: entity work.sync_fifoblk_mem_gen_generic_cstr
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -3186,7 +3186,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_blk_mem_gen_v8_4_4_synth is
+entity sync_fifoblk_mem_gen_v8_4_4_synth is
   port (
     ENA_dly_D : out STD_LOGIC;
     dout : out STD_LOGIC_VECTOR ( 127 downto 0 );
@@ -3203,12 +3203,12 @@ entity sync_fifo_blk_mem_gen_v8_4_4_synth is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_blk_mem_gen_v8_4_4_synth : entity is "blk_mem_gen_v8_4_4_synth";
-end sync_fifo_blk_mem_gen_v8_4_4_synth;
+  attribute ORIG_REF_NAME of sync_fifoblk_mem_gen_v8_4_4_synth : entity is "blk_mem_gen_v8_4_4_synth";
+end sync_fifoblk_mem_gen_v8_4_4_synth;
 
-architecture STRUCTURE of sync_fifo_blk_mem_gen_v8_4_4_synth is
+architecture STRUCTURE of sync_fifoblk_mem_gen_v8_4_4_synth is
 begin
-\gnbram.gnativebmg.native_blk_mem_gen\: entity work.sync_fifo_blk_mem_gen_top
+\gnbram.gnativebmg.native_blk_mem_gen\: entity work.sync_fifoblk_mem_gen_top
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -3229,7 +3229,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_blk_mem_gen_v8_4_4 is
+entity sync_fifoblk_mem_gen_v8_4_4 is
   port (
     ENA_dly_D : out STD_LOGIC;
     dout : out STD_LOGIC_VECTOR ( 127 downto 0 );
@@ -3246,12 +3246,12 @@ entity sync_fifo_blk_mem_gen_v8_4_4 is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_blk_mem_gen_v8_4_4 : entity is "blk_mem_gen_v8_4_4";
-end sync_fifo_blk_mem_gen_v8_4_4;
+  attribute ORIG_REF_NAME of sync_fifoblk_mem_gen_v8_4_4 : entity is "blk_mem_gen_v8_4_4";
+end sync_fifoblk_mem_gen_v8_4_4;
 
-architecture STRUCTURE of sync_fifo_blk_mem_gen_v8_4_4 is
+architecture STRUCTURE of sync_fifoblk_mem_gen_v8_4_4 is
 begin
-inst_blk_mem_gen: entity work.sync_fifo_blk_mem_gen_v8_4_4_synth
+inst_blk_mem_gen: entity work.sync_fifoblk_mem_gen_v8_4_4_synth
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -3272,7 +3272,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_memory is
+entity sync_fifomemory is
   port (
     ENA_dly_D : out STD_LOGIC;
     dout : out STD_LOGIC_VECTOR ( 127 downto 0 );
@@ -3289,12 +3289,12 @@ entity sync_fifo_memory is
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_memory : entity is "memory";
-end sync_fifo_memory;
+  attribute ORIG_REF_NAME of sync_fifomemory : entity is "memory";
+end sync_fifomemory;
 
-architecture STRUCTURE of sync_fifo_memory is
+architecture STRUCTURE of sync_fifomemory is
 begin
-\gbm.gbmg.gbmga.ngecc.bmg\: entity work.sync_fifo_blk_mem_gen_v8_4_4
+\gbm.gbmg.gbmga.ngecc.bmg\: entity work.sync_fifoblk_mem_gen_v8_4_4
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0),
@@ -3315,7 +3315,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_fifo_generator_ramfifo is
+entity sync_fifofifo_generator_ramfifo is
   port (
     \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\ : out STD_LOGIC;
     wr_rst_busy : out STD_LOGIC;
@@ -3330,10 +3330,10 @@ entity sync_fifo_fifo_generator_ramfifo is
     rd_en : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_fifo_generator_ramfifo : entity is "fifo_generator_ramfifo";
-end sync_fifo_fifo_generator_ramfifo;
+  attribute ORIG_REF_NAME of sync_fifofifo_generator_ramfifo : entity is "fifo_generator_ramfifo";
+end sync_fifofifo_generator_ramfifo;
 
-architecture STRUCTURE of sync_fifo_fifo_generator_ramfifo is
+architecture STRUCTURE of sync_fifofifo_generator_ramfifo is
   signal empty_fb_i : STD_LOGIC;
   signal \gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENA_I\ : STD_LOGIC;
   signal \gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENA_dly_D\ : STD_LOGIC;
@@ -3360,7 +3360,7 @@ architecture STRUCTURE of sync_fifo_fifo_generator_ramfifo is
   signal wr_pntr_rd : STD_LOGIC_VECTOR ( 3 downto 0 );
 begin
   \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\ <= \^ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\;
-\gntv_or_sync_fifo.gcx.clkx\: entity work.sync_fifo_clk_x_pntrs
+\gntv_or_sync_fifo.gcx.clkx\: entity work.sync_fifoclk_x_pntrs
      port map (
       Q(0) => wr_pntr_plus1(3),
       RD_PNTR_WR(3 downto 0) => rd_pntr_wr(3 downto 0),
@@ -3376,7 +3376,7 @@ begin
       \src_gray_ff_reg[3]_0\(3 downto 0) => rd_pntr(3 downto 0),
       wr_clk => wr_clk
     );
-\gntv_or_sync_fifo.gl0.rd\: entity work.sync_fifo_rd_logic
+\gntv_or_sync_fifo.gl0.rd\: entity work.sync_fiford_logic
      port map (
       Q(2 downto 0) => rd_pntr_plus1(2 downto 0),
       SS(0) => \^ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\,
@@ -3388,7 +3388,7 @@ begin
       rd_clk => rd_clk,
       rd_en => rd_en
     );
-\gntv_or_sync_fifo.gl0.wr\: entity work.sync_fifo_wr_logic
+\gntv_or_sync_fifo.gl0.wr\: entity work.sync_fifowr_logic
      port map (
       E(0) => ram_wr_en,
       ENA_I => \gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENA_I\,
@@ -3405,7 +3405,7 @@ begin
       wr_clk => wr_clk,
       wr_en => wr_en
     );
-\gntv_or_sync_fifo.mem\: entity work.sync_fifo_memory
+\gntv_or_sync_fifo.mem\: entity work.sync_fifomemory
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\(3 downto 0) => rd_pntr(3 downto 0),
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram_0\(3 downto 0) => wr_pntr(3 downto 0),
@@ -3421,7 +3421,7 @@ begin
       rd_clk => rd_clk,
       wr_clk => wr_clk
     );
-rstblk: entity work.sync_fifo_reset_blk_ramfifo
+rstblk: entity work.sync_fiforeset_blk_ramfifo
      port map (
       \DEVICE_7SERIES.NO_BMM_INFO.SDP.WIDE_PRIM36_NO_ECC.ram\ => empty_fb_i,
       ENB_I => \gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/ENB_I\,
@@ -3447,7 +3447,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_fifo_generator_top is
+entity sync_fifofifo_generator_top is
   port (
     SS : out STD_LOGIC_VECTOR ( 0 to 0 );
     wr_rst_busy : out STD_LOGIC;
@@ -3462,12 +3462,12 @@ entity sync_fifo_fifo_generator_top is
     rd_en : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_fifo_generator_top : entity is "fifo_generator_top";
-end sync_fifo_fifo_generator_top;
+  attribute ORIG_REF_NAME of sync_fifofifo_generator_top : entity is "fifo_generator_top";
+end sync_fifofifo_generator_top;
 
-architecture STRUCTURE of sync_fifo_fifo_generator_top is
+architecture STRUCTURE of sync_fifofifo_generator_top is
 begin
-\grf.rf\: entity work.sync_fifo_fifo_generator_ramfifo
+\grf.rf\: entity work.sync_fifofifo_generator_ramfifo
      port map (
       din(127 downto 0) => din(127 downto 0),
       dout(127 downto 0) => dout(127 downto 0),
@@ -3486,7 +3486,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_fifo_generator_v13_2_5_synth is
+entity sync_fifofifo_generator_v13_2_5_synth is
   port (
     \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\ : out STD_LOGIC;
     wr_rst_busy : out STD_LOGIC;
@@ -3501,12 +3501,12 @@ entity sync_fifo_fifo_generator_v13_2_5_synth is
     rd_en : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_fifo_generator_v13_2_5_synth : entity is "fifo_generator_v13_2_5_synth";
-end sync_fifo_fifo_generator_v13_2_5_synth;
+  attribute ORIG_REF_NAME of sync_fifofifo_generator_v13_2_5_synth : entity is "fifo_generator_v13_2_5_synth";
+end sync_fifofifo_generator_v13_2_5_synth;
 
-architecture STRUCTURE of sync_fifo_fifo_generator_v13_2_5_synth is
+architecture STRUCTURE of sync_fifofifo_generator_v13_2_5_synth is
 begin
-\gconvfifo.rf\: entity work.sync_fifo_fifo_generator_top
+\gconvfifo.rf\: entity work.sync_fifofifo_generator_top
      port map (
       SS(0) => \ngwrdrst.grst.g7serrst.gsckt_wrst.gic_rst.sckt_rd_rst_ic_reg\,
       din(127 downto 0) => din(127 downto 0),
@@ -3525,7 +3525,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
-entity sync_fifo_fifo_generator_v13_2_5 is
+entity sync_fifofifo_generator_v13_2_5 is
   port (
     backup : in STD_LOGIC;
     backup_marker : in STD_LOGIC;
@@ -3760,414 +3760,414 @@ entity sync_fifo_fifo_generator_v13_2_5 is
     axis_prog_empty : out STD_LOGIC
   );
   attribute C_ADD_NGC_CONSTRAINT : integer;
-  attribute C_ADD_NGC_CONSTRAINT of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ADD_NGC_CONSTRAINT of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_APPLICATION_TYPE_AXIS : integer;
-  attribute C_APPLICATION_TYPE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_APPLICATION_TYPE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_APPLICATION_TYPE_RACH : integer;
-  attribute C_APPLICATION_TYPE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_APPLICATION_TYPE_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_APPLICATION_TYPE_RDCH : integer;
-  attribute C_APPLICATION_TYPE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_APPLICATION_TYPE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_APPLICATION_TYPE_WACH : integer;
-  attribute C_APPLICATION_TYPE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_APPLICATION_TYPE_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_APPLICATION_TYPE_WDCH : integer;
-  attribute C_APPLICATION_TYPE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_APPLICATION_TYPE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_APPLICATION_TYPE_WRCH : integer;
-  attribute C_APPLICATION_TYPE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_APPLICATION_TYPE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_AXIS_TDATA_WIDTH : integer;
-  attribute C_AXIS_TDATA_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 8;
+  attribute C_AXIS_TDATA_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 8;
   attribute C_AXIS_TDEST_WIDTH : integer;
-  attribute C_AXIS_TDEST_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXIS_TDEST_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXIS_TID_WIDTH : integer;
-  attribute C_AXIS_TID_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXIS_TID_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXIS_TKEEP_WIDTH : integer;
-  attribute C_AXIS_TKEEP_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXIS_TKEEP_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXIS_TSTRB_WIDTH : integer;
-  attribute C_AXIS_TSTRB_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXIS_TSTRB_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXIS_TUSER_WIDTH : integer;
-  attribute C_AXIS_TUSER_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_AXIS_TUSER_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_AXIS_TYPE : integer;
-  attribute C_AXIS_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_AXIS_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_AXI_ADDR_WIDTH : integer;
-  attribute C_AXI_ADDR_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 32;
+  attribute C_AXI_ADDR_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 32;
   attribute C_AXI_ARUSER_WIDTH : integer;
-  attribute C_AXI_ARUSER_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_ARUSER_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_AWUSER_WIDTH : integer;
-  attribute C_AXI_AWUSER_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_AWUSER_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_BUSER_WIDTH : integer;
-  attribute C_AXI_BUSER_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_BUSER_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_DATA_WIDTH : integer;
-  attribute C_AXI_DATA_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 64;
+  attribute C_AXI_DATA_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 64;
   attribute C_AXI_ID_WIDTH : integer;
-  attribute C_AXI_ID_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_ID_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_LEN_WIDTH : integer;
-  attribute C_AXI_LEN_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 8;
+  attribute C_AXI_LEN_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 8;
   attribute C_AXI_LOCK_WIDTH : integer;
-  attribute C_AXI_LOCK_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_LOCK_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_RUSER_WIDTH : integer;
-  attribute C_AXI_RUSER_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_RUSER_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_TYPE : integer;
-  attribute C_AXI_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_AXI_WUSER_WIDTH : integer;
-  attribute C_AXI_WUSER_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_AXI_WUSER_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_COMMON_CLOCK : integer;
-  attribute C_COMMON_CLOCK of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_COMMON_CLOCK of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_COUNT_TYPE : integer;
-  attribute C_COUNT_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_COUNT_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_DATA_COUNT_WIDTH : integer;
-  attribute C_DATA_COUNT_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_DATA_COUNT_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_DEFAULT_VALUE : string;
-  attribute C_DEFAULT_VALUE of sync_fifo_fifo_generator_v13_2_5 : entity is "BlankString";
+  attribute C_DEFAULT_VALUE of sync_fifofifo_generator_v13_2_5 : entity is "BlankString";
   attribute C_DIN_WIDTH : integer;
-  attribute C_DIN_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 128;
+  attribute C_DIN_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 128;
   attribute C_DIN_WIDTH_AXIS : integer;
-  attribute C_DIN_WIDTH_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_DIN_WIDTH_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_DIN_WIDTH_RACH : integer;
-  attribute C_DIN_WIDTH_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 32;
+  attribute C_DIN_WIDTH_RACH of sync_fifofifo_generator_v13_2_5 : entity is 32;
   attribute C_DIN_WIDTH_RDCH : integer;
-  attribute C_DIN_WIDTH_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 64;
+  attribute C_DIN_WIDTH_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 64;
   attribute C_DIN_WIDTH_WACH : integer;
-  attribute C_DIN_WIDTH_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_DIN_WIDTH_WACH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_DIN_WIDTH_WDCH : integer;
-  attribute C_DIN_WIDTH_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 64;
+  attribute C_DIN_WIDTH_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 64;
   attribute C_DIN_WIDTH_WRCH : integer;
-  attribute C_DIN_WIDTH_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_DIN_WIDTH_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_DOUT_RST_VAL : string;
-  attribute C_DOUT_RST_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is "0";
+  attribute C_DOUT_RST_VAL of sync_fifofifo_generator_v13_2_5 : entity is "0";
   attribute C_DOUT_WIDTH : integer;
-  attribute C_DOUT_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 128;
+  attribute C_DOUT_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 128;
   attribute C_ENABLE_RLOCS : integer;
-  attribute C_ENABLE_RLOCS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ENABLE_RLOCS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ENABLE_RST_SYNC : integer;
-  attribute C_ENABLE_RST_SYNC of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_ENABLE_RST_SYNC of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_EN_SAFETY_CKT : integer;
-  attribute C_EN_SAFETY_CKT of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_EN_SAFETY_CKT of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_ERROR_INJECTION_TYPE : integer;
-  attribute C_ERROR_INJECTION_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ERROR_INJECTION_TYPE_AXIS : integer;
-  attribute C_ERROR_INJECTION_TYPE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ERROR_INJECTION_TYPE_RACH : integer;
-  attribute C_ERROR_INJECTION_TYPE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ERROR_INJECTION_TYPE_RDCH : integer;
-  attribute C_ERROR_INJECTION_TYPE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ERROR_INJECTION_TYPE_WACH : integer;
-  attribute C_ERROR_INJECTION_TYPE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ERROR_INJECTION_TYPE_WDCH : integer;
-  attribute C_ERROR_INJECTION_TYPE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_ERROR_INJECTION_TYPE_WRCH : integer;
-  attribute C_ERROR_INJECTION_TYPE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_ERROR_INJECTION_TYPE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_FAMILY : string;
-  attribute C_FAMILY of sync_fifo_fifo_generator_v13_2_5 : entity is "zynq";
+  attribute C_FAMILY of sync_fifofifo_generator_v13_2_5 : entity is "zynq";
   attribute C_FULL_FLAGS_RST_VAL : integer;
-  attribute C_FULL_FLAGS_RST_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_FULL_FLAGS_RST_VAL of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_ALMOST_EMPTY : integer;
-  attribute C_HAS_ALMOST_EMPTY of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_ALMOST_EMPTY of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_ALMOST_FULL : integer;
-  attribute C_HAS_ALMOST_FULL of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_ALMOST_FULL of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXIS_TDATA : integer;
-  attribute C_HAS_AXIS_TDATA of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_HAS_AXIS_TDATA of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_AXIS_TDEST : integer;
-  attribute C_HAS_AXIS_TDEST of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXIS_TDEST of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXIS_TID : integer;
-  attribute C_HAS_AXIS_TID of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXIS_TID of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXIS_TKEEP : integer;
-  attribute C_HAS_AXIS_TKEEP of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXIS_TKEEP of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXIS_TLAST : integer;
-  attribute C_HAS_AXIS_TLAST of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXIS_TLAST of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXIS_TREADY : integer;
-  attribute C_HAS_AXIS_TREADY of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_HAS_AXIS_TREADY of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_AXIS_TSTRB : integer;
-  attribute C_HAS_AXIS_TSTRB of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXIS_TSTRB of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXIS_TUSER : integer;
-  attribute C_HAS_AXIS_TUSER of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_HAS_AXIS_TUSER of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_AXI_ARUSER : integer;
-  attribute C_HAS_AXI_ARUSER of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXI_ARUSER of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXI_AWUSER : integer;
-  attribute C_HAS_AXI_AWUSER of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXI_AWUSER of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXI_BUSER : integer;
-  attribute C_HAS_AXI_BUSER of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXI_BUSER of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXI_ID : integer;
-  attribute C_HAS_AXI_ID of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXI_ID of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXI_RD_CHANNEL : integer;
-  attribute C_HAS_AXI_RD_CHANNEL of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_HAS_AXI_RD_CHANNEL of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_AXI_RUSER : integer;
-  attribute C_HAS_AXI_RUSER of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXI_RUSER of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_AXI_WR_CHANNEL : integer;
-  attribute C_HAS_AXI_WR_CHANNEL of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_HAS_AXI_WR_CHANNEL of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_AXI_WUSER : integer;
-  attribute C_HAS_AXI_WUSER of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_AXI_WUSER of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_BACKUP : integer;
-  attribute C_HAS_BACKUP of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_BACKUP of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNT : integer;
-  attribute C_HAS_DATA_COUNT of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNT of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNTS_AXIS : integer;
-  attribute C_HAS_DATA_COUNTS_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNTS_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNTS_RACH : integer;
-  attribute C_HAS_DATA_COUNTS_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNTS_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNTS_RDCH : integer;
-  attribute C_HAS_DATA_COUNTS_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNTS_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNTS_WACH : integer;
-  attribute C_HAS_DATA_COUNTS_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNTS_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNTS_WDCH : integer;
-  attribute C_HAS_DATA_COUNTS_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNTS_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_DATA_COUNTS_WRCH : integer;
-  attribute C_HAS_DATA_COUNTS_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_DATA_COUNTS_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_INT_CLK : integer;
-  attribute C_HAS_INT_CLK of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_INT_CLK of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_MASTER_CE : integer;
-  attribute C_HAS_MASTER_CE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_MASTER_CE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_MEMINIT_FILE : integer;
-  attribute C_HAS_MEMINIT_FILE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_MEMINIT_FILE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_OVERFLOW : integer;
-  attribute C_HAS_OVERFLOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_OVERFLOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_PROG_FLAGS_AXIS : integer;
-  attribute C_HAS_PROG_FLAGS_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_PROG_FLAGS_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_PROG_FLAGS_RACH : integer;
-  attribute C_HAS_PROG_FLAGS_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_PROG_FLAGS_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_PROG_FLAGS_RDCH : integer;
-  attribute C_HAS_PROG_FLAGS_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_PROG_FLAGS_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_PROG_FLAGS_WACH : integer;
-  attribute C_HAS_PROG_FLAGS_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_PROG_FLAGS_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_PROG_FLAGS_WDCH : integer;
-  attribute C_HAS_PROG_FLAGS_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_PROG_FLAGS_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_PROG_FLAGS_WRCH : integer;
-  attribute C_HAS_PROG_FLAGS_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_PROG_FLAGS_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_RD_DATA_COUNT : integer;
-  attribute C_HAS_RD_DATA_COUNT of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_RD_DATA_COUNT of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_RD_RST : integer;
-  attribute C_HAS_RD_RST of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_RD_RST of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_RST : integer;
-  attribute C_HAS_RST of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_HAS_RST of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_HAS_SLAVE_CE : integer;
-  attribute C_HAS_SLAVE_CE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_SLAVE_CE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_SRST : integer;
-  attribute C_HAS_SRST of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_SRST of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_UNDERFLOW : integer;
-  attribute C_HAS_UNDERFLOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_UNDERFLOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_VALID : integer;
-  attribute C_HAS_VALID of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_VALID of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_WR_ACK : integer;
-  attribute C_HAS_WR_ACK of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_WR_ACK of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_WR_DATA_COUNT : integer;
-  attribute C_HAS_WR_DATA_COUNT of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_WR_DATA_COUNT of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_HAS_WR_RST : integer;
-  attribute C_HAS_WR_RST of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_HAS_WR_RST of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_IMPLEMENTATION_TYPE : integer;
-  attribute C_IMPLEMENTATION_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_IMPLEMENTATION_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_IMPLEMENTATION_TYPE_AXIS : integer;
-  attribute C_IMPLEMENTATION_TYPE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_IMPLEMENTATION_TYPE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_IMPLEMENTATION_TYPE_RACH : integer;
-  attribute C_IMPLEMENTATION_TYPE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_IMPLEMENTATION_TYPE_RACH of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_IMPLEMENTATION_TYPE_RDCH : integer;
-  attribute C_IMPLEMENTATION_TYPE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_IMPLEMENTATION_TYPE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_IMPLEMENTATION_TYPE_WACH : integer;
-  attribute C_IMPLEMENTATION_TYPE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_IMPLEMENTATION_TYPE_WACH of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_IMPLEMENTATION_TYPE_WDCH : integer;
-  attribute C_IMPLEMENTATION_TYPE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_IMPLEMENTATION_TYPE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_IMPLEMENTATION_TYPE_WRCH : integer;
-  attribute C_IMPLEMENTATION_TYPE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_IMPLEMENTATION_TYPE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_INIT_WR_PNTR_VAL : integer;
-  attribute C_INIT_WR_PNTR_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_INIT_WR_PNTR_VAL of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_INTERFACE_TYPE : integer;
-  attribute C_INTERFACE_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_INTERFACE_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_MEMORY_TYPE : integer;
-  attribute C_MEMORY_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_MEMORY_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_MIF_FILE_NAME : string;
-  attribute C_MIF_FILE_NAME of sync_fifo_fifo_generator_v13_2_5 : entity is "BlankString";
+  attribute C_MIF_FILE_NAME of sync_fifofifo_generator_v13_2_5 : entity is "BlankString";
   attribute C_MSGON_VAL : integer;
-  attribute C_MSGON_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_MSGON_VAL of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_OPTIMIZATION_MODE : integer;
-  attribute C_OPTIMIZATION_MODE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_OPTIMIZATION_MODE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_OVERFLOW_LOW : integer;
-  attribute C_OVERFLOW_LOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_OVERFLOW_LOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_POWER_SAVING_MODE : integer;
-  attribute C_POWER_SAVING_MODE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_POWER_SAVING_MODE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PRELOAD_LATENCY : integer;
-  attribute C_PRELOAD_LATENCY of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_PRELOAD_LATENCY of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_PRELOAD_REGS : integer;
-  attribute C_PRELOAD_REGS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PRELOAD_REGS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PRIM_FIFO_TYPE : string;
-  attribute C_PRIM_FIFO_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is "512x72";
+  attribute C_PRIM_FIFO_TYPE of sync_fifofifo_generator_v13_2_5 : entity is "512x72";
   attribute C_PRIM_FIFO_TYPE_AXIS : string;
-  attribute C_PRIM_FIFO_TYPE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is "1kx18";
+  attribute C_PRIM_FIFO_TYPE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is "1kx18";
   attribute C_PRIM_FIFO_TYPE_RACH : string;
-  attribute C_PRIM_FIFO_TYPE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is "512x36";
+  attribute C_PRIM_FIFO_TYPE_RACH of sync_fifofifo_generator_v13_2_5 : entity is "512x36";
   attribute C_PRIM_FIFO_TYPE_RDCH : string;
-  attribute C_PRIM_FIFO_TYPE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is "1kx36";
+  attribute C_PRIM_FIFO_TYPE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is "1kx36";
   attribute C_PRIM_FIFO_TYPE_WACH : string;
-  attribute C_PRIM_FIFO_TYPE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is "512x36";
+  attribute C_PRIM_FIFO_TYPE_WACH of sync_fifofifo_generator_v13_2_5 : entity is "512x36";
   attribute C_PRIM_FIFO_TYPE_WDCH : string;
-  attribute C_PRIM_FIFO_TYPE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is "1kx36";
+  attribute C_PRIM_FIFO_TYPE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is "1kx36";
   attribute C_PRIM_FIFO_TYPE_WRCH : string;
-  attribute C_PRIM_FIFO_TYPE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is "512x36";
+  attribute C_PRIM_FIFO_TYPE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is "512x36";
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_AXIS : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 1022;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 1022;
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_RACH : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 1022;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_RACH of sync_fifofifo_generator_v13_2_5 : entity is 1022;
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_RDCH : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1022;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 1022;
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WACH : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 1022;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WACH of sync_fifofifo_generator_v13_2_5 : entity is 1022;
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WDCH : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1022;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 1022;
   attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WRCH : integer;
-  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1022;
+  attribute C_PROG_EMPTY_THRESH_ASSERT_VAL_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 1022;
   attribute C_PROG_EMPTY_THRESH_NEGATE_VAL : integer;
-  attribute C_PROG_EMPTY_THRESH_NEGATE_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 3;
+  attribute C_PROG_EMPTY_THRESH_NEGATE_VAL of sync_fifofifo_generator_v13_2_5 : entity is 3;
   attribute C_PROG_EMPTY_TYPE : integer;
-  attribute C_PROG_EMPTY_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_EMPTY_TYPE_AXIS : integer;
-  attribute C_PROG_EMPTY_TYPE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_EMPTY_TYPE_RACH : integer;
-  attribute C_PROG_EMPTY_TYPE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_EMPTY_TYPE_RDCH : integer;
-  attribute C_PROG_EMPTY_TYPE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_EMPTY_TYPE_WACH : integer;
-  attribute C_PROG_EMPTY_TYPE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_EMPTY_TYPE_WDCH : integer;
-  attribute C_PROG_EMPTY_TYPE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_EMPTY_TYPE_WRCH : integer;
-  attribute C_PROG_EMPTY_TYPE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_EMPTY_TYPE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 13;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL of sync_fifofifo_generator_v13_2_5 : entity is 13;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 1023;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_RACH : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 1023;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL_RACH of sync_fifofifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_RDCH : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1023;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WACH : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 1023;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL_WACH of sync_fifofifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WDCH : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1023;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1023;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_NEGATE_VAL : integer;
-  attribute C_PROG_FULL_THRESH_NEGATE_VAL of sync_fifo_fifo_generator_v13_2_5 : entity is 12;
+  attribute C_PROG_FULL_THRESH_NEGATE_VAL of sync_fifofifo_generator_v13_2_5 : entity is 12;
   attribute C_PROG_FULL_TYPE : integer;
-  attribute C_PROG_FULL_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_AXIS : integer;
-  attribute C_PROG_FULL_TYPE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_RACH : integer;
-  attribute C_PROG_FULL_TYPE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_RDCH : integer;
-  attribute C_PROG_FULL_TYPE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_WACH : integer;
-  attribute C_PROG_FULL_TYPE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_WDCH : integer;
-  attribute C_PROG_FULL_TYPE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_WRCH : integer;
-  attribute C_PROG_FULL_TYPE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_PROG_FULL_TYPE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_RACH_TYPE : integer;
-  attribute C_RACH_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_RACH_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_RDCH_TYPE : integer;
-  attribute C_RDCH_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_RDCH_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_RD_DATA_COUNT_WIDTH : integer;
-  attribute C_RD_DATA_COUNT_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_RD_DATA_COUNT_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_RD_DEPTH : integer;
-  attribute C_RD_DEPTH of sync_fifo_fifo_generator_v13_2_5 : entity is 16;
+  attribute C_RD_DEPTH of sync_fifofifo_generator_v13_2_5 : entity is 16;
   attribute C_RD_FREQ : integer;
-  attribute C_RD_FREQ of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_RD_FREQ of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_RD_PNTR_WIDTH : integer;
-  attribute C_RD_PNTR_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_RD_PNTR_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_REG_SLICE_MODE_AXIS : integer;
-  attribute C_REG_SLICE_MODE_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_REG_SLICE_MODE_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_REG_SLICE_MODE_RACH : integer;
-  attribute C_REG_SLICE_MODE_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_REG_SLICE_MODE_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_REG_SLICE_MODE_RDCH : integer;
-  attribute C_REG_SLICE_MODE_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_REG_SLICE_MODE_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_REG_SLICE_MODE_WACH : integer;
-  attribute C_REG_SLICE_MODE_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_REG_SLICE_MODE_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_REG_SLICE_MODE_WDCH : integer;
-  attribute C_REG_SLICE_MODE_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_REG_SLICE_MODE_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_REG_SLICE_MODE_WRCH : integer;
-  attribute C_REG_SLICE_MODE_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_REG_SLICE_MODE_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_SELECT_XPM : integer;
-  attribute C_SELECT_XPM of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_SELECT_XPM of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_SYNCHRONIZER_STAGE : integer;
-  attribute C_SYNCHRONIZER_STAGE of sync_fifo_fifo_generator_v13_2_5 : entity is 2;
+  attribute C_SYNCHRONIZER_STAGE of sync_fifofifo_generator_v13_2_5 : entity is 2;
   attribute C_UNDERFLOW_LOW : integer;
-  attribute C_UNDERFLOW_LOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_UNDERFLOW_LOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_COMMON_OVERFLOW : integer;
-  attribute C_USE_COMMON_OVERFLOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_COMMON_OVERFLOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_COMMON_UNDERFLOW : integer;
-  attribute C_USE_COMMON_UNDERFLOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_COMMON_UNDERFLOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_DEFAULT_SETTINGS : integer;
-  attribute C_USE_DEFAULT_SETTINGS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_DEFAULT_SETTINGS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_DOUT_RST : integer;
-  attribute C_USE_DOUT_RST of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_USE_DOUT_RST of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_USE_ECC : integer;
-  attribute C_USE_ECC of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_ECC_AXIS : integer;
-  attribute C_USE_ECC_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_ECC_RACH : integer;
-  attribute C_USE_ECC_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC_RACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_ECC_RDCH : integer;
-  attribute C_USE_ECC_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_ECC_WACH : integer;
-  attribute C_USE_ECC_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC_WACH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_ECC_WDCH : integer;
-  attribute C_USE_ECC_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_ECC_WRCH : integer;
-  attribute C_USE_ECC_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_ECC_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_EMBEDDED_REG : integer;
-  attribute C_USE_EMBEDDED_REG of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_EMBEDDED_REG of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_FIFO16_FLAGS : integer;
-  attribute C_USE_FIFO16_FLAGS of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_FIFO16_FLAGS of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_FWFT_DATA_COUNT : integer;
-  attribute C_USE_FWFT_DATA_COUNT of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_FWFT_DATA_COUNT of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_USE_PIPELINE_REG : integer;
-  attribute C_USE_PIPELINE_REG of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_USE_PIPELINE_REG of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_VALID_LOW : integer;
-  attribute C_VALID_LOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_VALID_LOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_WACH_TYPE : integer;
-  attribute C_WACH_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_WACH_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_WDCH_TYPE : integer;
-  attribute C_WDCH_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_WDCH_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_WRCH_TYPE : integer;
-  attribute C_WRCH_TYPE of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_WRCH_TYPE of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_WR_ACK_LOW : integer;
-  attribute C_WR_ACK_LOW of sync_fifo_fifo_generator_v13_2_5 : entity is 0;
+  attribute C_WR_ACK_LOW of sync_fifofifo_generator_v13_2_5 : entity is 0;
   attribute C_WR_DATA_COUNT_WIDTH : integer;
-  attribute C_WR_DATA_COUNT_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_WR_DATA_COUNT_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_WR_DEPTH : integer;
-  attribute C_WR_DEPTH of sync_fifo_fifo_generator_v13_2_5 : entity is 16;
+  attribute C_WR_DEPTH of sync_fifofifo_generator_v13_2_5 : entity is 16;
   attribute C_WR_DEPTH_AXIS : integer;
-  attribute C_WR_DEPTH_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 1024;
+  attribute C_WR_DEPTH_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 1024;
   attribute C_WR_DEPTH_RACH : integer;
-  attribute C_WR_DEPTH_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 16;
+  attribute C_WR_DEPTH_RACH of sync_fifofifo_generator_v13_2_5 : entity is 16;
   attribute C_WR_DEPTH_RDCH : integer;
-  attribute C_WR_DEPTH_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1024;
+  attribute C_WR_DEPTH_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 1024;
   attribute C_WR_DEPTH_WACH : integer;
-  attribute C_WR_DEPTH_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 16;
+  attribute C_WR_DEPTH_WACH of sync_fifofifo_generator_v13_2_5 : entity is 16;
   attribute C_WR_DEPTH_WDCH : integer;
-  attribute C_WR_DEPTH_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 1024;
+  attribute C_WR_DEPTH_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 1024;
   attribute C_WR_DEPTH_WRCH : integer;
-  attribute C_WR_DEPTH_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 16;
+  attribute C_WR_DEPTH_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 16;
   attribute C_WR_FREQ : integer;
-  attribute C_WR_FREQ of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_WR_FREQ of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute C_WR_PNTR_WIDTH : integer;
-  attribute C_WR_PNTR_WIDTH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_WR_PNTR_WIDTH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_WR_PNTR_WIDTH_AXIS : integer;
-  attribute C_WR_PNTR_WIDTH_AXIS of sync_fifo_fifo_generator_v13_2_5 : entity is 10;
+  attribute C_WR_PNTR_WIDTH_AXIS of sync_fifofifo_generator_v13_2_5 : entity is 10;
   attribute C_WR_PNTR_WIDTH_RACH : integer;
-  attribute C_WR_PNTR_WIDTH_RACH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_WR_PNTR_WIDTH_RACH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_WR_PNTR_WIDTH_RDCH : integer;
-  attribute C_WR_PNTR_WIDTH_RDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 10;
+  attribute C_WR_PNTR_WIDTH_RDCH of sync_fifofifo_generator_v13_2_5 : entity is 10;
   attribute C_WR_PNTR_WIDTH_WACH : integer;
-  attribute C_WR_PNTR_WIDTH_WACH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_WR_PNTR_WIDTH_WACH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_WR_PNTR_WIDTH_WDCH : integer;
-  attribute C_WR_PNTR_WIDTH_WDCH of sync_fifo_fifo_generator_v13_2_5 : entity is 10;
+  attribute C_WR_PNTR_WIDTH_WDCH of sync_fifofifo_generator_v13_2_5 : entity is 10;
   attribute C_WR_PNTR_WIDTH_WRCH : integer;
-  attribute C_WR_PNTR_WIDTH_WRCH of sync_fifo_fifo_generator_v13_2_5 : entity is 4;
+  attribute C_WR_PNTR_WIDTH_WRCH of sync_fifofifo_generator_v13_2_5 : entity is 4;
   attribute C_WR_RESPONSE_LATENCY : integer;
-  attribute C_WR_RESPONSE_LATENCY of sync_fifo_fifo_generator_v13_2_5 : entity is 1;
+  attribute C_WR_RESPONSE_LATENCY of sync_fifofifo_generator_v13_2_5 : entity is 1;
   attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of sync_fifo_fifo_generator_v13_2_5 : entity is "fifo_generator_v13_2_5";
-end sync_fifo_fifo_generator_v13_2_5;
+  attribute ORIG_REF_NAME of sync_fifofifo_generator_v13_2_5 : entity is "fifo_generator_v13_2_5";
+end sync_fifofifo_generator_v13_2_5;
 
-architecture STRUCTURE of sync_fifo_fifo_generator_v13_2_5 is
+architecture STRUCTURE of sync_fifofifo_generator_v13_2_5 is
   signal \<const0>\ : STD_LOGIC;
   signal \<const1>\ : STD_LOGIC;
 begin
@@ -4684,7 +4684,7 @@ VCC: unisim.vcomponents.VCC
      port map (
       P => \<const1>\
     );
-inst_fifo_gen: entity work.sync_fifo_fifo_generator_v13_2_5_synth
+inst_fifo_gen: entity work.sync_fifofifo_generator_v13_2_5_synth
      port map (
       din(127 downto 0) => din(127 downto 0),
       dout(127 downto 0) => dout(127 downto 0),
@@ -5255,20 +5255,20 @@ architecture STRUCTURE of sync_fifo is
   attribute C_WR_RESPONSE_LATENCY of U0 : label is 1;
   attribute KEEP_HIERARCHY : string;
   attribute KEEP_HIERARCHY of U0 : label is "soft";
-  attribute x_interface_info : string;
-  attribute x_interface_info of empty : signal is "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY";
-  attribute x_interface_info of full : signal is "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE FULL";
-  attribute x_interface_info of rd_clk : signal is "xilinx.com:signal:clock:1.0 read_clk CLK";
-  attribute x_interface_parameter : string;
-  attribute x_interface_parameter of rd_clk : signal is "XIL_INTERFACENAME read_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0";
-  attribute x_interface_info of rd_en : signal is "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_EN";
-  attribute x_interface_info of wr_clk : signal is "xilinx.com:signal:clock:1.0 write_clk CLK";
-  attribute x_interface_parameter of wr_clk : signal is "XIL_INTERFACENAME write_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0";
-  attribute x_interface_info of wr_en : signal is "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_EN";
-  attribute x_interface_info of din : signal is "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA";
-  attribute x_interface_info of dout : signal is "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_DATA";
+  attribute X_INTERFACE_INFO : string;
+  attribute X_INTERFACE_INFO of empty : signal is "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY";
+  attribute X_INTERFACE_INFO of full : signal is "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE FULL";
+  attribute X_INTERFACE_INFO of rd_clk : signal is "xilinx.com:signal:clock:1.0 read_clk CLK";
+  attribute X_INTERFACE_PARAMETER : string;
+  attribute X_INTERFACE_PARAMETER of rd_clk : signal is "XIL_INTERFACENAME read_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0";
+  attribute X_INTERFACE_INFO of rd_en : signal is "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_EN";
+  attribute X_INTERFACE_INFO of wr_clk : signal is "xilinx.com:signal:clock:1.0 write_clk CLK";
+  attribute X_INTERFACE_PARAMETER of wr_clk : signal is "XIL_INTERFACENAME write_clk, FREQ_HZ 100000000, FREQ_TOLERANCE_HZ 0, PHASE 0.000, INSERT_VIP 0";
+  attribute X_INTERFACE_INFO of wr_en : signal is "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_EN";
+  attribute X_INTERFACE_INFO of din : signal is "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA";
+  attribute X_INTERFACE_INFO of dout : signal is "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_DATA";
 begin
-U0: entity work.sync_fifo_fifo_generator_v13_2_5
+U0: entity work.sync_fifofifo_generator_v13_2_5
      port map (
       almost_empty => NLW_U0_almost_empty_UNCONNECTED,
       almost_full => NLW_U0_almost_full_UNCONNECTED,

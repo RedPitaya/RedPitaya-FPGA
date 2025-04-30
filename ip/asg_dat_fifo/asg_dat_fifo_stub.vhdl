@@ -1,13 +1,13 @@
 -- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
--- Date        : Tue Nov 26 11:50:25 2024
--- Host        : devmachine running 64-bit Ubuntu 24.04 LTS
+-- Date        : Tue Apr 29 15:34:27 2025
+-- Host        : alen-hpzbookpower running 64-bit EndeavourOS Linux
 -- Command     : write_vhdl -force -mode synth_stub
---               /home/juretrnovec/RPdev/RP30/redpitaya-fpga/redpitaya-fpga/ip/asg_dat_fifo/asg_dat_fifo_stub.vhdl
+--               /home/alenlu/projects/redpitaya2/redpitaya-fpga/ip/asg_dat_fifo/asg_dat_fifo_stub.vhdl
 -- Design      : asg_dat_fifo
 -- Purpose     : Stub declaration of top-level module interface
--- Device      : xc7z010clg400-1
+-- Device      : xc7z020clg400-1
 -- --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;

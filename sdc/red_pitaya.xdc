@@ -202,6 +202,11 @@ set_input_delay -clock adc_clk 3.400 [get_ports adc_dat_i[*][*]]
 
 create_clock -period 4.000 -name rx_clk  [get_ports daisy_p_i[1]]
 
+create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_o]
+create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_1x]
+create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_2x]
+create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_2p]
+
 set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_o]
 set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_2x]
 set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_2p]
