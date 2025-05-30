@@ -1,0 +1,45 @@
+/*
+ * Zynq XADC configuration
+*/
+
+&xadc {
+        compatible = "xlnx,axi-xadc-1.00.a";
+        clocks = <&clkc 18>;
+        xlnx,channels {
+                #address-cells = <1>;
+                #size-cells = <0>;
+                channel@0 {
+                        reg = <0>;
+                };
+                channel@1 {
+                        reg = <1>;
+                };
+                channel@2 {
+                        reg = <2>;
+                };
+                channel@9 {
+                        reg = <9>;
+                };
+                channel@10 {
+                        reg = <10>;
+                };
+        };
+};
+
+/ {
+         fragment@9 {
+                target = <&can0>;
+                overlay9: __overlay__ {
+                        status = "okay";
+                };
+        };
+
+        fragment@10 {
+                target = <&can1>;
+                overlay10: __overlay__ {
+                        status = "okay";
+                };
+        };
+};
+
+
