@@ -223,19 +223,19 @@ add_files                         $path_tbn
 add_files                         $path_tbn_top
 add_files -fileset sim_1 -norecurse $binfiles
 
-set ip_files [glob -nocomplain $path_ip/*.xci]
+set ip_files [glob -nocomplain $path_ip/**/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
 }
 
 
-if {[file isdirectory $path_ip/asg_dat_fifo]} {
-add_files $path_ip/asg_dat_fifo/asg_dat_fifo.xci
-}
+#if {[file isdirectory $path_ip/asg_dat_fifo]} {
+#add_files $path_ip/asg_dat_fifo/asg_dat_fifo.xci
+#}
 
-if {[file isdirectory $path_ip/sync_fifo]} {
-add_files $path_ip/sync_fifo/sync_fifo.xci
-}
+#if {[file isdirectory $path_ip/sync_fifo]} {
+#add_files $path_ip/sync_fifo/sync_fifo.xci
+#}
 
 if {[file isdirectory $path_tbn_top/axi_prot_check]} {
 add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci

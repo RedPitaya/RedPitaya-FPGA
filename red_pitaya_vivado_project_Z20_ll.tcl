@@ -48,12 +48,12 @@ create_project -part $part -force redpitaya ./project
 set ::gpio_width 24
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
-set ::hp2_clk_freq 125000000
-set ::hp3_clk_freq 125000000
+set ::hp2_clk_freq 250000000
+set ::hp3_clk_freq 250000000
 
 set_property verilog_define [concat Z20_ll $prj_defs] [current_fileset]
 
-source                            $path_ip/systemZ20.tcl
+source                            $path_ip/systemZ20_ll.tcl
 
 # generate SDK files
 generate_target all [get_files    system.bd]

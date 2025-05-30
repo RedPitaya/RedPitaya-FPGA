@@ -545,7 +545,59 @@ assign CAN1_rx = can_on & exp_p_in[6];
 // oscilloscope
 ////////////////////////////////////////////////////////////////////////////////
 
+wire [ 4-1:0] trig_ch_0_1;
+wire [ 4-1:0] trig_ch_2_3;
+wire [16-1:0] trg_state_ch_0_1;
+wire [16-1:0] trg_state_ch_2_3;
+wire [16-1:0] adc_state_ch_0_1;
+wire [16-1:0] adc_state_ch_2_3;
+wire [16-1:0] axi_state_ch_0_1;
+wire [16-1:0] axi_state_ch_2_3;
+logic         trig_asg_out;
 
+rp_scope_com #(
+  .CHN(0),
+  .N_CH(2),
+  .DW(14),
+  .RSZ(14)) 
+  i_scope (
+  // ADC
+  .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  .adc_clk_i     ({2{adc_clk}}  ),  // clock
+  .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
+  .trig_ext_i    (trig_ext    ),  // external trigger
+  .trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
+  .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
+  .trig_ext_asg_o(trig_ext_asg01),
+  .trig_ext_asg_i(trig_ext_asg01),
+  .daisy_trig_o  (scope_trigo ),
+  .adc_state_o   (adc_state_ch_0_1),
+  .adc_state_i   (adc_state_ch_2_3),
+  .axi_state_o   (axi_state_ch_0_1),
+  .axi_state_i   (axi_state_ch_2_3),
+  .trg_state_o   (trg_state_ch_0_1),
+  .trg_state_i   (trg_state_ch_2_3),
+  // AXI0 master                 // AXI1 master
+  .axi_waddr_o  ({axi1_sys.waddr,  axi0_sys.waddr} ),
+  .axi_wdata_o  ({axi1_sys.wdata,  axi0_sys.wdata} ),
+  .axi_wsel_o   ({axi1_sys.wsel,   axi0_sys.wsel}  ),
+  .axi_wvalid_o ({axi1_sys.wvalid, axi0_sys.wvalid}),
+  .axi_wlen_o   ({axi1_sys.wlen,   axi0_sys.wlen}  ),
+  .axi_wfixed_o ({axi1_sys.wfixed, axi0_sys.wfixed}),
+  .axi_werr_i   ({axi1_sys.werr,   axi0_sys.werr}  ),
+  .axi_wrdy_i   ({axi1_sys.wrdy,   axi0_sys.wrdy}  ),
+  // System bus
+  .sys_addr      (sys[1].addr ),
+  .sys_wdata     (sys[1].wdata),
+  .sys_wen       (sys[1].wen  ),
+  .sys_ren       (sys[1].ren  ),
+  .sys_rdata     (sys[1].rdata),
+  .sys_err       (sys[1].err  ),
+  .sys_ack       (sys[1].ack  )
+);
+
+/*
 red_pitaya_scope #(
   .ADC_DW(ADC_DW))
 i_scope (
@@ -577,6 +629,7 @@ i_scope (
   .sys_err       (sys[1].err  ),
   .sys_ack       (sys[1].ack  )
 );
+*/
 
 ////////////////////////////////////////////////////////////////////////////////
 //  DAC arbitrary signal generator

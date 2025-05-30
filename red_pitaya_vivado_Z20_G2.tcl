@@ -101,19 +101,24 @@ if {$prj_name == "v0.94"} {
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
 #generate_target all [get_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci]
-read_ip $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
-upgrade_ip [get_ips asg_dat_fifo]
-generate_target all [get_ips asg_dat_fifo] 
-synth_ip [get_ips asg_dat_fifo ] -force
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+#read_ip $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+#upgrade_ip [get_ips asg_dat_fifo]
+#generate_target all [get_ips asg_dat_fifo] 
+#synth_ip [get_ips asg_dat_fifo ] -force
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
 #generate_target all [get_files $path_ip_top/sync_fifo/sync_fifo.xci]
-read_ip $path_ip_top/sync_fifo/sync_fifo.xci
-upgrade_ip [get_ips sync_fifo] 
-generate_target all [get_ips sync_fifo] 
-synth_ip [get_ips sync_fifo] -force
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
+#read_ip $path_ip_top/sync_fifo/sync_fifo.xci
+#upgrade_ip [get_ips sync_fifo] 
+#generate_target all [get_ips sync_fifo] 
+#synth_ip [get_ips sync_fifo] -force
 }
+#
+upgrade_ip [get_ips *] 
+#
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_G2.xdc
 
 ################################################################################

@@ -46,6 +46,11 @@
  * pre-trigger data.
  * 
  */
+/* 
+* May 2025 - Alen Luin
+* added calibration at the input from adc
+*
+*/
 
 module red_pitaya_scope #(
   parameter CHN = 0 ,
@@ -144,7 +149,7 @@ reg             calib_b_coef_wr;
 wire            calib_a_rstn;
 wire            calib_b_rstn;
 
-// TODO still to define some parameters with ADC_DW to support 
+// TODO: still to define some parameters with ADC_DW to support 
 // both 14 and 16 bit
 
 wire  adc_sign_a = adc_a_i[ADC_DW-1];

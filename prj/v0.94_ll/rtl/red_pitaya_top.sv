@@ -113,6 +113,7 @@ module red_pitaya_top #(
   output logic [ 2-1:0] daisy_n_o  ,
   input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
   input  logic [ 2-1:0] daisy_n_i  ,
+  output logic          out_sync_o,
   // PLL
   output logic          clk_sel_o  ,  // 1-internal 0-external
   output logic          pll_hi_o   ,
@@ -207,6 +208,9 @@ logic                    hk_spi_clk ;
 logic                    hk_spi_i   ;
 logic                    hk_spi_o   ;
 logic                    hk_spi_t   ;
+
+// added to gen clock enabel
+assign out_sync_o = 1'b1;
 
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]), .rstn (frstn[0]));

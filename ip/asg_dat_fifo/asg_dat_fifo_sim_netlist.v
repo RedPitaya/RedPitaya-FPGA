@@ -1,7 +1,7 @@
 // Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
-// Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
-// Date        : Tue Apr 29 15:34:27 2025
+// Tool Version: Vivado v.2020.1.1 (lin64) Build 2960000 Wed Aug  5 22:57:21 MDT 2020
+// Date        : Mon May 26 14:04:05 2025
 // Host        : alen-hpzbookpower running 64-bit EndeavourOS Linux
 // Command     : write_verilog -force -mode funcsim
 //               /home/alenlu/projects/redpitaya2/redpitaya-fpga/ip/asg_dat_fifo/asg_dat_fifo_sim_netlist.v
@@ -12,7 +12,7 @@
 // --------------------------------------------------------------------------------
 `timescale 1 ps / 1 ps
 
-(* CHECK_LICENSE_TYPE = "asg_dat_fifo,fifo_generator_v13_2_5,{}" *) (* downgradeipidentifiedwarnings = "yes" *) (* x_core_info = "fifo_generator_v13_2_5,Vivado 2020.1" *) 
+(* CHECK_LICENSE_TYPE = "asg_dat_fifo,fifo_generator_v13_2_5,{}" *) (* downgradeipidentifiedwarnings = "yes" *) (* x_core_info = "fifo_generator_v13_2_5,Vivado 2020.1.1" *) 
 (* NotValidForBitStream *)
 module asg_dat_fifo
    (rst,

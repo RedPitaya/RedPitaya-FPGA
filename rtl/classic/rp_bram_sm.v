@@ -15,7 +15,8 @@
 
 /*
 GENERAL DESCRIPTION:
-Within this module we create the acquisition enable signals, write pointers and save the trigger write pointer.
+Within this module we create the acquisition enable signals, write pointers and
+save the trigger write pointer.
 */
 
 module rp_bram_sm #(

@@ -25,61 +25,64 @@ module rp_scope_cfg #(
   parameter RSZ  = 14  // RAM size 2^RSZ
 )(
    // ADC
-   input                      adc_clk_i       ,  // ADC clock
-   input                      adc_rstn_i      ,  // ADC reset - active low
+   input                      adc_clk_i            ,  // ADC clock
+   input                      adc_rstn_i           ,  // ADC reset - active low
   
    // System bus
-   input      [      32-1: 0] sys_addr        ,
-   input      [      32-1: 0] sys_wdata       ,
-   input                      sys_wen         ,
-   input                      sys_ren         ,
-   output reg [      32-1: 0] sys_rdata       ,
-   output reg                 sys_err         ,
-   output reg                 sys_ack         ,
+   input      [      32-1: 0] sys_addr             ,
+   input      [      32-1: 0] sys_wdata            ,
+   input                      sys_wen              ,
+   input                      sys_ren              ,
+   output reg [      32-1: 0] sys_rdata            ,
+   output reg                 sys_err              ,
+   output reg                 sys_ack              ,
 
-   input      [   4*8  -1: 0] adc_state_i     ,
-   input      [   4*8  -1: 0] axi_state_i     ,
-   input      [   4*8  -1: 0] trg_state_i     ,
-   input      [   2*8  -1: 0] adc_state_ext_i ,
-   input      [   2*8  -1: 0] axi_state_ext_i ,
-   input      [   2*8  -1: 0] trg_state_ext_i ,
+   input      [   4*8  -1: 0] adc_state_i          ,
+   input      [   4*8  -1: 0] axi_state_i          ,
+   input      [   4*8  -1: 0] trg_state_i          ,
+   input      [   2*8  -1: 0] adc_state_ext_i      ,
+   input      [   2*8  -1: 0] axi_state_ext_i      ,
+   input      [   2*8  -1: 0] trg_state_ext_i      ,
 
-   input      [   4*RSZ-1: 0] adc_wp_cur_i    ,
-   input      [   4*RSZ-1: 0] adc_wp_trig_i   ,
-   input      [   4*32 -1: 0] adc_we_cnt_i    ,
+   input      [   4*RSZ-1: 0] adc_wp_cur_i         ,
+    input      [   4*RSZ-1: 0] adc_wp_trig_i        ,
+   input      [   4*32 -1: 0] adc_we_cnt_i         ,
 
-   input      [   4*32 -1: 0] axi_wp_cur_i    ,
-   input      [   4*32 -1: 0] axi_wp_trig_i   ,
+   input      [   4*32 -1: 0] axi_wp_cur_i         ,
+   input      [   4*32 -1: 0] axi_wp_trig_i        ,
 
-   input      [   4*DW -1: 0] bram_rd_dat_i   ,
-   input      [       4-1: 0] bram_ack_i      ,
+   input      [   4*DW -1: 0] bram_rd_dat_i        ,
+   input      [       4-1: 0] bram_ack_i           ,
 
-   output     [       4-1: 0] adc_arm_do_o    ,
-   output     [       4-1: 0] adc_rst_do_o    ,
-   output     [       4-1: 0] adc_trig_sw_o   ,
-   output     [       4-1: 0] adc_we_keep_o   ,
-   output     [       4-1: 0] trig_dis_clr_o  ,
-   output     [       4-1: 0] indep_mode_o    ,
-   output     [       4-1: 0] axi_en_pulse_o  ,
-   output     [       4-1: 0] new_trg_src_o   ,
-   output     [   4*4  -1: 0] trg_src_o       ,
-   output     [       4-1: 0] set_dec1_o      ,
-   output     [       4-1: 0] filt_rstn_o     ,
-   output     [   4*DW -1: 0] set_tresh_o     ,
-   output     [   4*32 -1: 0] set_dly_o       ,
-   output     [   4*17 -1: 0] set_dec_o       ,
-   output     [   4*DW -1: 0] set_hyst_o      ,
-   output     [       4-1: 0] set_avg_en_o    ,
-   output     [   4*18 -1: 0] set_filt_aa_o   ,
-   output     [   4*25 -1: 0] set_filt_bb_o   ,
-   output     [   4*25 -1: 0] set_filt_kk_o   ,
-   output     [   4*25 -1: 0] set_filt_pp_o   ,
-   output     [      4 -1: 0] set_filt_byp_o  ,
+   output     [       4-1: 0] adc_arm_do_o         ,
+   output     [       4-1: 0] adc_rst_do_o         ,
+   output     [       4-1: 0] adc_trig_sw_o        ,
+   output     [       4-1: 0] adc_we_keep_o        ,
+   output     [       4-1: 0] trig_dis_clr_o       ,
+   output     [       4-1: 0] indep_mode_o         ,
+   output     [       4-1: 0] axi_en_pulse_o       ,
+   output     [       4-1: 0] new_trg_src_o        ,
+   output     [   4*4  -1: 0] trg_src_o            ,
+   output     [       4-1: 0] set_dec1_o           ,
+   output     [       4-1: 0] filt_rstn_o          ,
+   output     [   4*DW -1: 0] set_tresh_o          ,
+   output     [   4*32 -1: 0] set_dly_o            ,
+   output     [   4*17 -1: 0] set_dec_o            ,
+   output     [   4*DW -1: 0] set_hyst_o           ,
+   output     [       4-1: 0] set_avg_en_o         ,
+   output     [   4*18 -1: 0] set_filt_aa_o        ,
+   output     [   4*25 -1: 0] set_filt_bb_o        ,
+   output     [   4*25 -1: 0] set_filt_kk_o        ,
+   output     [   4*25 -1: 0] set_filt_pp_o        ,
 
-   output     [      20-1: 0] set_deb_len_o   ,
-   output     [   4*32 -1: 0] set_axi_start_o ,
-   output     [   4*32 -1: 0] set_axi_stop_o  ,
-   output     [   4*32 -1: 0] set_axi_dly_o   ,
+   output     [   4*16 -1: 0] set_calib_offset_o   ,
+   output     [   4*16 -1: 0] set_calib_gain_o     ,
+
+   output     [      4 -1: 0] set_filt_byp_o       ,
+   output     [      20-1: 0] set_deb_len_o        ,
+   output     [   4*32 -1: 0] set_axi_start_o      ,
+   output     [   4*32 -1: 0] set_axi_stop_o       ,
+   output     [   4*32 -1: 0] set_axi_dly_o        ,
    output     [       4-1: 0] set_axi_en_o
 
 
@@ -114,6 +117,9 @@ reg  [ 4*25-1: 0] set_filt_bb   ;
 reg  [ 4*25-1: 0] set_filt_kk   ;
 reg  [ 4*25-1: 0] set_filt_pp   ;
 reg  [    4-1: 0] set_filt_byp  ;
+// added to store calibration data
+reg  [ 4*16-1: 0]   set_calib_offset  ;
+reg  [ 4*16-1: 0]   set_calib_gain  ;
 
 reg  [   20-1: 0] set_deb_len   ;
 
@@ -260,6 +266,9 @@ if (adc_rstn_i == 1'b0) begin
   set_filt_pp            <= {4{25'h0}}      ;
   set_filt_byp           <=  4'h0           ;
 
+  set_calib_offset       <= {4{16'h0}}      ;
+  set_calib_gain         <= {4{16'h8000}}   ;
+
   set_deb_len            <= {4{20'd62500}}  ;
 
   set_axi_start          <= {4{32'd0}}      ;
@@ -300,6 +309,28 @@ end else begin
     if (sys_addr[19:0]==20'h110)   set_dly[32*2-1:32*1]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h114)   set_dec[17*2-1:17*1]       <= sys_wdata[17-1:0] ;    
 
+    // data for calibration of for channel
+      // ch 1
+    if (sys_addr[19:0]==20'h200)   set_calib_offset[16*1-1:16*0]    <= sys_wdata[16-1:0] ;
+    if (sys_addr[19:0]==20'h204)   set_calib_gain[16*1-1:16*0]      <= sys_wdata[16-1:0] ;
+      // ch 2
+    if (sys_addr[19:0]==20'h208)   set_calib_offset[16*2-1:16*1]    <= sys_wdata[16-1:0] ;
+    if (sys_addr[19:0]==20'h20c)   set_calib_gain[16*2-1:16*1]      <= sys_wdata[16-1:0] ;
+      // ch 3
+    if (sys_addr[19:0]==20'h210)   set_calib_offset[16*3-1:16*2]    <= sys_wdata[16-1:0] ;
+    if (sys_addr[19:0]==20'h214)   set_calib_gain[16*3-1:16*2]      <= sys_wdata[16-1:0] ;
+      //ch 4
+    if (sys_addr[19:0]==20'h218)   set_calib_offset[16*4-1:16*3]    <= sys_wdata[16-1:0] ;
+    if (sys_addr[19:0]==20'h21c)   set_calib_gain[16*4-1:16*3]      <= sys_wdata[16-1:0] ;
+
+    if (sys_addr[19:0]==20'h230 )   set_filt_aa[18*3-1:18*0]   <= sys_wdata[18-1:0] ;
+    if (sys_addr[19:0]==20'h234 )   set_filt_bb[25*3-1:25*0]   <= sys_wdata[25-1:0] ;
+    if (sys_addr[19:0]==20'h238 )   set_filt_kk[25*3-1:25*0]   <= sys_wdata[25-1:0] ;
+    if (sys_addr[19:0]==20'h23C )   set_filt_pp[25*3-1:25*0]   <= sys_wdata[25-1:0] ;
+    if (sys_addr[19:0]==20'h240 )   set_filt_aa[18*4-1:18*3]   <= sys_wdata[18-1:0] ;
+    if (sys_addr[19:0]==20'h244 )   set_filt_bb[25*4-1:25*3]   <= sys_wdata[25-1:0] ;
+    if (sys_addr[19:0]==20'h248 )   set_filt_kk[25*4-1:25*3]   <= sys_wdata[25-1:0] ;
+    if (sys_addr[19:0]==20'h24C )   set_filt_pp[25*4-1:25*3]   <= sys_wdata[25-1:0] ;
 
     // Offset 0x94 reserved for trigger unlock bit
    end
@@ -373,41 +404,60 @@ end else begin
     20'h0011C : begin sys_ack <= sys_en;          sys_rdata <= {{32-RSZ{1'b0}}, adc_wp_trig_i[RSZ*2-1:RSZ*1]}   ; end
     20'h0012C : begin sys_ack <= sys_en;          sys_rdata <=                  adc_we_cnt_i[32*2-1:32*1]       ; end
 
+    20'h00200 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*1-1:16*0]}  ; end
+    20'h00204 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*1-1:16*0]}    ; end
+    20'h00208 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*2-1:16*1]}  ; end
+    20'h0020C : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*2-1:16*1]}    ; end
+    20'h00210 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*3-1:16*2]}  ; end
+    20'h00214 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*3-1:16*2]}    ; end
+    20'h00218 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*4-1:16*3]}  ; end
+    20'h0021C : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*4-1:16*3]}    ; end
+
+    20'h00230 : begin sys_ack <= sys_en;          sys_rdata <= {{32-18{1'b0}},  set_filt_aa[18*3-1:18*2]}       ; end
+    20'h00234 : begin sys_ack <= sys_en;          sys_rdata <= {{32-25{1'b0}},  set_filt_bb[25*3-1:25*2]}       ; end
+    20'h00238 : begin sys_ack <= sys_en;          sys_rdata <= {{32-25{1'b0}},  set_filt_kk[25*3-1:25*2]}       ; end
+    20'h0023C : begin sys_ack <= sys_en;          sys_rdata <= {{32-25{1'b0}},  set_filt_pp[25*3-1:25*2]}       ; end
+    20'h00240 : begin sys_ack <= sys_en;          sys_rdata <= {{32-18{1'b0}},  set_filt_aa[18*4-1:18*3]}       ; end
+    20'h00244 : begin sys_ack <= sys_en;          sys_rdata <= {{32-25{1'b0}},  set_filt_bb[25*4-1:25*3]}       ; end
+    20'h00248 : begin sys_ack <= sys_en;          sys_rdata <= {{32-25{1'b0}},  set_filt_kk[25*4-1:25*3]}       ; end
+    20'h0024C : begin sys_ack <= sys_en;          sys_rdata <= {{32-25{1'b0}},  set_filt_pp[25*4-1:25*3]}       ; end
 
     20'h1???? : begin sys_ack <= bram_ack_i[0];   sys_rdata <= {{32-DW{1'b0}},  bram_rd_dat_i[DW*1-1:DW*0]}     ; end
     20'h2???? : begin sys_ack <= bram_ack_i[1];   sys_rdata <= {{32-DW{1'b0}},  bram_rd_dat_i[DW*2-1:DW*1]}     ; end
     20'h3???? : begin sys_ack <= bram_ack_i[2];   sys_rdata <= {{32-DW{1'b0}},  bram_rd_dat_i[DW*3-1:DW*2]}     ; end
     20'h4???? : begin sys_ack <= bram_ack_i[3];   sys_rdata <= {{32-DW{1'b0}},  bram_rd_dat_i[DW*4-1:DW*3]}     ; end
 
-    default   : begin sys_ack <= sys_en;          sys_rdata <=  32'h0 ;                                           end
+    default   : begin sys_ack <= sys_en;          sys_rdata <=  32'h0                                           ; end
   endcase
 end
 
-assign adc_arm_do_o     = adc_arm_do_x    ;
-assign adc_rst_do_o     = adc_rst_do_x    ;
-assign adc_trig_sw_o    = adc_trig_sw_x   ;
-assign adc_we_keep_o    = adc_we_keep_x   ;
-assign trig_dis_clr_o   = trig_dis_clr_x  ;
-assign indep_mode_o     = indep_mode      ;
-assign axi_en_pulse_o   = axi_en_pulse    ;
-assign new_trg_src_o    = new_trg_src_x   ;
-assign trg_src_o        = trg_src_x       ;
-assign set_dec1_o       = set_dec1_x      ;
-assign filt_rstn_o      = filt_rstn       ;
-assign set_tresh_o      = set_tresh       ;
-assign set_dly_o        = set_dly_x       ;
-assign set_dec_o        = set_dec_x       ;
-assign set_hyst_o       = set_hyst        ;
-assign set_avg_en_o     = set_avg_en_x    ;
-assign set_filt_aa_o    = set_filt_aa     ;
-assign set_filt_bb_o    = set_filt_bb     ;
-assign set_filt_kk_o    = set_filt_kk     ;
-assign set_filt_pp_o    = set_filt_pp     ;
-assign set_filt_byp_o   = set_filt_byp    ;
-assign set_deb_len_o    = set_deb_len     ;
-assign set_axi_start_o  = set_axi_start   ;
-assign set_axi_stop_o   = set_axi_stop    ;
-assign set_axi_dly_o    = set_axi_dly     ;
-assign set_axi_en_o     = set_axi_en      ;
+assign adc_arm_do_o          = adc_arm_do_x    ;
+assign adc_rst_do_o          = adc_rst_do_x    ;
+assign adc_trig_sw_o         = adc_trig_sw_x   ;
+assign adc_we_keep_o         = adc_we_keep_x   ;
+assign trig_dis_clr_o        = trig_dis_clr_x  ;
+assign indep_mode_o          = indep_mode      ;
+assign axi_en_pulse_o        = axi_en_pulse    ;
+assign new_trg_src_o         = new_trg_src_x   ;
+assign trg_src_o             = trg_src_x       ;
+assign set_dec1_o            = set_dec1_x      ;
+assign filt_rstn_o           = filt_rstn       ;
+assign set_tresh_o           = set_tresh       ;
+assign set_dly_o             = set_dly_x       ;
+assign set_dec_o             = set_dec_x       ;
+assign set_hyst_o            = set_hyst        ;
+assign set_avg_en_o          = set_avg_en_x    ;
+assign set_filt_aa_o         = set_filt_aa     ;
+assign set_filt_bb_o         = set_filt_bb     ;
+assign set_filt_kk_o         = set_filt_kk     ;
+assign set_filt_pp_o         = set_filt_pp     ;
+assign set_filt_byp_o        = set_filt_byp    ;
+assign set_deb_len_o         = set_deb_len     ;
+assign set_axi_start_o       = set_axi_start   ;
+assign set_axi_stop_o        = set_axi_stop    ;
+assign set_axi_dly_o         = set_axi_dly     ;
+assign set_axi_en_o          = set_axi_en      ;
+assign set_calib_offset_o    = set_calib_offset;
+assign set_calib_gain_o      = set_calib_gain  ;
 
 endmodule

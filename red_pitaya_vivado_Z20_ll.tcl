@@ -66,7 +66,7 @@ set ::hp3_clk_freq 250000000
 
 set_property verilog_define [concat Z20_ll $prj_defs] [current_fileset]
 
-source                            $path_ip/systemZ20_14.tcl
+source                            $path_ip/systemZ20_ll.tcl
 
 # generate SDK files
 generate_target all [get_files    system.bd]
@@ -119,7 +119,8 @@ set_property generic "GITH=160'h$gith" [current_fileset]
 ################################################################################
 
 #synth_design -top red_pitaya_top_ll
-synth_design -top red_pitaya_top_ll -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
+#synth_design -top red_pitaya_top_ll -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
+synth_design -top red_pitaya_top -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
 
 write_checkpoint         -force   $path_out/post_synth
 report_timing_summary    -file    $path_out/post_synth_timing_summary.rpt

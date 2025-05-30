@@ -1,7 +1,7 @@
 -- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
--- Tool Version: Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
--- Date        : Tue Apr 29 15:34:27 2025
+-- Tool Version: Vivado v.2020.1.1 (lin64) Build 2960000 Wed Aug  5 22:57:21 MDT 2020
+-- Date        : Mon May 26 14:04:05 2025
 -- Host        : alen-hpzbookpower running 64-bit EndeavourOS Linux
 -- Command     : write_vhdl -force -mode funcsim
 --               /home/alenlu/projects/redpitaya2/redpitaya-fpga/ip/asg_dat_fifo/asg_dat_fifo_sim_netlist.vhdl
@@ -5845,7 +5845,7 @@ entity asg_dat_fifo is
   attribute downgradeipidentifiedwarnings : string;
   attribute downgradeipidentifiedwarnings of asg_dat_fifo : entity is "yes";
   attribute x_core_info : string;
-  attribute x_core_info of asg_dat_fifo : entity is "fifo_generator_v13_2_5,Vivado 2020.1";
+  attribute x_core_info of asg_dat_fifo : entity is "fifo_generator_v13_2_5,Vivado 2020.1.1";
 end asg_dat_fifo;
 
 architecture STRUCTURE of asg_dat_fifo is

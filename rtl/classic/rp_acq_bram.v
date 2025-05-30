@@ -27,11 +27,11 @@ module rp_acq_bram #(
 
    input      [RSZ-1: 0] bram_wp_i  ,
    input      [DW -1: 0] bram_dat_i ,
-   input                 bram_val_i ,
-   input                 bram_we_i  ,
+   input                 bram_val_i ,  // data valid
+   input                 bram_we_i  ,  // write enable 
    input                 bram_ack_i ,
 
-   input      [RSZ-1: 0] bram_rp_i  ,
+   input      [RSZ-1: 0] bram_rp_i  , // address
    output reg [DW -1: 0] bram_dat_o ,
    output                bram_ack_o
 );
