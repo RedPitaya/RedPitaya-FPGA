@@ -21,6 +21,10 @@
 	clock-frequency = <400000>;
 	status = "okay";
 };
+&i2c1 {
+	clock-frequency = <400000>;
+	status = "okay";
+};
 &intc {
 	num_cpus = <2>;
 	num_interrupts = <96>;
