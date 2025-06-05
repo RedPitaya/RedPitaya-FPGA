@@ -118,6 +118,9 @@ module red_pitaya_top #(
   output logic          clk_sel_o  ,  // 1-internal 0-external
   output logic          pll_hi_o   ,
   output logic          pll_lo_o   ,
+  // I2C1 signal
+  inout logic           i2c1_scl_io,
+  inout logic           i2c1_sda_io,
   // LED
   output logic [ 8-1:0] led_o
 );
@@ -211,6 +214,19 @@ logic                    hk_spi_t   ;
 
 // added to gen clock enabel
 assign out_sync_o = 1'b1;
+
+////////////////////////////////////////////////////////////////////////////////
+// I2C1 
+////////////////////////////////////////////////////////////////////////////////
+logic           i2c1_scl_i;
+logic           i2c1_scl_o;
+logic           i2c1_scl_t;
+logic           i2c1_sda_i;
+logic           i2c1_sda_o;
+logic           i2c1_sda_t;
+
+IOBUF i_i2c1_scl (.O(i2c1_scl_i), .IO(i2c1_scl_io), .I(i2c1_scl_o), .T(i2c1_scl_t) );
+IOBUF i_i2c1_sda (.O(i2c1_sda_i), .IO(i2c1_sda_io), .I(i2c1_sda_o), .T(i2c1_sda_t) );
 
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]), .rstn (frstn[0]));
@@ -335,8 +351,14 @@ red_pitaya_ps ps (
   .gpio          (gpio),
   // system read/write channel
   .bus           (ps_sys      ),
+  // I2C1
+  .i2c1_scl_i    (i2c1_scl_i),
+  .i2c1_scl_o    (i2c1_scl_o),
+  .i2c1_scl_t    (i2c1_scl_t),
+  .i2c1_sda_i    (i2c1_sda_i),
+  .i2c1_sda_o    (i2c1_sda_o),
+  .i2c1_sda_t    (i2c1_sda_t),
   // AXI masters
-
   .axi0_sys      (axi0_sys    ),
   .axi1_sys      (axi1_sys    ),
   .axi2_sys      (axi2_sys    ),

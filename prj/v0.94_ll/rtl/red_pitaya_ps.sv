@@ -65,6 +65,13 @@ module red_pitaya_ps (
   gpio_if.m              gpio,
   // system read/write channel
   sys_bus_if.m           bus,
+  // i2c1   
+  input  logic           i2c1_scl_i,
+  output logic           i2c1_scl_o,
+  output logic           i2c1_scl_t,
+  input  logic           i2c1_sda_i,
+  output logic           i2c1_sda_o,
+  output logic           i2c1_sda_t,
 
   // AXI masters
   axi_sys_if.m           axi0_sys,
@@ -506,6 +513,13 @@ system system_i (
   .GPIO_tri_i (gpio.i),
   .GPIO_tri_o (gpio.o),
   .GPIO_tri_t (gpio.t),
+  // I2C1
+  .IIC_1_0_scl_i     (i2c1_scl_i),
+  .IIC_1_0_scl_o     (i2c1_scl_o),
+  .IIC_1_0_scl_t     (i2c1_scl_t),
+  .IIC_1_0_sda_i     (i2c1_sda_i),
+  .IIC_1_0_sda_o     (i2c1_sda_o),
+  .IIC_1_0_sda_t     (i2c1_sda_t),
   // SPI
   .SPI0_io0_i (1'b0),
   .SPI0_io0_o (),

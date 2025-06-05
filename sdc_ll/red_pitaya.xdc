@@ -194,6 +194,10 @@ set_property PACKAGE_PIN J15 [get_ports {led_o[6]}] ; # LED6
 set_property PACKAGE_PIN J14 [get_ports {led_o[7]}] ; # LED7
 
 
+### I2C1
+set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8  PACKAGE_PIN T15}  [get_ports i2c1_sda_io] ; # 
+set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8  PACKAGE_PIN P14}  [get_ports i2c1_scl_io] ; # 
+
 ############################################################################
 # Clock constraints                                                        #
 ############################################################################
