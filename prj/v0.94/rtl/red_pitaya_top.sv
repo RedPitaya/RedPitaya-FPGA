@@ -431,6 +431,10 @@ always @(posedge adc_clk) begin
   adc_dat[0] <= digital_loop[0] ? dac_a : {adc_dat_raw[0][ADW-1], ~adc_dat_raw[0][ADW-2:0]};
   adc_dat[1] <= digital_loop[0] ? dac_b : {adc_dat_raw[1][ADW-1], ~adc_dat_raw[1][ADW-2:0]};
 end
+//always @(posedge adc_clk) begin
+  //adc_dat[0] <= digital_loop[0] ? dac_a : adc_dat_raw[0];
+  //adc_dat[1] <= digital_loop[0] ? dac_b : adc_dat_raw[1];
+//end
 
 ////////////////////////////////////////////////////////////////////////////////
 // DAC IO
@@ -596,10 +600,8 @@ rp_scope_com #(
   .sys_err       (sys[1].err  ),
   .sys_ack       (sys[1].ack  )
 );
-
 /*
-red_pitaya_scope #(
-  .ADC_DW(ADC_DW))
+red_pitaya_scope (
 i_scope (
   // ADC
   .adc_a_i       (adc_dat[0]  ),  // CH 1
@@ -630,7 +632,6 @@ i_scope (
   .sys_ack       (sys[1].ack  )
 );
 */
-
 ////////////////////////////////////////////////////////////////////////////////
 //  DAC arbitrary signal generator
 ////////////////////////////////////////////////////////////////////////////////

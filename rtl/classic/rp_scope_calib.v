@@ -95,10 +95,6 @@ begin
     gain_calc_r <= 'h0;
     gain_calc   <= 'h0;
   end else begin
-      //if(DBITS > 15)
-        //gain_calc_r <= $signed({offset_calc_limit,{15+(DBITS-16){1'b0}}}) * $signed({{15{1'b0}},gain});
-    //else
-        //gain_calc_r <= $signed({offset_calc_limit,{15-(16-DBITS){1'b0}}}) * $signed({{15{1'b0}},gain});
 
     //gain_calc_r <= $signed({offset_calc_limit,{15{1'b0}}}) * {{15{1'b0}},gain};
     gain_calc_r <= ($signed({offset_calc_limit,{15{1'b0}}}) * $signed({{15{1'b0}},gain})) >>> (30);
@@ -106,8 +102,8 @@ begin
   end
 end
 
-//assign gain_max = (gain_calc[46:45] == 2'b01);
-//assign gain_min = (gain_calc[46:45] == 2'b10);
+//assign gain_max = (gain_calc[CALC3_BITS-1:CALC3_BITS-2] == 2'b01);
+//assign gain_min = (gain_calc[CALC3_BITS-1:CALC3_BITS-2] == 2'b10);
 assign gain_max = gain_calc>CALC_MAX ? 1:0;
 assign gain_min = gain_calc<CALC_MIN ? 1:0;
 
