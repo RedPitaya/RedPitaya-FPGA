@@ -86,6 +86,8 @@ wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope_0_1.adc_wp_trig[14-1:0]
 wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope_0_1.set_tresh[14-1:0];
 
 `else
+//`define RP_SCOPE
+`ifdef RP_SCOPE
 wire  [  14-1:0] adc_adr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_wp_act[2*14-1:1*14],
                                   top_tb.red_pitaya_top.i_scope.adc_wp_act[14-1:0]};
 
@@ -108,6 +110,30 @@ wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope.adc_wp_trig[14-1:0];
 wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope.set_tresh[14-1:0];
 wire           adc_trig  = top_tb.red_pitaya_top.i_scope.adc_trig[0];
 wire           axi_trig  = top_tb.red_pitaya_top.i_scope.axi_trig[0];
+`else
+wire  [  14-1:0] adc_adr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_b_raddr,
+                                  top_tb.red_pitaya_top.i_scope.adc_a_raddr};
+
+wire  [  14-1:0] adc_datr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_b_rd,
+                                   top_tb.red_pitaya_top.i_scope.adc_a_rd};
+
+wire  [2*1 -1:0] adc_we    = {top_tb.red_pitaya_top.i_scope.adc_we,
+                              top_tb.red_pitaya_top.i_scope.adc_we};
+
+wire  [2*1 -1:0] adc_dv    = {top_tb.red_pitaya_top.i_scope.adc_dv_del,
+                              top_tb.red_pitaya_top.i_scope.adc_dv_del};
+
+wire  [2*1 -1:0] adc_clk   = {top_tb.red_pitaya_top.i_scope.adc_clk_i,
+                              top_tb.red_pitaya_top.i_scope.adc_clk_i};
+
+wire [ 4-1:0]  trig_src  = top_tb.red_pitaya_top.i_scope.set_trig_src[4-1:0];
+wire [32-1:0]  axi_triga = top_tb.red_pitaya_top.i_scope.set_a_axi_trig;
+//wire [32-1:0]  axi_triga = top_tb.red_pitaya_top.i_scope.axi_wp_trig[32-1:0];
+wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope.adc_wp_trig[14-1:0];
+wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope.set_a_tresh;
+wire           adc_trig  = top_tb.red_pitaya_top.i_scope.adc_trig;
+wire           axi_trig  = top_tb.red_pitaya_top.i_scope.set_a_axi_trig;
+`endif
 `endif
 
 

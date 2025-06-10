@@ -92,7 +92,7 @@ add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
-add_files                         $ip_files
+read_ip                         $ip_files
 }
 
 #if {$prj_name == "v0.94"} {
@@ -100,13 +100,13 @@ add_files                         $ip_files
 #}
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+read_ip $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
 upgrade_ip [get_ips asg_dat_fifo] 
 generate_target all [get_ips asg_dat_fifo ]
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-add_files $path_ip_top/sync_fifo/sync_fifo.xci
+read_ip $path_ip_top/sync_fifo/sync_fifo.xci
 upgrade_ip [get_ips sync_fifo] 
 generate_target all [get_ips sync_fifo]
 }
