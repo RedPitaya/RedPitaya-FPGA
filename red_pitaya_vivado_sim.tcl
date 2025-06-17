@@ -109,7 +109,8 @@ switch $model {
     set def_model "Z20_G2"
 }
 "Z20_ll" {
-    set def_model "Z20_ll"
+    set def_name "v0.94_ll"
+    set def_model "Z20_LL"
 }
 default {
     set def_model "Z10_14"
@@ -162,9 +163,9 @@ if {($def_name == "STREAMING")} {
         set_property verilog_define {Z20_G2 Z20_xx} [current_fileset]
         source ${path_tbn}/systemZ20_G2_sim.tcl
     }
-    "Z20_ll" {
-        set_property verilog_define {Z20_ll Z20_xx} [current_fileset]
-        source ${path_ip}/systemZ20_14.tcl
+    "Z20_LL" {
+        set_property verilog_define {Z20_LL Z20_xx} [current_fileset]
+        source ${path_ip}/systemZ20_sim.tcl
     }
     default {
         source ${path_tbn}/systemZ10_sim.tcl
@@ -191,9 +192,9 @@ if {($def_name == "STREAMING")} {
         set_property verilog_define {Z20_G2 Z20_xx} [current_fileset]
         source ${path_ip}/systemZ20_G2.tcl
     }
-    "Z20_ll" {
-        set_property verilog_define {Z20_ll Z20_xx} [current_fileset]
-        source ${path_ip}/systemZ20_14.tcl
+    "Z20_LL" {
+        set_property verilog_define {Z20_LL Z20_xx} [current_fileset]
+        source ${path_ip}/systemZ20_ll.tcl
     }
     default {
         source ${path_ip}/systemZ10.tcl

@@ -86,6 +86,12 @@ if {[file isdirectory $path_ip_top/sync_fifo]} {
 add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
 
+if {[file isdirectory $path_ip_top/ila_0]} {
+add_file $path_ip_top/ila_0/ila_0.xci
+upgrade_ip [get_ips ila_0]
+synth_ip [get_ips ila_0]
+}
+
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ################################################################################

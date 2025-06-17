@@ -62,7 +62,7 @@ always @(posedge adc_clk_i) begin
     dac_cha_prev <= dac_a_o;
     dac_chb_prev <= dac_b_o;
 end
-`elsif Z20_LL
+`elsif Z20_LL_OLD
     if (dac_wrt_i[0]) begin
         dac_a_o <= {dac_dat_i[0][14-1],~dac_dat_i[0][14-2:0]};
     end

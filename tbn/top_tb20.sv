@@ -74,7 +74,7 @@ module top_tb #(
   `define   rp_top        red_pitaya_top
   `endif
 
-  `ifdef Z20_ll
+  `ifdef Z20_LL
   parameter ADC_DW        = 14,
   parameter MNG           = 2,
   parameter TRIG_ACT_LVL  = 1,
@@ -82,7 +82,7 @@ module top_tb #(
   parameter DWE           = 8,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
-  `define   rp_top        red_pitaya_top_ll
+  `define   rp_top        red_pitaya_top
   `endif
 
   parameter N_SAMP        = 131072-1, // size of ADC buffer file
@@ -601,7 +601,7 @@ red_pitaya_top
   .dac_dat_o    (dac_dat),
   .dac_reset_o  (dac_rst),
   .exp_9_io     (gpio_9),
-  `elsif Z20_ll
+  `elsif Z20_LL
   // ADC
   .adc_dclk_i  (adcll_odclk ),  // ADC data clock {p,n}
   .adc_fclk_i  (adcll_fclk  ),  // ADC frame clock {p,n}

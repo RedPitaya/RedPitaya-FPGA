@@ -136,6 +136,15 @@ output logic                M_AXI_STR_TX3_tlast ,  M_AXI_STR_TX2_tlast , //M_AXI
 input  logic                M_AXI_STR_TX3_tready,  M_AXI_STR_TX2_tready, //M_AXI_STR_TX1_tready, M_AXI_STR_TX0_tready,
 output logic                M_AXI_STR_TX3_tvalid,  M_AXI_STR_TX2_tvalid, //M_AXI_STR_TX1_tvalid, M_AXI_STR_TX0_tvalid,
 
+`ifdef Z20_LL
+input         IIC_1_0_scl_i,
+output        IIC_1_0_scl_o,
+output        IIC_1_0_scl_t,
+input         IIC_1_0_sda_i,
+output        IIC_1_0_sda_o,
+output        IIC_1_0_sda_t,
+`endif
+
 input         SPI0_io0_i,
 output        SPI0_io0_o,
 output        SPI0_io0_t,

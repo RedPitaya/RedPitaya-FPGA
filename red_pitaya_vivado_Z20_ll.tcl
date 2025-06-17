@@ -92,19 +92,42 @@ add_files                               $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
-add_files                         $ip_files
+add_file                         $ip_files
 }
 
+#set ip_folders [glob -directory -tails [file join $path_ip_top *]]
+#set ip_folders [glob -nocomplain -type {d} $path_ip_top/*]
+#set ip_files [glob -nocomplain $path_ip_top/**/*.xci]
+#if {$ip_files != ""} {
+#add_file                         $ip_files
+#}
+#puts "folders: $ip_folders"
+#if {$ip_folders != ""} {
+#upgrade_ip [get_ips $ip_folders]
+#synth_ip [get_ips $ip_folders]
+#}
+
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+add_file $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+upgrade_ip [get_ips asg_dat_fifo]
+synth_ip [get_ips asg_dat_fifo]
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-add_files $path_ip_top/sync_fifo/sync_fifo.xci
+add_file $path_ip_top/sync_fifo/sync_fifo.xci
+upgrade_ip [get_ips sync_fifo]
+synth_ip [get_ips sync_fifo]
 }
 
+if {[file isdirectory $path_ip_top/ila_0]} {
+add_file $path_ip_top/ila_0/ila_0.xci
+upgrade_ip [get_ips ila_0]
+synth_ip [get_ips ila_0]
+}
+
+
 upgrade_ip [get_ips *] 
-#synth_ip [get_ips *]
+##synth_ip [get_ips *]
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 

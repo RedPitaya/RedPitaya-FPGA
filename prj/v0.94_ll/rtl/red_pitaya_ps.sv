@@ -429,7 +429,12 @@ assign fclk_rstn_o = fclk_rstn;
 
 BUFG fclk_buf [4-1:0] (.O(fclk_clk_o), .I(fclk_clk));
 
-system system_i (
+`ifdef SIMULATION
+system_model system_i
+`else
+system system_i 
+`endif //SIMULATION
+(
   // MIO
   .FIXED_IO_mio      (FIXED_IO_mio     ),
   .FIXED_IO_ps_clk   (FIXED_IO_ps_clk  ),

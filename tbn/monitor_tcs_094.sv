@@ -86,7 +86,12 @@ wire [14-1:0]  adc_triga = top_tb.red_pitaya_top.i_scope_0_1.adc_wp_trig[14-1:0]
 wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope_0_1.set_tresh[14-1:0];
 
 `else
-//`define RP_SCOPE
+`ifdef Z20_G2
+`define RP_SCOPE  // Z20_LL Z20_G2 where used rp_scope_com.sv
+`endif
+`ifdef Z20_G2
+`define RP_SCOPE  // Z20_LL Z20_G2 where used rp_scope_com.sv
+`endif
 `ifdef RP_SCOPE
 wire  [  14-1:0] adc_adr [1:0] = {top_tb.red_pitaya_top.i_scope.adc_wp_act[2*14-1:1*14],
                                   top_tb.red_pitaya_top.i_scope.adc_wp_act[14-1:0]};
