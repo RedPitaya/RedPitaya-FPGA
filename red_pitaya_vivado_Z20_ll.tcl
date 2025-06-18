@@ -119,14 +119,7 @@ upgrade_ip [get_ips sync_fifo]
 synth_ip [get_ips sync_fifo]
 }
 
-if {[file isdirectory $path_ip_top/ila_0]} {
-add_file $path_ip_top/ila_0/ila_0.xci
-upgrade_ip [get_ips ila_0]
-synth_ip [get_ips ila_0]
-}
-
-
-upgrade_ip [get_ips *] 
+#upgrade_ip [get_ips *] 
 ##synth_ip [get_ips *]
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
@@ -186,6 +179,13 @@ report_io                -file    $path_out/post_imp_io.rpt
 #write_xdc -no_fixed_only -force   $path_out/bft_impl.xdc
 
 xilinx::ultrafast::report_io_reg -verbose -file $path_out/post_route_iob.rpt
+
+################################################################################
+# write debug probes 
+################################################################################
+
+
+write_debug_probes        -force $path_out/red_pitaya
 
 ################################################################################
 # generate a bitstream

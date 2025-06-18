@@ -470,7 +470,6 @@ always @(posedge fclk[0]) begin
   adc_en <= adc_en_cnt[7];
 end
 
-
 //assign adc_clk = pll_dac_clk_1x ;
 
 adc366x_top i_adc366x
