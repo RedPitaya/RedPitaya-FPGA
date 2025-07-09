@@ -114,6 +114,6 @@ always @(posedge axi_clk_i) begin
   axidly_dat_o <= axi_fifo[2];
 end
 
-assign dly_valp_o    = adc_fifo[dat_dly];
+assign dly_valp_o    = adc_dv_r[dat_dly];
 assign axidly_valp_o = adc_dv_r[1];
 endmodule

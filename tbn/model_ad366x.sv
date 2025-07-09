@@ -36,7 +36,7 @@ reg            frl   = 0;
 reg  [LW-1: 0] outal = 0;
 reg  [LW-1: 0] outbl = 0;
 
-always @(posedge dco_o) begin
+always @(dco_o) begin
 
   if (&bsel[2:0])begin
    outa <= {dat_a, 2'h0} ;

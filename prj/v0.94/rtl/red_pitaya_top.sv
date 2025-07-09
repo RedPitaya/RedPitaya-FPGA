@@ -550,14 +550,13 @@ assign CAN1_rx = can_on & exp_p_in[6];
 ////////////////////////////////////////////////////////////////////////////////
 
 wire [ 4-1:0] trig_ch_0_1;
-wire [ 4-1:0] trig_ch_2_3;
+wire [ 4-1:0] trig_ch_2_3 = 4'h0;
 wire [16-1:0] trg_state_ch_0_1;
-wire [16-1:0] trg_state_ch_2_3;
+wire [16-1:0] trg_state_ch_2_3 = 16'h0;
 wire [16-1:0] adc_state_ch_0_1;
-wire [16-1:0] adc_state_ch_2_3;
+wire [16-1:0] adc_state_ch_2_3 = 16'h0;
 wire [16-1:0] axi_state_ch_0_1;
-wire [16-1:0] axi_state_ch_2_3;
-logic         trig_asg_out;
+wire [16-1:0] axi_state_ch_2_3 = 16'h0;
 
 rp_scope_com #(
   .CHN(0),
