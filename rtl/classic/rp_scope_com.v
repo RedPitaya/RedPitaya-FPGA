@@ -171,8 +171,8 @@ genvar GV;
 generate
 for(GV = 0 ; GV < N_CH ; GV = GV + 1) begin
 //wire [ DW-1: 0] adc_calib_in  ;
-wire [ 16-1: 0] adc_calib_in  ;
-wire [ 16-1: 0] adc_calib_out ;
+wire [ DW-1: 0] adc_calib_in  ;
+wire [ DW-1: 0] adc_calib_out ;
 //wire [ DW-1: 0] adc_calib_in  ;
 //wire [ DW-1: 0] adc_calib_out ;
 wire [ DW-1: 0] adc_filt_in  ;
@@ -192,7 +192,7 @@ wire  adc_sign_a = adc_dat_i[(GV+1)*DW-1];
 assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
 
 rp_scope_calib #(
-    .DBITS(14)
+    .DBITS(DW)
     )
     i_calib_ch(
   .adc_clk_i            ( adc_clk_i[GV] ),  // ADC clock
@@ -210,18 +210,34 @@ rp_scope_calib #(
 //assign adc_filt_in = adc_calib_out[16-1:2];
 assign adc_filt_in = adc_calib_out;
 
-red_pitaya_dfilt1 i_dfilt1_ch (
+osc_filter #(
+    .DW     ( DW ) 
+) i_dfilt1_ch (
    // ADC
-  .adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
-  .adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
-  .adc_dat_i   ( adc_filt_in   ),  // ADC raw data
-  .adc_dat_o   ( adc_filtered  ),  // filtered data
+  .clk         ( adc_clk_i[GV] ),  // ADC clock
+  .rst_n       ( filt_rstn[GV] ),  // ADC reset - active low
+  .s_axis_tdata( adc_filt_in   ),  // ADC raw data
+  .s_axis_tvalid(1'b1),
+  .m_axis_tdata( adc_filtered  ),  // filtered data
+  .cfg_bypass(1'b0),
    // configuration
-  .cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
-  .cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
-  .cfg_kk_i    ( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
-  .cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
+  .cfg_coeff_aa( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
+  .cfg_coeff_bb( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
+  .cfg_coeff_kk( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
+  .cfg_coeff_pp( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
 );
+//red_pitaya_dfilt1 i_dfilt1_ch (
+   //// ADC
+  //.adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
+  //.adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
+  //.adc_dat_i   ( adc_filt_in   ),  // ADC raw data
+  //.adc_dat_o   ( adc_filtered  ),  // filtered data
+   //// configuration
+  //.cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
+  //.cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
+  //.cfg_kk_i    ( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
+  //.cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
+//);
 
 assign adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
