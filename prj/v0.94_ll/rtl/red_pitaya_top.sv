@@ -640,23 +640,6 @@ wire [16-1:0] adc_state_ch_2_3 = 16'h0;
 wire [16-1:0] axi_state_ch_0_1;
 wire [16-1:0] axi_state_ch_2_3 = 16'h0;
 
-// dbg  to be removed 
-wire   signed [16-1:0] dbg_out;
-assign adc_a_i_dbg = dbg_out;
-
-dbg_counter #(
-    .DW(16)
-    )
-i_dbg_counter (
-    .out    (dbg_out),
-    //.din    (adc_a_dat),
-    .clk    (adc_clk),
-    .reset_n(adc_rstn),
-    .bypass (1'b0)
-);
-// dbg  to be removed 
-// ^^^^^^^^^^^^^^
-
 rp_scope_com #(
   .CHN      (0),
   .N_CH     (2),
@@ -664,8 +647,8 @@ rp_scope_com #(
   .RSZ      (14)) 
   i_scope (
   // ADC
-  //.adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
-  .adc_dat_i     ({adc_dat[1], dbg_out}  ),
+  .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  //.adc_dat_i     ({adc_dat[1], dbg_out}  ),
   .adc_clk_i     ({2{adc_clk}}  ),  // clock
   .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
