@@ -31,6 +31,7 @@ reg signed  [DBITS-1:0]           offset, offset_reg;
 reg signed  [15:0]                gain, gain_reg;     
 
 reg  signed [DBITS:0]             offset_calc;
+reg  signed [DBITS:0]             offset_calc_r;
 wire                              offs_max, offs_min;
 wire signed [DBITS:0]             offset_calc_limit;
 
@@ -41,6 +42,7 @@ wire signed [DBITS-1:0]           gain_calc_limit;
 
 reg                               s_axis_tvalid_p1;
 reg                               s_axis_tvalid_p2;
+reg                               s_axis_tvalid_p3;
 
 initial begin
     //$display ("DBITS=%0d (CALC3_BITS-C_START-1)=%0d (CALC3_BITS)-C_END)=%0d ", DBITS, (CALC3_BITS-C_START-1), ((CALC3_BITS)-C_END));
@@ -122,15 +124,16 @@ begin
   if (adc_rstn_i == 1'b0)
     offset_calc <= 'h0;
   else
-    offset_calc <= $signed(adc_data) + $signed(offset);  
+    offset_calc <= $signed(adc_data) + $signed(offset);
+    offset_calc_r <= offset_calc;
 end
 
 //assign offs_max = (offset_calc[16:15] == 2'b01);
 //assign offs_min = (offset_calc[16:15] == 2'b10);
-assign offs_max = (offset_calc[DBITS:DBITS-1] == 2'b01);
-assign offs_min = (offset_calc[DBITS:DBITS-1] == 2'b10);
+assign offs_max = (offset_calc_r[DBITS:DBITS-1] == 2'b01);
+assign offs_min = (offset_calc_r[DBITS:DBITS-1] == 2'b10);
 
-assign offset_calc_limit = offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc);
+assign offset_calc_limit = offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc_r);
 
 ////////////////////////////////////////////////////////////
 // Name : Master AXI-S TDATA
@@ -159,7 +162,8 @@ begin
   end else begin
     s_axis_tvalid_p1  <= calib_din_tvalid_i;
     s_axis_tvalid_p2  <= s_axis_tvalid_p1;
-    calib_dout_tvalid_o     <= s_axis_tvalid_p2;   
+    s_axis_tvalid_p3  <= s_axis_tvalid_p2;
+    calib_dout_tvalid_o     <= s_axis_tvalid_p3;   
   end
 end
 

@@ -77,23 +77,55 @@ end else begin
    else if (dly_valp_i)
       adc_trig_sw_r <= 1'b0; 
 
+end
+
+genvar GV;
+generate
+if(CHN == 0) begin
+
+always @(posedge adc_clk_i) begin
    case (set_trig_src & ({4{!adc_trg_dis}}))
        4'd1 : adc_trig <= adc_trig_sw   ; // manual
-       4'd2 : adc_trig <= CHN == 0 ? adc_trig_p_i[0] : trig_ch_i[0] ; // A ch rising edge
-       4'd3 : adc_trig <= CHN == 0 ? adc_trig_n_i[0] : trig_ch_i[1] ; // A ch falling edge
-       4'd4 : adc_trig <= CHN == 0 ? adc_trig_p_i[1] : trig_ch_i[2] ; // B ch rising edge
-       4'd5 : adc_trig <= CHN == 0 ? adc_trig_n_i[1] : trig_ch_i[3] ; // B ch falling edge
+       4'd2 : adc_trig <= adc_trig_p_i[0] ; // A ch rising edge
+       4'd3 : adc_trig <= adc_trig_n_i[0] ; // A ch falling edge
+       4'd4 : adc_trig <= adc_trig_p_i[1] ; // B ch rising edge
+       4'd5 : adc_trig <= adc_trig_n_i[1] ; // B ch falling edge
        4'd6 : adc_trig <= ext_trig_p_i  ; // external - rising edge
        4'd7 : adc_trig <= ext_trig_n_i  ; // external - falling edge
        4'd8 : adc_trig <= asg_trig_p_i  ; // ASG - rising edge
        4'd9 : adc_trig <= asg_trig_n_i  ; // ASG - falling edge
-       4'd10: adc_trig <= CHN == 1 ? adc_trig_p_i[0] : trig_ch_i[0] ; // from the other two ADC channels: C ch rising edge
-       4'd11: adc_trig <= CHN == 1 ? adc_trig_n_i[0] : trig_ch_i[1] ; // from the other two ADC channels: C ch falling edge
-       4'd12: adc_trig <= CHN == 1 ? adc_trig_p_i[1] : trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
-       4'd13: adc_trig <= CHN == 1 ? adc_trig_n_i[1] : trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
+       4'd10: adc_trig <= trig_ch_i[0] ; // from the other two ADC channels: C ch rising edge
+       4'd11: adc_trig <= trig_ch_i[1] ; // from the other two ADC channels: C ch falling edge
+       4'd12: adc_trig <= trig_ch_i[2] ; // from the other two ADC channels: D ch rising edge
+       4'd13: adc_trig <= trig_ch_i[3] ; // from the other two ADC channels: D ch falling edge
     default : adc_trig <= 1'b0          ; 
    endcase
 end
+
+end else begin
+
+always @(posedge adc_clk_i) begin
+   case (set_trig_src & ({4{!adc_trg_dis}}))
+       4'd1 : adc_trig <= adc_trig_sw   ; // manual
+       4'd2 : adc_trig <= trig_ch_i[0] ; // A ch rising edge
+       4'd3 : adc_trig <= trig_ch_i[1] ; // A ch falling edge
+       4'd4 : adc_trig <= trig_ch_i[2] ; // B ch rising edge
+       4'd5 : adc_trig <= trig_ch_i[3] ; // B ch falling edge
+       4'd6 : adc_trig <= ext_trig_p_i  ; // external - rising edge
+       4'd7 : adc_trig <= ext_trig_n_i  ; // external - falling edge
+       4'd8 : adc_trig <= asg_trig_p_i  ; // ASG - rising edge
+       4'd9 : adc_trig <= asg_trig_n_i  ; // ASG - falling edge
+       4'd10: adc_trig <= adc_trig_p_i[0] ; // from the other two ADC channels: C ch rising edge
+       4'd11: adc_trig <= adc_trig_n_i[0] ; // from the other two ADC channels: C ch falling edge
+       4'd12: adc_trig <= adc_trig_p_i[1] ; // from the other two ADC channels: D ch rising edge
+       4'd13: adc_trig <= adc_trig_n_i[1] ; // from the other two ADC channels: D ch falling edge
+    default : adc_trig <= 1'b0          ; 
+   endcase
+end
+
+end
+endgenerate
+
 
 assign adc_trig_o    = adc_trig;
 assign trg_state_o   = {3'h0, adc_trg_dis, set_trig_src};

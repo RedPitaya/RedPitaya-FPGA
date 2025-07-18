@@ -163,6 +163,7 @@ logic                 ser_clk ;
 // PWM clock and reset
 logic                 pwm_clk ;
 logic                 pwm_rstn;
+logic                 trig_asg_out;
 
 //SPI CS
 logic                 spi_cs;
@@ -384,6 +385,7 @@ sys_bus_interconnect #(
   .bus_s (sys)
 );
 
+sys_bus_stub sys_bus_stub_3 (sys[3]);
 generate
 for (genvar i=6; i<8; i++) begin: for_sys
   sys_bus_stub sys_bus_stub_5_7 (sys[i]);
@@ -627,7 +629,6 @@ wire [16-1:0] adc_state_ch_0_1;
 wire [16-1:0] adc_state_ch_2_3;
 wire [16-1:0] axi_state_ch_0_1;
 wire [16-1:0] axi_state_ch_2_3;
-logic         trig_asg_out;
 
 rp_scope_com #(
   .CHN(0),
