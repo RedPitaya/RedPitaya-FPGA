@@ -525,8 +525,8 @@ begin
   dac_dat_a <= {dac_a[14-1], ~dac_a[14-2:0]};
   dac_dat_b <= {dac_b[14-1], ~dac_b[14-2:0]};
  // Loopback is for demonstration only. We avoid constraining for timing optimizations.
-  dac_data_o <= digital_loop[1] ? adc_dat_raw[0][16-1 -: 14] : dac_dat_a ;
-  dac_datb_o <= digital_loop[1] ? adc_dat_raw[1][16-1 -: 14] : dac_dat_b ;
+  dac_data_o <= digital_loop[1] ? adc_dat_raw[1][16-1 -: 14] : dac_dat_b ;
+  dac_datb_o <= digital_loop[1] ? adc_dat_raw[0][16-1 -: 14] : dac_dat_a ;
 end
 
 // DDR outputs
@@ -631,27 +631,65 @@ assign CAN1_rx = can_on & exp_p_in[6];
 // oscilloscope
 ////////////////////////////////////////////////////////////////////////////////
 
+wire [ 4-1:0] trig_ch_0_1;
+wire [ 4-1:0] trig_ch_2_3 = 4'h0;
+wire [16-1:0] trg_state_ch_0_1;
+wire [16-1:0] trg_state_ch_2_3 = 16'h0;
+wire [16-1:0] adc_state_ch_0_1;
+wire [16-1:0] adc_state_ch_2_3 = 16'h0;
+wire [16-1:0] axi_state_ch_0_1;
+wire [16-1:0] axi_state_ch_2_3 = 16'h0;
 
-red_pitaya_scope_Z20 i_scope (
+// dbg  to be removed 
+wire   signed [16-1:0] dbg_out;
+assign adc_a_i_dbg = dbg_out;
+
+dbg_counter #(
+    .DW(16)
+    )
+i_dbg_counter (
+    .out    (dbg_out),
+    //.din    (adc_a_dat),
+    .clk    (adc_clk),
+    .reset_n(adc_rstn),
+    .bypass (1'b0)
+);
+// dbg  to be removed 
+// ^^^^^^^^^^^^^^
+
+rp_scope_com #(
+  .CHN      (0),
+  .N_CH     (2),
+  .DW       (16),
+  .RSZ      (14)) 
+  i_scope (
   // ADC
-  .adc_a_i       (adc_dat[0]  ),  // CH 1
-  .adc_b_i       (adc_dat[1]  ),  // CH 2
-  .adc_clk_i     (adc_clk     ),  // clock
-  .adc_rstn_i    (adc_rstn    ),  // reset - active low
+  //.adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  .adc_dat_i     ({adc_dat[1], dbg_out}  ),
+  .adc_clk_i     ({2{adc_clk}}  ),  // clock
+  .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
+  .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .trig_ext_asg_o(trig_ext_asg01),
   .trig_ext_asg_i(trig_ext_asg01),
   .daisy_trig_o  (scope_trigo ),
+  .adc_state_o   (adc_state_ch_0_1),
+  .adc_state_i   (adc_state_ch_2_3),
+  .axi_state_o   (axi_state_ch_0_1),
+  .axi_state_i   (axi_state_ch_2_3),
+  .trg_state_o   (trg_state_ch_0_1),
+  .trg_state_i   (trg_state_ch_2_3),
   // AXI0 master                 // AXI1 master
-  .axi0_waddr_o  (axi0_sys.waddr ),  .axi1_waddr_o  (axi1_sys.waddr ),
-  .axi0_wdata_o  (axi0_sys.wdata ),  .axi1_wdata_o  (axi1_sys.wdata ),
-  .axi0_wsel_o   (axi0_sys.wsel  ),  .axi1_wsel_o   (axi1_sys.wsel  ),
-  .axi0_wvalid_o (axi0_sys.wvalid),  .axi1_wvalid_o (axi1_sys.wvalid),
-  .axi0_wlen_o   (axi0_sys.wlen  ),  .axi1_wlen_o   (axi1_sys.wlen  ),
-  .axi0_wfixed_o (axi0_sys.wfixed),  .axi1_wfixed_o (axi1_sys.wfixed),
-  .axi0_werr_i   (axi0_sys.werr  ),  .axi1_werr_i   (axi1_sys.werr  ),
-  .axi0_wrdy_i   (axi0_sys.wrdy  ),  .axi1_wrdy_i   (axi1_sys.wrdy  ),
+  .axi_waddr_o  ({axi1_sys.waddr,  axi0_sys.waddr} ),
+  .axi_wdata_o  ({axi1_sys.wdata,  axi0_sys.wdata} ),
+  .axi_wsel_o   ({axi1_sys.wsel,   axi0_sys.wsel}  ),
+  .axi_wvalid_o ({axi1_sys.wvalid, axi0_sys.wvalid}),
+  .axi_wlen_o   ({axi1_sys.wlen,   axi0_sys.wlen}  ),
+  .axi_wfixed_o ({axi1_sys.wfixed, axi0_sys.wfixed}),
+  .axi_werr_i   ({axi1_sys.werr,   axi0_sys.werr}  ),
+  .axi_wrdy_i   ({axi1_sys.wrdy,   axi0_sys.wrdy}  ),
   // System bus
   .sys_addr      (sys[1].addr ),
   .sys_wdata     (sys[1].wdata),
@@ -661,6 +699,36 @@ red_pitaya_scope_Z20 i_scope (
   .sys_err       (sys[1].err  ),
   .sys_ack       (sys[1].ack  )
 );
+// old scope 
+//red_pitaya_scope_Z20 i_scope (
+  //// ADC
+  //.adc_a_i       (adc_dat[0]  ),  // CH 1
+  //.adc_b_i       (adc_dat[1]  ),  // CH 2
+  //.adc_clk_i     (adc_clk     ),  // clock
+  //.adc_rstn_i    (adc_rstn    ),  // reset - active low
+  //.trig_ext_i    (trig_ext    ),  // external trigger
+  //.trig_asg_i    (trig_asg_out),  // ASG trigger
+  //.trig_ext_asg_o(trig_ext_asg01),
+  //.trig_ext_asg_i(trig_ext_asg01),
+  //.daisy_trig_o  (scope_trigo ),
+  //// AXI0 master                 // AXI1 master
+  //.axi0_waddr_o  (axi0_sys.waddr ),  .axi1_waddr_o  (axi1_sys.waddr ),
+  //.axi0_wdata_o  (axi0_sys.wdata ),  .axi1_wdata_o  (axi1_sys.wdata ),
+  //.axi0_wsel_o   (axi0_sys.wsel  ),  .axi1_wsel_o   (axi1_sys.wsel  ),
+  //.axi0_wvalid_o (axi0_sys.wvalid),  .axi1_wvalid_o (axi1_sys.wvalid),
+  //.axi0_wlen_o   (axi0_sys.wlen  ),  .axi1_wlen_o   (axi1_sys.wlen  ),
+  //.axi0_wfixed_o (axi0_sys.wfixed),  .axi1_wfixed_o (axi1_sys.wfixed),
+  //.axi0_werr_i   (axi0_sys.werr  ),  .axi1_werr_i   (axi1_sys.werr  ),
+  //.axi0_wrdy_i   (axi0_sys.wrdy  ),  .axi1_wrdy_i   (axi1_sys.wrdy  ),
+  //// System bus
+  //.sys_addr      (sys[1].addr ),
+  //.sys_wdata     (sys[1].wdata),
+  //.sys_wen       (sys[1].wen  ),
+  //.sys_ren       (sys[1].ren  ),
+  //.sys_rdata     (sys[1].rdata),
+  //.sys_err       (sys[1].err  ),
+  //.sys_ack       (sys[1].ack  )
+//);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  DAC arbitrary signal generator
