@@ -1,23 +1,23 @@
 `timescale 1ns / 1ps
 
 module osc_filter
-  #(parameter AXIS_DATA_BITS = 16)(
+  #(parameter DW = 16)(
   input  wire         clk,  
   input  wire         rst_n,    
   // Slave AXI-S
-  input  wire [AXIS_DATA_BITS-1:0]  s_axis_tdata,
+  input  wire [DW-1:0]  s_axis_tdata,
   input  wire         s_axis_tvalid,
   output wire         s_axis_tready,
   // Master AXI-
-  output reg  [AXIS_DATA_BITS-1:0]  m_axis_tdata,
+  output reg  [DW-1:0]  m_axis_tdata,
   output wire         m_axis_tvalid,
   input  wire         m_axis_tready,
   // Confi
   input  wire         cfg_bypass,
-  input  wire [17:0]  cfg_coeff_aa, 
-  input  wire [24:0]  cfg_coeff_bb, 
-  input  wire [24:0]  cfg_coeff_kk, 
-  input  wire [24:0]  cfg_coeff_pp  
+  input  wire [18-1:0]  cfg_coeff_aa, 
+  input  wire [25-1:0]  cfg_coeff_bb, 
+  input  wire [25-1:0]  cfg_coeff_kk, 
+  input  wire [25-1:0]  cfg_coeff_pp  
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,19 +54,19 @@ wire signed [40-1:0]  kk_mult;
 reg  signed [14-1:0]  r5_reg;
 */
 
-wire signed [15:0]  din; 
-reg         [15:0]  tdata_pipe [0:3];
-reg         [3:0]   tvalid_pipe;
-wire signed [17:0]  coeff_aa;
-wire signed [24:0]  coeff_bb;
-wire signed [24:0]  coeff_kk;
-wire signed [24:0]  coeff_pp;
+wire signed [DW-1:0]  din; 
+reg         [DW-1:0]  tdata_pipe [0:3];
+reg         [3:0]     tvalid_pipe;
+wire signed [18-1:0]  coeff_aa;
+wire signed [25-1:0]  coeff_bb;
+wire signed [25-1:0]  coeff_kk;
+wire signed [25-1:0]  coeff_pp;
 
-wire signed [41-1:0]  bb_mult; // DIN + coeff_bb = 39->41
+wire signed [(DW+25)-1:0]  bb_mult; // DIN + coeff_bb = 39->41
 wire signed [35-1:0]  r2_sum; // r1reg = 33->35
 reg  signed [35-1:0]  r1_reg; // r02reg+1 = 33->35
 reg  signed [25-1:0]  r2_reg; // r2sum-10 = 23->25
-reg  signed [34-1:0]  r01_reg; // DIN + 18 = 32->34
+reg  signed [(DW+18)-1:0]  r01_reg; // DIN + 18 = 32->34
 reg  signed [30-1:0]  r02_reg; // BB mult - 10 = 28->30
 
 wire signed [41-1:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
@@ -81,12 +81,13 @@ reg  signed [17-1:0]  r4_reg; // r3sum-33-1
 reg  signed [17-1:0]  r3_shr; // r3sum-33-1
 
 reg  signed [42-1:0]  kk_mult;
-reg  signed [16-1:0]  r5_reg;
+reg  signed [DW-1:0]  r5_reg;
 reg                   bypass_reg;
 wire                  bypass_dis;
 
-assign din            = s_axis_tdata;
 assign s_axis_tready  = 1;
+// convert to signed 
+assign din            = s_axis_tdata;
 assign coeff_aa       = cfg_coeff_aa;
 assign coeff_bb       = cfg_coeff_bb;
 assign coeff_kk       = cfg_coeff_kk;
@@ -172,11 +173,13 @@ begin
  if ((rst_n == 1'b0) || bypass_dis) begin
    r5_reg <= 'h0;   
  end else begin
-    if ((kk_mult >>> 24) > $signed(16'h7FFF)) begin
-      r5_reg <= 16'h7FFF;
+    if ((kk_mult >>> 24) > $signed({1'b0,{(DW-1){1'b1}}})) begin
+      //r5_reg <= 16'h7FFF;
+      r5_reg <= {1'b0,{(DW-1){1'b1}}};
     end else begin
-      if ((kk_mult >>> 24) < $signed(16'h8000)) begin 
-        r5_reg <= 16'h8000;
+      if ((kk_mult >>> 24) < $signed({1'b1,{(DW-1){1'b0}}})) begin 
+        //r5_reg <= 16'h8000;
+        r5_reg <= {1'b1,{(DW-1){1'b0}}};
       end else  begin
         r5_reg <= kk_mult >>> 24;
       end
@@ -189,7 +192,7 @@ begin
   if (cfg_bypass)
     m_axis_tdata <= din;
   else
-    m_axis_tdata <= r5_reg;
+    m_axis_tdata <= $unsigned(r5_reg);
 end
 
 always @(posedge clk)
