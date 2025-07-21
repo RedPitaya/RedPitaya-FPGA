@@ -46,8 +46,15 @@ logic [SN-1:0]         bus_s_sync_cs;
 logic [SN-1:0]         bus_s_sync_adr;
 
 sys_bus_if             bus_int_i[SN-1:0](.clk (bus_m.clk), .rstn (bus_m.rstn)); //@FCLK0
-sys_bus_if             bus_int_o[SN-1:0](.clk ({bus_s[7].clk , bus_s[6].clk , bus_s[5].clk , bus_s[4].clk , bus_s[3].clk , bus_s[2].clk , bus_s[1].clk , bus_s[0].clk }), 
-                                         .rstn({bus_s[7].rstn, bus_s[6].rstn, bus_s[5].rstn, bus_s[4].rstn, bus_s[3].rstn, bus_s[2].rstn, bus_s[1].rstn, bus_s[0].rstn}));
+sys_bus_if             bus_int_o[SN-1:0]();
+
+genvar i;
+generate
+    for (i = 0; i < SN; i = i + 1) begin : gen_bus_connect
+        assign bus_int_o[i].clk  = bus_s[i].clk;
+        assign bus_int_o[i].rstn = bus_s[i].rstn;
+    end
+endgenerate
 
 assign bus_s_a  = `BUS_NAME_M.addr[SW+:SL];
 assign bus_s_cs = SN'(1) << bus_s_a;
