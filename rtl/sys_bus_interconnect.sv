@@ -80,7 +80,7 @@ assign `BUS_NAME_I1[i].wen   =  bus_s_cs[i] & `BUS_NAME_M.wen;
 assign `BUS_NAME_I1[i].ren   =  bus_s_cs[i] & `BUS_NAME_M.ren;
 
 //enables different config clock for each module if needed
-sys_bus_cdc2 inst_sys_bus_cdc
+sys_bus_cdc inst_sys_bus_cdc
 (
   .pll_locked_i(pll_locked_i),
   .bus_m(`BUS_NAME_I2[i]),
