@@ -121,7 +121,7 @@ wire [   4*18 -1: 0] set_filt_aa       ;
 wire [   4*25 -1: 0] set_filt_bb       ;
 wire [   4*25 -1: 0] set_filt_kk       ;
 wire [   4*25 -1: 0] set_filt_pp       ;
-wire [   4*16 -1: 0] set_calib_offset  ;
+wire [   4*DW -1: 0] set_calib_offset  ;
 wire [   4*16 -1: 0] set_calib_gain    ;
 wire [      4 -1: 0] set_filt_byp      ;
 wire [      20-1: 0] set_deb_len       ;
@@ -203,7 +203,7 @@ rp_scope_calib #(
 
   .calib_dat_o          (adc_calib_out),
   .calib_dout_tvalid_o  (),
-  .cfg_calib_offset_i   ( set_calib_offset[(GV+1)*16-1:GV*16] ),
+  .cfg_calib_offset_i   ( set_calib_offset[(GV+1)*DW-1:GV*DW] ),
   .cfg_calib_gain_i     ( set_calib_gain[(GV+1)*16-1:GV*16] )   
 );
 
