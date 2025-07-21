@@ -3,7 +3,7 @@
 // assumes single reads and writes
 ////////////////////////////////////////////////////////////////////////////////
 
-module sys_bus_cdc2 #(
+module sys_bus_cdc #(
 
 )(
   input        pll_locked_i,
@@ -144,4 +144,4 @@ assign reg_read_synced  = (reg_do != reg_done) && reg_re_csff[1] ;
 assign bus_m.wen   = reg_write ;
 assign bus_m.ren   = reg_read ;
 
-endmodule: sys_bus_cdc2
+endmodule: sys_bus_cdc
