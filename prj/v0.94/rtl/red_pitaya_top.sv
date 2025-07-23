@@ -787,34 +787,34 @@ always @(posedge adc_clk) begin
   adc_dat[1] <= {adc_dat_raw[1][ADW-1], ~adc_dat_raw[1][ADW-2:0]};
 end
 
-red_pitaya_hk #(.DWE(DWE)) i_hk (
-  // system signals
-  .clk_i           (adc_clk    ),  // clock
-  .rstn_i          (adc_rstn   ),  // reset - active low
-  .fclk_i          (fclk[0]    ),  // clock
-  .frstn_i         (frstn[0]   ),  // reset - active low
-  //// LED
-  //.led_o           (  led_o     ),  // LED output
-  //// global configuration
-  //.digital_loop    (digital_loop),
-  //.daisy_mode_o    (daisy_mode),
-  //// Expansion connector
-  // .exp_p_dat_i     (exp_p_in ),  // input data
-  // .exp_p_dat_o     (exp_p_out),  // output data
-  // .exp_p_dir_o     (exp_p_dir),  // 1-output enable
-  // .exp_n_dat_i     (exp_n_in ),
-  // .exp_n_dat_o     (exp_n_out),
-  // .exp_n_dir_o     (exp_n_dir),
-  // .can_on_o        (can_on   ),
-  //// System bus
-  .sys_addr        (sys[0].addr ),
-  .sys_wdata       (sys[0].wdata),
-  .sys_wen         (sys[0].wen  ),
-  .sys_ren         (sys[0].ren  ),
-  .sys_rdata       (sys[0].rdata),
-  .sys_err         (sys[0].err  ),
-  .sys_ack         (sys[0].ack  )
-);
+//red_pitaya_hk #(.DWE(DWE)) i_hk (
+  //// system signals
+  //.clk_i           (adc_clk    ),  // clock
+  //.rstn_i          (adc_rstn   ),  // reset - active low
+  //.fclk_i          (fclk[0]    ),  // clock
+  //.frstn_i         (frstn[0]   ),  // reset - active low
+  ////// LED
+  ////.led_o           (  led_o     ),  // LED output
+  ////// global configuration
+  ////.digital_loop    (digital_loop),
+  ////.daisy_mode_o    (daisy_mode),
+  ////// Expansion connector
+  //// .exp_p_dat_i     (exp_p_in ),  // input data
+  //// .exp_p_dat_o     (exp_p_out),  // output data
+  //// .exp_p_dir_o     (exp_p_dir),  // 1-output enable
+  //// .exp_n_dat_i     (exp_n_in ),
+  //// .exp_n_dat_o     (exp_n_out),
+  //// .exp_n_dir_o     (exp_n_dir),
+  //// .can_on_o        (can_on   ),
+  ////// System bus
+  //.sys_addr        (sys[0].addr ),
+  //.sys_wdata       (sys[0].wdata),
+  //.sys_wen         (sys[0].wen  ),
+  //.sys_ren         (sys[0].ren  ),
+  //.sys_rdata       (sys[0].rdata),
+  //.sys_err         (sys[0].err  ),
+  //.sys_ack         (sys[0].ack  )
+//);
 
 red_pitaya_scope i_scope (
   // ADC

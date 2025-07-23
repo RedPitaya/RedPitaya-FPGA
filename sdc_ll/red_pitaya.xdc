@@ -169,7 +169,7 @@ set_property PACKAGE_PIN P19 [get_ports exp_n_io[10]] ; # DIO10_N
 
 ### SATA connector
 #set_property -dict {IOSTANDARD DIFF_SSTL18_I  IOB TRUE } [get_ports {daisy_?_?[*]}]
-set_property -dict {IOSTANDARD LVCMOS18  IOB TRUE } [get_ports {daisy_?_?[*]}]
+#set_property -dict {IOSTANDARD LVCMOS18  IOB TRUE } [get_ports {daisy_?_?[*]}]
 
 set_property PACKAGE_PIN V6  [get_ports {daisy_p_o[0]}] ; # DAISY_IO0_P
 set_property PACKAGE_PIN W6  [get_ports {daisy_n_o[0]}] ; # DAISY_IO0_N
