@@ -469,17 +469,17 @@ IBUFDS  i_IBUFDS_adc_dat [4:0] (.I (adc_dat_p_in),  .IB (adc_dat_n_in),  .O  (ad
 //(* IODELAY_GROUP = adc_inputs *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
 IDELAYCTRL i_idelayctrl (.RDY(idly_rdy), .REFCLK(fclk[3]), .RST(!frstn[3]) );
 
-reg       adc_en;
-reg [7:0] adc_en_cnt;
+//reg       adc_en;
+//reg [7:0] adc_en_cnt;
 
-always @(posedge fclk[0]) begin
-  if (!frstn[0])
-    adc_en_cnt <= 8'h0;
-  else if (!adc_en_cnt[7])
-    adc_en_cnt <= adc_en_cnt + 8'h1;
+//always @(posedge fclk[0]) begin
+  //if (!frstn[0])
+    //adc_en_cnt <= 8'h0;
+  //else if (!adc_en_cnt[7])
+    //adc_en_cnt <= adc_en_cnt + 8'h1;
 
-  adc_en <= adc_en_cnt[7];
-end
+  //adc_en <= adc_en_cnt[7];
+//end
 
 //assign adc_clk = pll_dac_clk_1x ;
 
@@ -492,7 +492,9 @@ adc366x_top i_adc366x
 
    // configuration
   .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
-  .cfg_en_i        (  adc_en         ),  //!< global module enable
+  //.cfg_en_i        (  adc_en         ),  //!< global module enable
+  //.cfg_clk_i       (  adc_clk        ),  //!< Configuration clock
+  .cfg_en_i        (  adc_rstn         ),  //!< global module enable
   .cfg_dly_i       (  ser_ddly       ),  //!< delay control
 
    // parallel ports

@@ -218,7 +218,8 @@ if (rstn_i == 1'b0) begin
   exp_n_dir_o  <= {DWE{1'b0}};
   can_on_o     <= 1'b0;
   ser_inv_o    <= 5'h8;
-  ser_ddly_o   <= 25'h00010;  // alui added def value tested 180625
+  //ser_ddly_o   <= 25'h00010;  // alui added def value tested 180625
+  ser_ddly_o   <= 25'h6318c6;  // alui added def value tested 240725
 end else if (sys_wen) begin
   if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[1:0];
 
@@ -240,7 +241,10 @@ end
 
 
 always @(posedge clk_i)
-begin
+if (rstn_i == 1'b0) begin
+    new_ddly_o <= 1'b1;
+end
+else begin
   spi_do     <= (sys_addr[19:0]==20'h54) & sys_wen;
   new_ddly_o <= (sys_addr[19:0]==20'h40) & sys_wen;
 end
