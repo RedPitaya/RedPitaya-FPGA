@@ -100,15 +100,17 @@ read_ip                         $ip_files
 #}
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-read_ip $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+add_file $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
 upgrade_ip [get_ips asg_dat_fifo] 
-generate_target all [get_ips asg_dat_fifo ]
+#generate_target all [get_ips asg_dat_fifo ]
+synth_ip [get_ips asg_dat_fifo]
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-read_ip $path_ip_top/sync_fifo/sync_fifo.xci
+add_file $path_ip_top/sync_fifo/sync_fifo.xci
 upgrade_ip [get_ips sync_fifo] 
-generate_target all [get_ips sync_fifo]
+#generate_target all [get_ips sync_fifo]
+synth_ip [get_ips sync_fifo]
 }
 #
 #generate_target all [get_ips system_axi_protocol_converter_0_0]

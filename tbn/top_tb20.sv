@@ -295,22 +295,23 @@ initial begin
     $display("Testing normal acq mode!");
 
     ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
-    ADR2 = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
+    ADR2 = `BASE_OFS + `SCOPE2_REG_OFS << `OFS_SHIFT;
     ADR3 = `BASE_OFS + `EXP_E3_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
       //top_tc20.daisy_trigs();
-      top_tc20.init_adc_02(ADR);
+      //top_tc20.init_adc_02(ADR);
       //top_tc20.init_dac(ADR2, DAC_BUF_WRITE);
       //top_tc20.test_sata(ADR3);
 
        //top_tc20.init_adc_23(ADR2);     
-      top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      //top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
        //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       //top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
       //top_tc20.custom_test(ADR2, ADR);
-      //top_tc20.custom_test1(ADR);
+      top_tc20.custom_adcconf(ADR);
+      //top_tc20.custom_adcconf(ADR2);
 
       //#1000;
       //top_tc20.test_dac2(ADR2);

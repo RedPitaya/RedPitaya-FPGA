@@ -46,18 +46,19 @@ initial begin
     //$display ("DBITS=%0d (CALC3_BITS-C_START-1)=%0d (CALC3_BITS)-C_END)=%0d ", DBITS, (CALC3_BITS-C_START-1), ((CALC3_BITS)-C_END));
     //$display ("DBITS=%0d CALC3_BITS=%0d C_START=%0d C_END=%0d ", DBITS, CALC3_BITS, C_START, C_END);
 end
-always @(gain_calc)
-begin
-    $display ("\n");
-    $display ("gain_calc=%0b", gain_calc);
-    $display ("gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]=%0b", gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]);
-    $display ("offset_calc=%0b", offset_calc);
-    $display ("offs_max=%0b, offs_min=%0b, offset_calc[DBITS:DBITS-1]=%0b", offs_max, offs_min, offset_calc[DBITS:DBITS-1]);
-    $display ("DBITS=%0d (CALC3_BITS-C_START-1)=%0d (CALC3_BITS)-C_END)=%0d ", DBITS, (CALC3_BITS-C_START-1), ((CALC3_BITS)-C_END));
-    $display ("DBITS=%0d CALC3_BITS=%0d C_START=%0d C_END=%0d ", DBITS, CALC3_BITS, C_START, C_END);
-    $display ("DBITS=%0d adc_data=%0d, offset=%0d, gain=%0d, adc_data+offset=%0d, gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]=%0d ", DBITS, adc_data, offset, gain, adc_data+offset, gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]);
+// DBG
+//always @(gain_calc)
+//begin
     //$display ("\n");
-end
+    //$display ("gain_calc=%0b", gain_calc);
+    //$display ("gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]=%0b", gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]);
+    //$display ("offset_calc=%0b", offset_calc);
+    //$display ("offs_max=%0b, offs_min=%0b, offset_calc[DBITS:DBITS-1]=%0b", offs_max, offs_min, offset_calc[DBITS:DBITS-1]);
+    //$display ("DBITS=%0d (CALC3_BITS-C_START-1)=%0d (CALC3_BITS)-C_END)=%0d ", DBITS, (CALC3_BITS-C_START-1), ((CALC3_BITS)-C_END));
+    //$display ("DBITS=%0d CALC3_BITS=%0d C_START=%0d C_END=%0d ", DBITS, CALC3_BITS, C_START, C_END);
+    //$display ("DBITS=%0d adc_data=%0d, offset=%0d, gain=%0d, adc_data+offset=%0d, gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]=%0d ", DBITS, adc_data, offset, gain, adc_data+offset, gain_calc[(CALC3_BITS-C_START-1):((CALC3_BITS)-C_END)]);
+    ////$display ("\n");
+//end
 ////////////////////////////////////////////////////////////
 // Input data registration
 // 

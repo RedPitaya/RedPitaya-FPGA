@@ -927,6 +927,34 @@ task write_buf(
   end
 endtask: write_buf
 
+task custom_adcconf(
+    int unsigned offset
+    );
+    int unsigned dat;
+    int unsigned dat1;
+    int unsigned regvalues[4] = '{ 32'h0100, 32'h0200, 32'hff9c, 32'hff38}; 
+    $display("ADC %x regs test", offset) ;
+    axi_write(offset+'h200 ,  32'h0340);  
+    axi_write(offset+'h208 ,  32'h0340); 
+    axi_read(offset+'h200 ,  dat);
+    axi_read(offset+'h208 ,  dat1); 
+    
+    $display("ADC1 offset %x", dat) ;
+    $display("ADC2 offset %x", dat1) ;
+
+    foreach (regvalues[i]) begin 
+        $display("ADC %x regs with value %x", offset, regvalues[i]) ;
+        axi_write(offset+'h200 , regvalues[i]);  
+        axi_write(offset+'h208 , regvalues[i]); 
+        axi_read(offset+'h200 ,  dat);
+        axi_read(offset+'h208 ,  dat1); 
+        $display("ADC1 offset %x", dat) ; 
+        $display("ADC2 offset %x", dat1) ;
+    end
+
+endtask: custom_adcconf
+
+
 task custom_test1 (
   int unsigned offset1
 );

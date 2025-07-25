@@ -75,7 +75,7 @@ module rp_scope_cfg #(
    output     [   4*25 -1: 0] set_filt_kk_o        ,
    output     [   4*25 -1: 0] set_filt_pp_o        ,
 
-   output     [   4*16 -1: 0] set_calib_offset_o   ,
+   output     [   4*DW -1: 0] set_calib_offset_o   ,
    output     [   4*16 -1: 0] set_calib_gain_o     ,
 
    output     [      4 -1: 0] set_filt_byp_o       ,
@@ -118,7 +118,7 @@ reg  [ 4*25-1: 0] set_filt_kk   ;
 reg  [ 4*25-1: 0] set_filt_pp   ;
 reg  [    4-1: 0] set_filt_byp  ;
 // added to store calibration data
-reg  [ 4*16-1: 0]   set_calib_offset  ;
+reg  [ 4*DW-1: 0]   set_calib_offset  ;
 reg  [ 4*16-1: 0]   set_calib_gain  ;
 
 reg  [   20-1: 0] set_deb_len   ;
@@ -266,7 +266,7 @@ if (adc_rstn_i == 1'b0) begin
   set_filt_pp            <= {4{25'h0}}      ;
   set_filt_byp           <=  4'h0           ;
 
-  set_calib_offset       <= {4{16'h0}}      ;
+  set_calib_offset       <= {4{{DW{1'b0}}}}      ;
   set_calib_gain         <= {4{16'h8000}}   ;
 
   set_deb_len            <= {4{20'd62500}}  ;
@@ -406,9 +406,9 @@ end else begin
     20'h0011C : begin sys_ack <= sys_en;          sys_rdata <= {{32-RSZ{1'b0}}, adc_wp_trig_i[RSZ*2-1:RSZ*1]}   ; end
     20'h0012C : begin sys_ack <= sys_en;          sys_rdata <=                  adc_we_cnt_i[32*2-1:32*1]       ; end
 
-    20'h00200 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*1-1:16*0]}  ; end
+    20'h00200 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_calib_offset[DW*1-1:DW*0]}  ; end
     20'h00204 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*1-1:16*0]}    ; end
-    20'h00208 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*2-1:16*1]}  ; end
+    20'h00208 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_calib_offset[DW*2-1:DW*1]}  ; end
     20'h0020C : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*2-1:16*1]}    ; end
     // removed because for 4ADC channels are mirrored on main address
     //20'h00210 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*3-1:16*2]}  ; end
