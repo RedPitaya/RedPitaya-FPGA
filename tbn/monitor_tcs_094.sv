@@ -89,6 +89,9 @@ wire [14-1:0]  trig_lvl  = top_tb.red_pitaya_top.i_scope_0_1.set_tresh[14-1:0];
 `ifdef Z20_G2
 `define RP_SCOPE  // Z20_LL Z20_G2 where used rp_scope_com.sv
 `endif
+`ifdef Z20_250
+`define RP_SCOPE  // Z20_LL Z20_G2 where used rp_scope_com.sv
+`endif
 `ifdef Z20_LL
 `define RP_SCOPE  // Z20_LL Z20_G2 where used rp_scope_com.sv
 `endif
