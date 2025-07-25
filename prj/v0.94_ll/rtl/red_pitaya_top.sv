@@ -144,6 +144,7 @@ logic          trig_output_sel;
 logic          trig_asg_out;
 logic [ 4-1:0] trig_ext_asg01;
 
+logic [ 3-1:0] bitslip;
 
 
 // PLL signals
@@ -496,6 +497,7 @@ adc366x_top i_adc366x
   //.cfg_clk_i       (  adc_clk        ),  //!< Configuration clock
   .cfg_en_i        (  adc_rstn         ),  //!< global module enable
   .cfg_dly_i       (  ser_ddly       ),  //!< delay control
+  .cfg_bslip_o     (  bitslip        ),
 
    // parallel ports
   .adc_clk_i       (  adc_clk        ),  //!< parallel clock
@@ -591,7 +593,8 @@ i_hk (
 
   .ser_ddly_o      (ser_ddly[25-1:0]),
   .new_ddly_o      (ser_ddly[26-1]),
-  //.ser_inv_o       (ser_inv     ),
+  .ser_inv_o       (ser_inv     ),
+  .cfg_bslip_i     (  bitslip        ),
   
    // System bus
   .sys_addr        (sys[0].addr ),
