@@ -82,6 +82,7 @@ module top_tb #(
   parameter DWE           = 8,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  realtime  ADC_TP        = 16.0ns, // 65 MHz
   `define   rp_top        red_pitaya_top
   `endif
 
@@ -160,6 +161,7 @@ logic                  pll_ref_lo;
 logic                  intr;
 logic                  clk0;
 logic                  clk1;
+logic                  clk_65;
 logic                  clk_250 ;
 reg                    trig_ext;
 logic                  rstn;
@@ -210,6 +212,9 @@ logic           s1_orient ;
 
 initial #3.6ns clk0 = 1'b0;
 always #(TP/2) clk0 = ~clk0;
+
+initial #3.6ns clk_65 = 1'b0;
+always #(ADC_TP/2)   clk_65 = ~clk_65;
 
 initial            clk_250 = 1'b0;
 always #(TP_250/2) clk_250 = ~clk_250;
@@ -409,7 +414,11 @@ adc_driver #(
 ) 
 tb_adc_drv
 (
+ `ifdef Z20_LL
+   .adc_clk_i    ({clk_65,clk_65}),
+ `else
    .adc_clk_i    ({clk1,clk0}),
+ `endif
    .adc_rstn_i   ({rstn,rstn}),
    .adc_data_in0 (cnter1     ),
    .adc_data_in1 (cnter2     ),
