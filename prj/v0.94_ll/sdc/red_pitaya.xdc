@@ -45,6 +45,7 @@ set_false_path -from [get_pins {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins {dac_d
 #set_max_delay -datapath_only 4.000 -from [get_pins i_adc366x/par_dv/Q] -to [get_pins i_adc366x/adc_dv_o/D]
 set_max_delay -datapath_only 4.000 -from [get_pins i_adc366x/par_dv_reg/C] -to [get_pins i_adc366x/adc_dv_o_reg/D]
 set_max_delay -datapath_only 4.000 -from [get_pins i_adc366x/par_dat_o_reg[*]/C] -to [get_pins i_adc366x/adc_dat_o_reg[*]/D]
+set_bus_skew -from [get_cells i_adc366x/par_dat_o_reg*] -to [get_cells i_adc366x/adc_dat_o_reg*] 8.000
 set_max_delay -datapath_only -from [get_cells i_adc366x/par_dat_o_reg*] -to [get_cells i_adc366x/adc_dat_o_reg*] 8.000
 
 

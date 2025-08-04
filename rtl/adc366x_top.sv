@@ -268,8 +268,9 @@ end
 wire [16-1: 0] rawa ;
 wire [16-1: 0] rawb ;
 reg  [32-1: 0] par_dat_o ;
-wire           par_clk_o ;
-reg            par_dv    ;
+//wire           par_clk_o ;
+
+(* keep = "true" *) reg            par_dv    ;
 
 assign rawa = par_out[PDW+16 +: 16]; // channels were inverted
 assign rawb = par_out[PDW    +: 16];

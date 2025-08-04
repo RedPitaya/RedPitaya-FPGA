@@ -206,6 +206,7 @@ create_clock -period 8.000 -name adc_dclk [get_ports {adc_dclk_i[1]}]
 create_clock -period 8.000 -name dac_clk [get_ports dac_clk_i]
 create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
+
 create_generated_clock -name i_hk/dna_clk -source [get_pins pll/pll/CLKOUT1] -divide_by 16 [get_pins i_hk/dna_clk_reg/Q]
 #create_generated_clock -name {adc_dclk_o[1]} -source [get_pins ODDR_dclk/C] -divide_by 1 [get_ports {adc_dclk_o[1]}]
 create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 -invert [get_ports dac_wrta_o]
