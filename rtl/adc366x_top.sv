@@ -26,7 +26,11 @@ module adc366x_top
    // parallel ports
    input                 adc_clk_i       ,  //!< parallel clock
    output reg [ 32-1: 0] adc_dat_o       ,  //!< parallel data
-   output reg            adc_dv_o           //!< parallel valid
+   output reg            adc_dv_o        
+`ifdef Z20_ll
+   ,   //!< parallel valid
+   output wire           par_clk_o 
+`endif
 );
 
 

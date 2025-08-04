@@ -137,6 +137,7 @@ logic [4-1:0] frstn;
 
 logic [16-1:0] par_dat;
 
+logic          en_65;
 logic          daisy_trig;
 logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
@@ -144,7 +145,6 @@ logic          trig_output_sel;
 logic          trig_asg_out;
 logic [ 4-1:0] trig_ext_asg01;
 
-logic [ 3-1:0] bitslip;
 
 
 // PLL signals
@@ -171,6 +171,8 @@ logic                 pwm_rstn;
 
 // ADC clock/reset
 logic                 adc_clk;
+logic                 par_clk;
+logic                 par_clk_bf;
 logic                 adc_rstn;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
@@ -180,7 +182,8 @@ logic                 CAN0_rx, CAN0_tx;
 logic                 CAN1_rx, CAN1_tx;
 logic                 can_on;
 logic [26-1:0]        ser_ddly;
-logic [ 5-1:0]        ser_inv = 5'h8;
+logic [ 5-1:0]        ser_inv;
+logic [ 3-1:0]        bitslip;
 
 
 // stream bus type
@@ -483,6 +486,37 @@ IDELAYCTRL i_idelayctrl (.RDY(idly_rdy), .REFCLK(fclk[3]), .RST(!frstn[3]) );
 //end
 
 //assign adc_clk = pll_dac_clk_1x ;
+//
+//---------------------------------------------------------------------------------
+//
+//  Frequency meter
+wire [32-1: 0] fmtr_freq;
+
+// if adc is 62.5MHz signal out en_65
+always @(posedge adc_clk)
+ if (adc_rstn == 1'b0) begin
+    en_65 <= 1'b0;
+ end else begin
+    en_65 = (fmtr_freq < 32'd100_000_000) ? 1'b1:1'b0;
+end
+
+freq_meter #(
+  .GCL  ( 32'd15625000 ), // Gate counter length - 1/8 of s, 125000000/8
+  .GCS  (  3           )  // Gate counter sections (1<<GCS)
+) i_freq_meter_adc
+(
+  // measured clock
+  .mes_clk_i     (  par_clk      ),
+  .mes_rstn_i    (  adc_rstn     ),
+  // reference clock
+  .ref_clk_i     (  fclk[0]      ),
+  .ref_rstn_i    (  frstn[0]     ),
+  // result
+  .freq_o        (  fmtr_freq    ),  // @ mes_clk_i
+  .freq_ref_o    (               )   // @ ref_clk_i
+);
+//---------------------------------------------------------------------------------
+
 
 adc366x_top i_adc366x
 (
@@ -502,10 +536,13 @@ adc366x_top i_adc366x
    // parallel ports
   .adc_clk_i       (  adc_clk        ),  //!< parallel clock
   .adc_dat_o       (  adc_dat_raw    ),  //!< parallel data
-  .adc_dv_o        (  adc_dat_rdv    )   //!< parallel valid
+  .adc_dv_o        (  adc_dat_rdv    ),  //!< parallel valid
+  .par_clk_o       (  par_clk        )
+  //.par_clk_o       (         )
 );
 
 
+  
 // ADC SPI
 assign adc_sen_o    = hk_spi_cs;
 assign adc_sclk_o   = hk_spi_clk;
@@ -594,7 +631,7 @@ i_hk (
   .ser_ddly_o      (ser_ddly[25-1:0]),
   .new_ddly_o      (ser_ddly[26-1]),
   .ser_inv_o       (ser_inv     ),
-  .cfg_bslip_i     (  bitslip        ),
+  .cfg_bslip_i     (bitslip        ),
   
    // System bus
   .sys_addr        (sys[0].addr ),
@@ -676,6 +713,7 @@ rp_scope_com #(
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .trig_ext_asg_o(trig_ext_asg01),
   .trig_ext_asg_i(trig_ext_asg01),
+  .en_65_i       (en_65),
   .daisy_trig_o  (scope_trigo ),
   .adc_state_o   (adc_state_ch_0_1),
   .adc_state_i   (adc_state_ch_2_3),
@@ -790,7 +828,10 @@ wire dly_clk = fclk[3]; // 200MHz clock from PS - used for IDELAY (optionaly)
 wire [16-1:0] par_dati = daisy_mode[0] ? {16{trig_output_sel}} : 16'h1234;
 wire          par_dvi  = daisy_mode[0] ? 1'b0 : daisy_rx_rdy;
 
-red_pitaya_daisy i_daisy (
+red_pitaya_daisy  #(
+  .IO_STD("LVDS_25"),
+  .N_DATS(1)
+) i_daisy (
    // SATA connector
   .daisy_p_o       (  daisy_p_o                  ),  // line 1 is clock capable
   .daisy_n_o       (  daisy_n_o                  ),

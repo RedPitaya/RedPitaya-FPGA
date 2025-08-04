@@ -70,6 +70,9 @@ module rp_scope_com #(
    input      [      4-1: 0] trig_ch_i      ,  // input ADC trigger from other 2 channels
    output     [      4-1: 0] trig_ext_asg_o ,  // output External and ASG trigger to share between multiple scope modules
    input      [      4-1: 0] trig_ext_asg_i ,  // input External and ASG trigger 
+`ifdef Z20_ll
+   input                     en_65_i        ,  // signal to indicate 62.5MHz adc running 
+`endif
    output                    daisy_trig_o   ,  // trigger for daisy chaining
    // axi master
    output     [N_CH   -1: 0] axi_clk_o      ,  // global clock
@@ -159,6 +162,7 @@ wire [   4*RSZ-1: 0] adc_wp_act   ;
 wire [    4*DW-1: 0] adc_bram_in  ;
 wire [       4-1: 0] adc_we       ;
 wire [       4-1: 0] adc_dv_del   ;
+wire [       4-1: 0] adc_dv_bram  ;
 wire [       4-1: 0] adc_dv_del_p ;
 
 assign sys_en = sys_wen | sys_ren;
@@ -185,6 +189,7 @@ wire            adc_dly_do   ;
 
 wire            axi_dv_del;
 wire            dec_val;
+wire            dec_val_65;
 
 //assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
 wire  adc_sign_a = adc_dat_i[(GV+1)*DW-1];
@@ -258,6 +263,19 @@ rp_decim #(
   .dec_dat_o    ( adc_dly_in    )   // decimated data out
 );
 
+// actually disabled it was inserted for testing
+`ifdef Z20_ll_test
+// module added to prevent double write to bram if adc freq is 62.5MHz
+rp_dv_65 dv_impl (
+    .adc_clk_i      ( adc_clk_i[1]     ),
+    .adc_rstn_i     ( adc_rstn_i[1]    ),
+    .dv_en_i        ( en_65_i           ),
+    .adc_dv_i       ( dec_val    ),
+    .adc_dv_o       ( dec_val_65   )
+);
+`else
+    assign dec_val_65 = dec_val;
+`endif
 
 rp_delay #(
   .DW  (  DW    )
@@ -270,7 +288,7 @@ rp_delay #(
 
    // Connection to AXI master
   .dly_dat_i     ( adc_dly_in                     ),
-  .dly_val_i     ( dec_val                        ),
+  .dly_val_i     ( dec_val_65                        ),
   .set_trg_src_i ( trg_src[(GV+1)*4-1:GV*4]       ),
   .set_trg_new_i ( new_trg_src[GV]                ),
 
@@ -291,7 +309,7 @@ rp_adc_trig #(
 
    // Connection to AXI master
   .adc_dat_i      ( adc_dly_in                      ),
-  .adc_dv_i       ( dec_val                         ),
+  .adc_dv_i       ( dec_val_65                         ),
   .set_tresh_i    ( set_tresh[(GV+1)*DW-1:GV*DW]    ),
   .set_hyst_i     ( set_hyst[(GV+1)*DW-1:GV*DW]     ),
 
@@ -328,6 +346,19 @@ rp_trig_src #(
   .adc_trig_o     ( adc_trig[GV]              )
 );
 
+`ifdef Z20_ll
+// module added to prevent double write to bram if adc freq is 62.5MHz
+rp_dv_65 dv_impl (
+    .adc_clk_i      ( adc_clk_i[GV]     ),
+    .adc_rstn_i     ( adc_rstn_i[GV]    ),
+    .dv_en_i        ( en_65_i           ),
+    .adc_dv_i       ( adc_dv_del[GV]    ),
+    .adc_dv_o       ( adc_dv_bram[GV]   )
+);
+`else
+    assign adc_dv_bram[GV] = adc_dv_del[GV];
+`endif
+
 rp_bram_sm #(
 ) i_bram_sm (
    // global signals
@@ -341,7 +372,7 @@ rp_bram_sm #(
   .adc_we_keep_i  ( adc_we_keep[GV]                   ),
   .adc_arm_do_i   ( adc_arm_do[GV]                    ),
   .adc_trig_i     ( adc_trig[GV]                      ),
-  .adc_dv_i       ( adc_dv_del[GV]                    ),
+  .adc_dv_i       ( adc_dv_bram[GV]                   ),
   .indep_mode_i   ( indep_mode[GV]                    ),
   .trig_dis_clr_i ( trig_dis_clr[GV]                  ),
 
@@ -365,7 +396,7 @@ rp_acq_bram #(
    // Connection to AXI master
   .bram_wp_i      ( adc_wp_act[(GV+1)*RSZ-1:GV*RSZ] ),
   .bram_dat_i     ( adc_bram_in[(GV+1)*DW-1:GV*DW]  ),
-  .bram_val_i     ( adc_dv_del[GV]                  ),
+  .bram_val_i     ( adc_dv_bram[GV]                 ),
   .bram_we_i      ( adc_we[GV]                      ),
   .bram_ack_i     ( sys_en                          ),
 
@@ -419,6 +450,7 @@ for(GM = N_CH ; GM < 4 ; GM = GM + 1) begin // pad out remaining channels
 
 assign adc_bram_in[(GM+1)*DW -1:GM*DW ] = {DW{1'b0}};
 assign adc_dv_del[GM]                   =  1'b0;
+assign adc_dv_bram[GM]                  =  1'b0;
 assign adc_dv_del_p[GM]                 =  1'b0;
 
 

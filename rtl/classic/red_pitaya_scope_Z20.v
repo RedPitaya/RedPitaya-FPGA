@@ -798,6 +798,7 @@ wire              ext_trig_n       ;
 wire              asg_trig_p       ;
 wire              asg_trig_n       ;
 reg               adc_trg_dis      ;
+reg    [2-1:0]    dat_dly  = 2'h0  ;
 
 assign adc_trig_sw_p = sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // trigger pulse
 assign adc_trig_sw   = (adc_trig_sw_r) && adc_dv_r[dat_dly];
@@ -856,7 +857,6 @@ always @(posedge adc_clk_i) begin
    last_src <= sys_wdata[3:0] ;
 end
 
-reg [2-1:0] dat_dly  = 2'h0;
 reg [2-1:0] prev_dly = 2'h0;
 always @(posedge adc_clk_i) begin //delay to trigger
    case (last_src)
