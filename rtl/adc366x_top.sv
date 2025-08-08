@@ -27,7 +27,7 @@ module adc366x_top
    input                 adc_clk_i       ,  //!< parallel clock
    output reg [ 32-1: 0] adc_dat_o       ,  //!< parallel data
    output reg            adc_dv_o        
-`ifdef Z20_ll
+`ifdef Z20_LL
    ,   //!< parallel valid
    output wire           par_clk_o 
 `endif
@@ -289,7 +289,8 @@ BUFG i_adc_buf   (.O(par_clk_o), .I(par_clk));
 //
 //  Sync
 
-always @(posedge adc_clk_i) begin
+//always @(posedge adc_clk_i) begin
+always @(posedge par_clk_o) begin
   adc_dat_o <= par_dat_o ;
   adc_dv_o  <= par_dv    ;//      !par_dv   ? 1'b0 : !adc_dv_o ;
 end

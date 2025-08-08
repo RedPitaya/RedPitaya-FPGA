@@ -51,7 +51,7 @@ set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
-set_property verilog_define [concat Z20_ll $prj_defs] [current_fileset]
+set_property verilog_define [concat Z20_LL $prj_defs] [current_fileset]
 
 source                            $path_ip/systemZ20_ll.tcl
 

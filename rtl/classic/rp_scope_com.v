@@ -70,9 +70,6 @@ module rp_scope_com #(
    input      [      4-1: 0] trig_ch_i      ,  // input ADC trigger from other 2 channels
    output     [      4-1: 0] trig_ext_asg_o ,  // output External and ASG trigger to share between multiple scope modules
    input      [      4-1: 0] trig_ext_asg_i ,  // input External and ASG trigger 
-`ifdef Z20_ll
-   input                     en_65_i        ,  // signal to indicate 62.5MHz adc running 
-`endif
    output                    daisy_trig_o   ,  // trigger for daisy chaining
    // axi master
    output     [N_CH   -1: 0] axi_clk_o      ,  // global clock
@@ -190,11 +187,14 @@ wire            adc_dly_do   ;
 wire            axi_dv_del;
 wire            dec_val;
 wire            dec_val_65;
+wire            cal_val_65;
 
 //assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
 wire  adc_sign_a = adc_dat_i[(GV+1)*DW-1];
 //assign adc_calib_in = {adc_dat_i[(GV+1)*DW-1:GV*DW], {(16-DW){adc_sign_a}}};
 assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
+
+assign cal_val_65 = 1'b1;
 
 rp_scope_calib #(
     .DBITS(DW)
@@ -204,7 +204,8 @@ rp_scope_calib #(
   .adc_rstn_i           ( adc_rstn_i[GV] ),  // ADC reset - active low
 
   .calib_dat_i          (adc_calib_in),
-  .calib_din_tvalid_i   (1'b1),
+  //.calib_din_tvalid_i   (1'b1),
+  .calib_din_tvalid_i   (cal_val_65),
 
   .calib_dat_o          (adc_calib_out),
   .calib_dout_tvalid_o  (),
@@ -263,19 +264,7 @@ rp_decim #(
   .dec_dat_o    ( adc_dly_in    )   // decimated data out
 );
 
-// actually disabled it was inserted for testing
-`ifdef Z20_ll_test
-// module added to prevent double write to bram if adc freq is 62.5MHz
-rp_dv_65 dv_impl (
-    .adc_clk_i      ( adc_clk_i[1]     ),
-    .adc_rstn_i     ( adc_rstn_i[1]    ),
-    .dv_en_i        ( en_65_i           ),
-    .adc_dv_i       ( dec_val    ),
-    .adc_dv_o       ( dec_val_65   )
-);
-`else
-    assign dec_val_65 = dec_val;
-`endif
+assign dec_val_65 = dec_val;
 
 rp_delay #(
   .DW  (  DW    )
@@ -346,18 +335,7 @@ rp_trig_src #(
   .adc_trig_o     ( adc_trig[GV]              )
 );
 
-`ifdef Z20_ll
-// module added to prevent double write to bram if adc freq is 62.5MHz
-rp_dv_65 dv_impl (
-    .adc_clk_i      ( adc_clk_i[GV]     ),
-    .adc_rstn_i     ( adc_rstn_i[GV]    ),
-    .dv_en_i        ( en_65_i           ),
-    .adc_dv_i       ( adc_dv_del[GV]    ),
-    .adc_dv_o       ( adc_dv_bram[GV]   )
-);
-`else
-    assign adc_dv_bram[GV] = adc_dv_del[GV];
-`endif
+assign adc_dv_bram[GV] = adc_dv_del[GV];
 
 rp_bram_sm #(
 ) i_bram_sm (

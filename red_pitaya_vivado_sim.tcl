@@ -55,7 +55,7 @@ switch $model {
 "Z20_G2" {
     set part xc7z020clg400-1
 }
-"Z20_ll" {
+"Z20_LL" {
     set part xc7z020clg400-1
 }
 default {
@@ -108,7 +108,7 @@ switch $model {
 "Z20_G2" {
     set def_model "Z20_G2"
 }
-"Z20_ll" {
+"Z20_LL" {
     set def_name "v0.94_ll"
     set def_model "Z20_LL"
 }

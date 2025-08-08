@@ -49,6 +49,12 @@
  * send and received is at the moment undefined. This is left for the user.
  */
 
+/* 
+* 080825 ALUI
+* scope is driven with adc clock, retrieved from serial signal adc366x
+*/
+
+ 
 module red_pitaya_top #(
   // identification
   bit [0:5*32-1] GITH = '0,
@@ -137,7 +143,6 @@ logic [4-1:0] frstn;
 
 logic [16-1:0] par_dat;
 
-logic          en_65;
 logic          daisy_trig;
 logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
@@ -489,33 +494,6 @@ IDELAYCTRL i_idelayctrl (.RDY(idly_rdy), .REFCLK(fclk[3]), .RST(!frstn[3]) );
 //
 //---------------------------------------------------------------------------------
 //
-//  Frequency meter
-wire [32-1: 0] fmtr_freq;
-
-// if adc is 62.5MHz signal out en_65
-always @(posedge adc_clk)
- if (adc_rstn == 1'b0) begin
-    en_65 <= 1'b0;
- end else begin
-    en_65 = (fmtr_freq < 32'd100_000_000) ? 1'b1:1'b0;
-end
-
-freq_meter #(
-  .GCL  ( 32'd15625000 ), // Gate counter length - 1/8 of s, 125000000/8
-  .GCS  (  3           )  // Gate counter sections (1<<GCS)
-) i_freq_meter_adc
-(
-  // measured clock
-  .mes_clk_i     (  par_clk      ),
-  .mes_rstn_i    (  adc_rstn     ),
-  // reference clock
-  .ref_clk_i     (  fclk[0]      ),
-  .ref_rstn_i    (  frstn[0]     ),
-  // result
-  .freq_o        (  fmtr_freq    ),  // @ mes_clk_i
-  .freq_ref_o    (               )   // @ ref_clk_i
-);
-//---------------------------------------------------------------------------------
 
 
 adc366x_top i_adc366x
@@ -527,8 +505,6 @@ adc366x_top i_adc366x
 
    // configuration
   .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
-  //.cfg_en_i        (  adc_en         ),  //!< global module enable
-  //.cfg_clk_i       (  adc_clk        ),  //!< Configuration clock
   .cfg_en_i        (  adc_rstn         ),  //!< global module enable
   .cfg_dly_i       (  ser_ddly       ),  //!< delay control
   .cfg_bslip_o     (  bitslip        ),
@@ -538,7 +514,6 @@ adc366x_top i_adc366x
   .adc_dat_o       (  adc_dat_raw    ),  //!< parallel data
   .adc_dv_o        (  adc_dat_rdv    ),  //!< parallel valid
   .par_clk_o       (  par_clk        )
-  //.par_clk_o       (         )
 );
 
 
@@ -704,8 +679,7 @@ rp_scope_com #(
   i_scope (
   // ADC
   .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
-  //.adc_dat_i     ({adc_dat[1], dbg_out}  ),
-  .adc_clk_i     ({2{adc_clk}}  ),  // clock
+  .adc_clk_i     ({2{par_clk}}  ),  // clock
   .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
@@ -713,7 +687,6 @@ rp_scope_com #(
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .trig_ext_asg_o(trig_ext_asg01),
   .trig_ext_asg_i(trig_ext_asg01),
-  .en_65_i       (en_65),
   .daisy_trig_o  (scope_trigo ),
   .adc_state_o   (adc_state_ch_0_1),
   .adc_state_i   (adc_state_ch_2_3),
