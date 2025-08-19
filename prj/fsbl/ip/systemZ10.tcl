@@ -88,7 +88,7 @@ if { ${design_name} eq "" } {
    set errMsg "Design <$design_name> already exists in your project, please set the variable <design_name> to another value."
    set nRet 1
 } elseif { [get_files -quiet ${design_name}.bd] ne "" } {
-   # USE CASES:
+   # USE CASES: 
    #    6) Current opened design, has components, but diff names, design_name exists in project.
    #    7) No opened design, design_name exists in project.
 
@@ -122,7 +122,7 @@ set bCheckIPsPassed 1
 ##################################################################
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
-   set list_check_ips "\
+   set list_check_ips "\ 
 xilinx.com:ip:processing_system7:5.5\
 "
 
@@ -207,7 +207,6 @@ proc create_root_design { parentCell } {
   set_property -dict [ list \
    CONFIG.PCW_ACT_APU_PERIPHERAL_FREQMHZ {666.666687} \
    CONFIG.PCW_ACT_CAN_PERIPHERAL_FREQMHZ {10.000000} \
-   CONFIG.PCW_CAN_PERIPHERAL_FREQMHZ {10} \
    CONFIG.PCW_ACT_DCI_PERIPHERAL_FREQMHZ {10.158730} \
    CONFIG.PCW_ACT_ENET0_PERIPHERAL_FREQMHZ {125.000000} \
    CONFIG.PCW_ACT_ENET1_PERIPHERAL_FREQMHZ {10.000000} \
@@ -231,8 +230,16 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_ACT_WDT_PERIPHERAL_FREQMHZ {111.111115} \
    CONFIG.PCW_APU_CLK_RATIO_ENABLE {6:2:1} \
    CONFIG.PCW_ARMPLL_CTRL_FBDIV {40} \
-   CONFIG.PCW_CAN_PERIPHERAL_DIVISOR0 {1} \
-   CONFIG.PCW_CAN_PERIPHERAL_DIVISOR1 {1} \
+   CONFIG.PCW_CAN0_CAN0_IO {EMIO} \
+   CONFIG.PCW_CAN0_GRP_CLK_ENABLE {0} \
+   CONFIG.PCW_CAN0_PERIPHERAL_ENABLE {1} \
+   CONFIG.PCW_CAN1_CAN1_IO {EMIO} \
+   CONFIG.PCW_CAN1_GRP_CLK_ENABLE {0} \
+   CONFIG.PCW_CAN1_PERIPHERAL_ENABLE {1} \
+   CONFIG.PCW_CAN_PERIPHERAL_DIVISOR0 {10} \
+   CONFIG.PCW_CAN_PERIPHERAL_DIVISOR1 {10} \
+   CONFIG.PCW_CAN_PERIPHERAL_FREQMHZ {10} \
+   CONFIG.PCW_CAN_PERIPHERAL_VALID {1} \
    CONFIG.PCW_CLK0_FREQ {125000000} \
    CONFIG.PCW_CLK1_FREQ {250000000} \
    CONFIG.PCW_CLK2_FREQ {50000000} \
@@ -247,6 +254,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_DDRPLL_CTRL_FBDIV {32} \
    CONFIG.PCW_DDR_DDR_PLL_FREQMHZ {1066.667} \
    CONFIG.PCW_DDR_PERIPHERAL_DIVISOR0 {2} \
+   CONFIG.PCW_DDR_RAM_HIGHADDR {0x1FFFFFFF} \
    CONFIG.PCW_ENET0_ENET0_IO {MIO 16 .. 27} \
    CONFIG.PCW_ENET0_GRP_MDIO_ENABLE {1} \
    CONFIG.PCW_ENET0_GRP_MDIO_IO {MIO 52 .. 53} \
@@ -261,9 +269,13 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_ENET1_RESET_ENABLE {0} \
    CONFIG.PCW_ENET_RESET_ENABLE {1} \
    CONFIG.PCW_ENET_RESET_SELECT {Share reset pin} \
+   CONFIG.PCW_EN_CAN0 {1} \
+   CONFIG.PCW_EN_CAN1 {1} \
    CONFIG.PCW_EN_CLK1_PORT {1} \
    CONFIG.PCW_EN_CLK2_PORT {1} \
    CONFIG.PCW_EN_CLK3_PORT {1} \
+   CONFIG.PCW_EN_EMIO_CAN0 {1} \
+   CONFIG.PCW_EN_EMIO_CAN1 {1} \
    CONFIG.PCW_EN_EMIO_GPIO {1} \
    CONFIG.PCW_EN_EMIO_I2C1 {1} \
    CONFIG.PCW_EN_EMIO_SPI0 {1} \
@@ -412,7 +424,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_MIO_29_IOTYPE {LVCMOS 2.5V} \
    CONFIG.PCW_MIO_29_PULLUP {disabled} \
    CONFIG.PCW_MIO_29_SLEW {fast} \
-   CONFIG.PCW_MIO_2_DIRECTION {inout} \
+   CONFIG.PCW_MIO_2_DIRECTION {out} \
    CONFIG.PCW_MIO_2_IOTYPE {LVCMOS 3.3V} \
    CONFIG.PCW_MIO_2_PULLUP {disabled} \
    CONFIG.PCW_MIO_2_SLEW {slow} \
@@ -456,7 +468,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_MIO_39_IOTYPE {LVCMOS 2.5V} \
    CONFIG.PCW_MIO_39_PULLUP {disabled} \
    CONFIG.PCW_MIO_39_SLEW {fast} \
-   CONFIG.PCW_MIO_3_DIRECTION {inout} \
+   CONFIG.PCW_MIO_3_DIRECTION {in} \
    CONFIG.PCW_MIO_3_IOTYPE {LVCMOS 3.3V} \
    CONFIG.PCW_MIO_3_PULLUP {disabled} \
    CONFIG.PCW_MIO_3_SLEW {slow} \
@@ -540,16 +552,8 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_MIO_9_IOTYPE {LVCMOS 3.3V} \
    CONFIG.PCW_MIO_9_PULLUP {enabled} \
    CONFIG.PCW_MIO_9_SLEW {slow} \
-   CONFIG.PCW_MIO_TREE_PERIPHERALS {GPIO#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#GPIO#UART 1#UART 1#SPI 1#SPI 1#SPI 1#SPI 1#UART 0#UART 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#USB Reset#GPIO#I2C 0#I2C 0#Enet 0#Enet 0} \
-   CONFIG.PCW_MIO_TREE_SIGNALS {gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]/HOLD_B#qspi0_sclk#gpio[7]#tx#rx#mosi#miso#sclk#ss[0]#rx#tx#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#cd#wp#reset#gpio[49]#scl#sda#mdc#mdio} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY0 {0.080} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY1 {0.063} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY2 {0.057} \
-   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY3 {0.068} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_0 {-0.047} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_1 {-0.025} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_2 {-0.006} \
-   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_3 {-0.017} \
+   CONFIG.PCW_MIO_TREE_PERIPHERALS {GPIO#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#GPIO#Quad SPI Flash#Quad SPI Flash#GPIO#UART 1#UART 1#SPI 1#SPI 1#SPI 1#SPI 1#UART 0#UART 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#GPIO#SD 0#USB Reset#GPIO#I2C 0#I2C 0#Enet 0#Enet 0} \
+   CONFIG.PCW_MIO_TREE_SIGNALS {gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#gpio[4]#qspi0_io[3]/HOLD_B#qspi0_sclk#gpio[7]#tx#rx#mosi#miso#sclk#ss[0]#rx#tx#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#gpio[46]#wp#reset#gpio[49]#scl#sda#mdc#mdio} \
    CONFIG.PCW_NAND_GRP_D8_ENABLE {0} \
    CONFIG.PCW_NAND_PERIPHERAL_ENABLE {0} \
    CONFIG.PCW_NOR_GRP_A25_ENABLE {0} \
@@ -559,6 +563,14 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_NOR_GRP_SRAM_CS1_ENABLE {0} \
    CONFIG.PCW_NOR_GRP_SRAM_INT_ENABLE {0} \
    CONFIG.PCW_NOR_PERIPHERAL_ENABLE {0} \
+   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY0 {0.080} \
+   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY1 {0.063} \
+   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY2 {0.057} \
+   CONFIG.PCW_PACKAGE_DDR_BOARD_DELAY3 {0.068} \
+   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_0 {-0.047} \
+   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_1 {-0.025} \
+   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_2 {-0.006} \
+   CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_3 {-0.017} \
    CONFIG.PCW_PCAP_PERIPHERAL_DIVISOR0 {5} \
    CONFIG.PCW_PRESET_BANK1_VOLTAGE {LVCMOS 2.5V} \
    CONFIG.PCW_QSPI_GRP_FBCLK_ENABLE {0} \
@@ -571,10 +583,10 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_QSPI_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_QSPI_PERIPHERAL_FREQMHZ {125} \
    CONFIG.PCW_QSPI_QSPI_IO {MIO 1 .. 6} \
-   CONFIG.PCW_SD0_GRP_CD_ENABLE {1} \
-   CONFIG.PCW_SD0_GRP_CD_IO {MIO 46} \
+   CONFIG.PCW_SD0_GRP_CD_ENABLE {0} \
+   CONFIG.PCW_SD0_GRP_CD_IO {<Select>} \
    CONFIG.PCW_SD0_GRP_POW_ENABLE {0} \
-   CONFIG.PCW_SD0_GRP_WP_ENABLE {1} \
+   CONFIG.PCW_SD0_GRP_WP_ENABLE {0} \
    CONFIG.PCW_SD0_GRP_WP_IO {MIO 47} \
    CONFIG.PCW_SD0_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_SD0_SD0_IO {MIO 40 .. 45} \
@@ -597,11 +609,17 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_SPI1_GRP_SS2_ENABLE {0} \
    CONFIG.PCW_SPI1_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_SPI1_SPI1_IO {MIO 10 .. 15} \
-   CONFIG.PCW_CAN0_PERIPHERAL_ENABLE {1} \
-   CONFIG.PCW_CAN1_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_SPI_PERIPHERAL_DIVISOR0 {5} \
    CONFIG.PCW_SPI_PERIPHERAL_FREQMHZ {200} \
    CONFIG.PCW_SPI_PERIPHERAL_VALID {1} \
+   CONFIG.PCW_S_AXI_HP0_DATA_WIDTH {64} \
+   CONFIG.PCW_S_AXI_HP0_ID_WIDTH {4} \
+   CONFIG.PCW_S_AXI_HP1_DATA_WIDTH {64} \
+   CONFIG.PCW_S_AXI_HP1_ID_WIDTH {4} \
+   CONFIG.PCW_S_AXI_HP2_DATA_WIDTH {64} \
+   CONFIG.PCW_S_AXI_HP2_ID_WIDTH {4} \
+   CONFIG.PCW_S_AXI_HP3_DATA_WIDTH {64} \
+   CONFIG.PCW_S_AXI_HP3_ID_WIDTH {4} \
    CONFIG.PCW_TPIU_PERIPHERAL_DIVISOR0 {1} \
    CONFIG.PCW_TTC0_CLK0_PERIPHERAL_FREQMHZ {133.333333} \
    CONFIG.PCW_TTC0_CLK1_PERIPHERAL_FREQMHZ {133.333333} \
@@ -643,22 +661,14 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_USB1_RESET_ENABLE {0} \
    CONFIG.PCW_USB_RESET_ENABLE {1} \
    CONFIG.PCW_USB_RESET_SELECT {Share reset pin} \
-   CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
    CONFIG.PCW_USE_DMA0 {0} \
+   CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
    CONFIG.PCW_USE_M_AXI_GP1 {1} \
    CONFIG.PCW_USE_S_AXI_GP0 {1} \
    CONFIG.PCW_USE_S_AXI_HP0 {1} \
    CONFIG.PCW_USE_S_AXI_HP1 {1} \
    CONFIG.PCW_USE_S_AXI_HP2 {1} \
    CONFIG.PCW_USE_S_AXI_HP3 {1} \
-   CONFIG.PCW_S_AXI_HP0_DATA_WIDTH {64} \
-   CONFIG.PCW_S_AXI_HP0_ID_WIDTH {4} \
-   CONFIG.PCW_S_AXI_HP1_DATA_WIDTH {64} \
-   CONFIG.PCW_S_AXI_HP1_ID_WIDTH {4} \
-   CONFIG.PCW_S_AXI_HP2_DATA_WIDTH {64} \
-   CONFIG.PCW_S_AXI_HP2_ID_WIDTH {4} \
-   CONFIG.PCW_S_AXI_HP3_DATA_WIDTH {64} \
-   CONFIG.PCW_S_AXI_HP3_ID_WIDTH {4} \
  ] $processing_system7
 
   # Create interface connections
@@ -690,3 +700,5 @@ proc create_root_design { parentCell } {
 ##################################################################
 
 create_root_design ""
+
+
