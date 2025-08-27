@@ -178,6 +178,8 @@ wire                                rd_dat_en;
 wire    [          AXI_SW-1: 0]     rd_dat_stb;
 reg                                 rd_dat_start; 
 reg                                 rd_dat_start_rnd;
+reg                                 rd_dat_start_dlyd;
+reg                                 rd_dat_start_dlyd_v;
 wire    [               2-1: 0]     rd_rsp_typ     = 2'b00;
 reg     [          AXI_LW-1: 0]     rd_cnt;
 reg     [          AXI_LW-1: 0]     rd_len;  
@@ -549,6 +551,12 @@ wire [4*16-1:0] ch3_4samp = {dats34_flip, dats33_flip, dats32_flip, dats31_flip}
 
 wire [ 2-1:0] strm_dac_en = top_tb.strm_dac_en;
 
+wire [16-1:0] pnt00, pnt11, pnt22, pnt33;
+assign pnt00 = rd_pnt+0;
+assign pnt11 = rd_pnt+1;
+assign pnt22 = rd_pnt+2;
+assign pnt33 = rd_pnt+3;
+/*
 always @(*)
 begin
   if (test_dac1)
@@ -558,7 +566,12 @@ begin
   else if (test_gpio)
     axi_rdata_o = ch3_4samp;
 end
+*/
 
+always @(*)
+begin
+  axi_rdata_o = {pnt33,pnt22,pnt11,pnt00};
+end
 
 always @(*)
 begin
@@ -602,6 +615,30 @@ begin
     end
 end
 
+reg [5-1:0] cnt_val = 5'h0;
+
+always @(posedge axi_clk_i)
+begin
+    if (rd_dat_start_dlyd) begin
+        cnt_val <= cnt_val + 1;
+    end
+    rd_dat_start_dlyd_v <= &cnt_val[4:0];
+
+    if (!axi_rstn_i) 
+    begin
+        rd_dat_start_dlyd <= 1'b0;
+    end
+    else if (rd_adr_en)
+    begin
+        rd_dat_start_dlyd   <= 1'b1;
+    end
+    else if (rd_dat_en && axi_rlast_o)
+    begin
+        rd_dat_start_dlyd <= 1'b0;
+        cnt_val <= 4'h0;
+    end
+end
+
 always @(posedge axi_clk_i)
 begin
     rd_dat_vld_rnd <= $random(SEED);
@@ -628,6 +665,7 @@ begin
     case (rd_dat_vld_sel)
         2'b00   : axi_rvalid_o = rd_dat_start; 
         2'b01   : axi_rvalid_o = rd_dat_start_rnd;
+        2'b10   : axi_rvalid_o = rd_dat_start_dlyd_v;
         default : axi_rvalid_o = 1'b0;
     endcase
 end

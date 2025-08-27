@@ -88,7 +88,7 @@ if { ${design_name} eq "" } {
    set errMsg "Design <$design_name> already exists in your project, please set the variable <design_name> to another value."
    set nRet 1
 } elseif { [get_files -quiet ${design_name}.bd] ne "" } {
-   # USE CASES: 
+   # USE CASES:
    #    6) Current opened design, has components, but diff names, design_name exists in project.
    #    7) No opened design, design_name exists in project.
 
@@ -122,7 +122,7 @@ set bCheckIPsPassed 1
 ##################################################################
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
-   set list_check_ips "\ 
+   set list_check_ips "\
 xilinx.com:ip:axi_dma:7.1\
 xilinx.com:ip:axis_clock_converter:1.1\
 xilinx.com:ip:axis_data_fifo:2.0\
@@ -520,7 +520,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_ACT_FPGA2_PERIPHERAL_FREQMHZ {166.666665} \
    CONFIG.PCW_ACT_FPGA3_PERIPHERAL_FREQMHZ {199.999998} \
    CONFIG.PCW_ACT_PCAP_PERIPHERAL_FREQMHZ {199.999998} \
-   CONFIG.PCW_ACT_QSPI_PERIPHERAL_FREQMHZ {199.999998} \
+   CONFIG.PCW_ACT_QSPI_PERIPHERAL_FREQMHZ {125.000000} \
    CONFIG.PCW_ACT_SDIO_PERIPHERAL_FREQMHZ {99.999999} \
    CONFIG.PCW_ACT_SMC_PERIPHERAL_FREQMHZ {10.000000} \
    CONFIG.PCW_ACT_SPI_PERIPHERAL_FREQMHZ {199.999998} \
@@ -879,7 +879,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_SDIO_PERIPHERAL_DIVISOR0 {10} \
    CONFIG.PCW_SDIO_PERIPHERAL_FREQMHZ {100} \
    CONFIG.PCW_SDIO_PERIPHERAL_VALID {1} \
-   CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x4} \
+   CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x1} \
    CONFIG.PCW_SMC_PERIPHERAL_DIVISOR0 {1} \
    CONFIG.PCW_SPI0_GRP_SS0_ENABLE {0} \
    CONFIG.PCW_SPI0_GRP_SS1_ENABLE {0} \

@@ -1,0 +1,16 @@
+/*
+ * stystem LED are given a fixed function
+ * red    LED - CPU heartbeat
+ */
+
+/ {
+	led-system-red {
+		compatible = "gpio-leds";
+		led-9-red {
+			label = "led9";
+			gpios = <&gpio0 7 0>;
+			default-state = "off";
+			linux,default-trigger = "heartbeat";
+		};
+	};
+};

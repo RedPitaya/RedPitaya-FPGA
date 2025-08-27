@@ -88,7 +88,7 @@ if { ${design_name} eq "" } {
    set errMsg "Design <$design_name> already exists in your project, please set the variable <design_name> to another value."
    set nRet 1
 } elseif { [get_files -quiet ${design_name}.bd] ne "" } {
-   # USE CASES: 
+   # USE CASES:
    #    6) Current opened design, has components, but diff names, design_name exists in project.
    #    7) No opened design, design_name exists in project.
 
@@ -127,7 +127,7 @@ set_property ip_repo_paths $path_ip [current_project]
 update_ip_catalog
 
 if { $bCheckIPs == 1 } {
-   set list_check_ips "\ 
+   set list_check_ips "\
 xilinx.com:ip:clk_wiz:6.0\
 xilinx.com:ip:xlconcat:2.1\
 xilinx.com:ip:processing_system7:5.5\
@@ -331,7 +331,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_ACT_FPGA3_PERIPHERAL_FREQMHZ {10.000000} \
    CONFIG.PCW_ACT_I2C_PERIPHERAL_FREQMHZ {50} \
    CONFIG.PCW_ACT_PCAP_PERIPHERAL_FREQMHZ {200.000000} \
-   CONFIG.PCW_ACT_QSPI_PERIPHERAL_FREQMHZ {200.000000} \
+   CONFIG.PCW_ACT_QSPI_PERIPHERAL_FREQMHZ {125.000000} \
    CONFIG.PCW_ACT_SDIO_PERIPHERAL_FREQMHZ {100.000000} \
    CONFIG.PCW_ACT_SMC_PERIPHERAL_FREQMHZ {10.000000} \
    CONFIG.PCW_ACT_SPI_PERIPHERAL_FREQMHZ {166.666672} \
@@ -912,7 +912,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_SDIO_PERIPHERAL_DIVISOR0 {10} \
    CONFIG.PCW_SDIO_PERIPHERAL_FREQMHZ {100} \
    CONFIG.PCW_SDIO_PERIPHERAL_VALID {1} \
-   CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x4} \
+   CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x1} \
    CONFIG.PCW_SMC_CYCLE_T0 {NA} \
    CONFIG.PCW_SMC_CYCLE_T1 {NA} \
    CONFIG.PCW_SMC_CYCLE_T2 {NA} \
@@ -1239,7 +1239,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net dac_data_ch1_0_1 [get_bd_ports dac_dat_a] [get_bd_pins rp_dac/dac_data_cha_o]
   connect_bd_net -net dac_data_ch2_0_1 [get_bd_ports dac_dat_b] [get_bd_pins rp_dac/dac_data_chb_o]
   connect_bd_net -net loopback_sel_scope [get_bd_ports loopback_sel] [get_bd_pins rp_oscilloscope/loopback_sel]
-  connect_bd_net -net processing_system7_0_FCLK_RESET2_N [get_bd_pins processing_system7_0/FCLK_RESET2_N] [get_bd_ports FCLK_RESET2_N] [get_bd_pins rst_gen/ext_reset_in] [get_bd_pins rst_gen2/ext_reset_in] [get_bd_pins rst_gen3/ext_reset_in] 
+  connect_bd_net -net processing_system7_0_FCLK_RESET2_N [get_bd_pins processing_system7_0/FCLK_RESET2_N] [get_bd_ports FCLK_RESET2_N] [get_bd_pins rst_gen/ext_reset_in] [get_bd_pins rst_gen2/ext_reset_in] [get_bd_pins rst_gen3/ext_reset_in]
   connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_ports FCLK_CLK0] [get_bd_pins processing_system7_0/FCLK_CLK0]
   connect_bd_net -net processing_system7_0_fclk_clk1 [get_bd_ports FCLK_CLK1] [get_bd_pins processing_system7_0/FCLK_CLK1]
   connect_bd_net -net processing_system7_0_fclk_clk3 [get_bd_ports FCLK_CLK3] [get_bd_pins processing_system7_0/FCLK_CLK3]

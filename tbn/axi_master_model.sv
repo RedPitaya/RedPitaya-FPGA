@@ -199,7 +199,7 @@ begin:main
 
    in_use    <= 1'b0 ;
    wr_idle   <= 1'b1 ;
-   @(posedge aclk_i) ;
+   repeat(10) @(posedge aclk_i) ;
 
    //resp_o <= bresp_i ;
 end
@@ -224,6 +224,7 @@ task rd_single ;
    reg     [ IW-1: 0] id          ;
 
 begin:main
+     // $display("start rd_single @ %t", $time) ;
 
    if (in_use === 1'b1)
    begin
@@ -262,13 +263,18 @@ begin:main
    @(posedge aclk_i) ;
    while(arready_i === 1'b0)
       @(posedge aclk_i) ;
+  // $display("arready got @ %t", $time) ;
 
+   //   @(posedge aclk_i) ;
    arvalid_o <= 1'b0 ;
    rready_o  <= 1'b1 ;
+   //   @(posedge aclk_i) ;
 
    while ((rvalid_i === 1'b0) && (rlast_i === 1'b0))
       @(posedge aclk_i) ;
+  // $display("rvalid got @ %t", $time) ;
 
+   //   @(posedge aclk_i) ;
    rready_o  <= 1'b0 ;
 
    if(rid_i !== id)
@@ -282,7 +288,9 @@ begin:main
 
    in_use    <= 1'b0 ;
    rd_idle   <= 1'b1 ;
-   @(posedge aclk_i) ;
+   repeat(10) @(posedge aclk_i) ;
+
+   //$display("end rd_single @ %t", $time) ;
 
    //resp_o <= rresp_i ;
 end

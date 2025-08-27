@@ -171,6 +171,10 @@ sys_bus_if   sys [8-1:0] (.clk (adc_clk), .rstn (adc_rstn));
 // GPIO interface
 gpio_if #(.DW (24)) gpio ();
 
+axi_sys_if axi0_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi1_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi2_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi3_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
@@ -259,6 +263,7 @@ sys_bus_interconnect #(
   .SN (8),
   .SW (20)
 ) sys_bus_interconnect (
+  .pll_locked_i(pll_locked),
   .bus_m (ps_sys),
   .bus_s (sys)
 );
@@ -431,6 +436,9 @@ red_pitaya_asg i_asg (
   .trig_a_i        (gpio.i[8]   ),
   .trig_b_i        (gpio.i[8]   ),
   .trig_out_o      (trig_asg_out),
+
+  .axi_a_sys       (axi2_sys    ),
+  .axi_b_sys       (axi3_sys    ),
   // System bus
   .sys_addr        (sys[2].addr ),
   .sys_wdata       (sys[2].wdata),

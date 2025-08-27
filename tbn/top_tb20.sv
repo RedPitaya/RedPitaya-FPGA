@@ -16,6 +16,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8138,
   realtime  TP            = 8.138ns,  // 122.88 MHz
+  `define   rp_top        red_pitaya_top_Z20
   `endif
 
   `ifdef Z20_14
@@ -26,6 +27,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top
   `endif
 
   `ifdef Z10_14
@@ -36,6 +38,7 @@ module top_tb #(
   parameter DWE           = 8,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top
   `endif
 
   `ifdef Z20_4ADC
@@ -46,6 +49,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top_4ADC
   `endif
 
   `ifdef Z20_250
@@ -56,13 +60,37 @@ module top_tb #(
   parameter DWE           = 9,
   parameter CLKA_PER      = 4000,
   realtime  TP            = 4.0ns,  // 250 MHz
+  `define   rp_top        red_pitaya_top
+  `endif
+
+  `ifdef Z20_G2
+  parameter ADC_DW        = 14,
+  parameter MNG           = 2,
+  parameter TRIG_ACT_LVL  = 1,
+  parameter NUM_ADC       = 2,
+  parameter DWE           = 11,
+  parameter CLKA_PER      = 8000,
+  realtime  TP            = 8.0ns,  // 125 MHz
+  `define   rp_top        red_pitaya_top
+  `endif
+
+  `ifdef Z20_LL
+  parameter ADC_DW        = 14,
+  parameter MNG           = 2,
+  parameter TRIG_ACT_LVL  = 1,
+  parameter NUM_ADC       = 2,
+  parameter DWE           = 8,
+  parameter CLKA_PER      = 8000,
+  realtime  TP            = 8.0ns,  // 125 MHz
+  realtime  ADC_TP        = 16.0ns, // 65 MHz
+  `define   rp_top        red_pitaya_top
   `endif
 
   parameter N_SAMP        = 131072-1, // size of ADC buffer file
 
   parameter ADC_TRIG      = `AP_TRIG_ADC,   // which trigger source for ADC
   parameter DAC_TRIG      = `SW_TRIG_DAC,   // which trigger source for DAC
-  parameter CYCLES        = 1000,             // how many ADC cycles (triggers) are handled
+  parameter CYCLES        = 3,             // how many ADC cycles (triggers) are handled
   parameter DEC           = 32'h1,          // decimation
   parameter R_TRIG        =  1'b1,          // read and save trigger values
   parameter ADC_MODE      = `MODE_NORMAL,     // normal, axi0, axi1, fast
@@ -70,7 +98,7 @@ module top_tb #(
   parameter ARM_DELAY     = 200,           // delay in sending SW trigger after arming
 
   parameter MON_LEN       = 100000,         // how many samples are acquired before monitor file is closed
-
+  parameter DAC_BUF_WRITE = 0,        // write the DAC buffer or not
   realtime  DEL           = 1.0ns,    // delay between clk0 and clk1
   realtime  RP            = 100.1ns,  // ~10MHz
   realtime  TP_250        = 4.0ns     // daisy clk 250 MHz
@@ -89,11 +117,19 @@ logic [4-1:0][16-1:0] adc_drv     ;
 logic [4-1:0][ 7-1:0] adc_drv_ddr ; 
 logic [4-1:0][ 7-1:0] adc_drv_p   ; 
 logic [4-1:0][ 7-1:0] adc_drv_n   ;
+
+// ADC
+logic [ 2-1:0] [ 2-1:0] adcll_dat1;
+logic [ 2-1:0] [ 2-1:0] adcll_dat2;
+logic          [ 2-1:0] adcll_fclk;
+logic          [ 2-1:0] adcll_odclk;
+logic          [ 2-1:0] adcll_idclk;
+
 // DAC
 logic [2-1:0][14-1:0] dac_dat;     // DAC combined data
 logic                 dac_clk;     // DAC clock
 logic                 dac_rst;     // DAC reset
-logic                 dac_wrt;
+logic [2-1:0]         dac_wrt;
 logic                 dac_sel;
 logic        [14-1:0] dac_cha;
 logic        [14-1:0] dac_chb;
@@ -125,6 +161,7 @@ logic                  pll_ref_lo;
 logic                  intr;
 logic                  clk0;
 logic                  clk1;
+logic                  clk_65;
 logic                  clk_250 ;
 reg                    trig_ext;
 logic                  rstn;
@@ -148,14 +185,26 @@ wire            gpio_9_rec;
 
 logic [32-1:0 ] ext_trig_cnt;
 
-wire d_clko_p ;
-wire d_clko_n ;
-wire d_trigo_p;
-wire d_trigo_n;
-wire d_clki_p ;
-wire d_clki_n ;
-wire d_trigi_p;
-wire d_trigi_n;
+logic           d_clko_p ;
+logic           d_clko_n ;
+logic           d_trigo_p;
+logic           d_trigo_n;
+logic           d_clki_p ;
+logic           d_clki_n ;
+logic           d_trigi_p;
+logic           d_trigi_n;
+
+logic           e3_clko_p ;
+logic           e3_clko_n ;
+logic [  3-1:0] e3_dato_p ;
+logic [  3-1:0] e3_dato_n ;
+logic           e3_clki_p ;
+logic           e3_clki_n ;
+logic [  3-1:0] e3_dati_p ;
+logic [  3-1:0] e3_dati_n ;
+
+logic           s1_link ;
+logic           s1_orient ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Clock and reset generation
@@ -163,6 +212,9 @@ wire d_trigi_n;
 
 initial #3.6ns clk0 = 1'b0;
 always #(TP/2) clk0 = ~clk0;
+
+initial #3.6ns clk_65 = 1'b0;
+always #(ADC_TP/2)   clk_65 = ~clk_65;
 
 initial            clk_250 = 1'b0;
 always #(TP_250/2) clk_250 = ~clk_250;
@@ -196,7 +248,6 @@ initial begin
   trig_ext      = ~`TRIG_ACT_LVL;
   ext_trig_cnt  = 32'h0;
 end
-
 `ifdef Z10_14
 initial begin
     $display("Testing Z10_14!");
@@ -214,7 +265,7 @@ assign adc_rstn = red_pitaya_top.adc_rstn_01;
 `endif
 
 int BASE =  `BASE_OFS;
-int ADR, ADR2;
+int ADR, ADR2, ADR3;
 initial begin
   ##500;
    // top_tc.daisy_trigs();
@@ -229,34 +280,48 @@ initial begin
   fork
 `ifdef STREAMING
     $display("Testing streaming!");
-    //ADR = (1 << 30) + (`STRM_SCOPE_REG_OFS << `OFS_SHIFT);
-    ADR = 32'h40200000;
+    //ADR = 32'h40000000 + (`STRM_SCOPE_REG_OFS << `OFS_SHIFT);
+    ADR = 32'h40000000 + (`STRM_ASG_REG_OFS   << `OFS_SHIFT);
+
     monitor_tcs_strm.set_monitor(MON_LEN);
     begin
       //top_tc20_strm.scope_test(ADR, CYCLES, ACK_DELAY);
-      //top_tc20_strm.test_dac(ADR, CYCLES, ACK_DELAY);
-      top_tc20_strm.test_gpio(ADR, CYCLES, ACK_DELAY);
+      top_tc20_strm.test_dac(ADR, CYCLES, ACK_DELAY);
+      //top_tc20_strm.test_gpio(ADR, CYCLES, ACK_DELAY);
 
     end    
 `else
+
+  `ifdef LOGIC
+    $display("Testing Logic Analyzer!");
+    top_tc20.test_la (32'h40300000);
+    top_tc20.test_la_automatic (32'h40300000);
+  `else
     $display("Testing normal acq mode!");
 
     ADR  = `BASE_OFS + `SCOPE1_REG_OFS << `OFS_SHIFT;
     ADR2 = `BASE_OFS + `SCOPE2_REG_OFS << `OFS_SHIFT;
+    ADR3 = `BASE_OFS + `EXP_E3_REG_OFS << `OFS_SHIFT;
     monitor_tcs_094.set_monitor(MON_LEN);
     begin
-       top_tc20.init_adc_01(ADR);
-       top_tc20.init_adc_23(ADR2);
-       top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-       //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-      // top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
-      // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      //top_tc20.daisy_trigs();
+      //top_tc20.init_adc_02(ADR);
+      //top_tc20.init_dac(ADR2, DAC_BUF_WRITE);
+      //top_tc20.test_sata(ADR3);
 
-    ADR = `BASE_OFS + `ASG_REG_OFS << `OFS_SHIFT;
-      top_tc20.init_dac(ADR);
-      #10000;
-      top_tc20.test_dac(ADR);
+       //top_tc20.init_adc_23(ADR2);     
+      //top_tc20.test_osc(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+       //top_tc20.test_osc(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      //top_tc20.test_osc_common(ADR,  ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      // top_tc20.test_osc_common(ADR2, ADC_TRIG, CYCLES, DEC, ARM_DELAY, R_TRIG, ADC_MODE);
+      //top_tc20.custom_test(ADR2, ADR);
+      top_tc20.custom_adcconf(ADR);
+      //top_tc20.custom_adcconf(ADR2);
+
+      //#1000;
+      //top_tc20.test_dac2(ADR2);
     end
+    `endif
 `endif
 
   join
@@ -267,6 +332,10 @@ initial begin
   $finish();
 end
 
+// wire [4-1:0] trg_01 = top_tb.red_pitaya_top.i_scope_0_1.adc_trig;
+// wire [4-1:0] trg_23 = top_tb.red_pitaya_top.i_scope_2_3.adc_trig;
+// wire [4-1:0] trg_xord;
+// assign trg_xord = trg_01 ^ trg_23;
 
 ////////////////////////////////////////////////////////////////////////////////
 // signal generation
@@ -345,12 +414,22 @@ adc_driver #(
 ) 
 tb_adc_drv
 (
+ `ifdef Z20_LL
+   .adc_clk_i    ({clk_65,clk_65}),
+ `else
    .adc_clk_i    ({clk1,clk0}),
+ `endif
    .adc_rstn_i   ({rstn,rstn}),
    .adc_data_in0 (cnter1     ),
    .adc_data_in1 (cnter2     ),
    .adc_data_in2 (cnter3     ),
    .adc_data_in3 (cnter4     ),
+
+   .adcll_dclk_i (adcll_idclk),
+   .adcll_fclk_o (adcll_fclk ),
+   .adcll_data_o (adcll_dat1 ),
+   .adcll_datb_o (adcll_dat2 ),
+   .adcll_dclk_o (adcll_odclk),
 
    .adc_drv_o     (adc_drv    ), 
    .adc_drv_ddr_o (adc_drv_ddr), 
@@ -374,15 +453,32 @@ tb_dac_drv
   .dac_b_o   (dac_chb )
 );
 
-
+`ifndef STREAMING
+  `ifdef LOGIC
+assign gpio_p_dir =  8'h0;
+assign gpio_n_dir =  8'h0;
+  `else
 assign gpio_p_dir =  top_tb.red_pitaya_top.exp_p_dtr;
 assign gpio_n_dir =  top_tb.red_pitaya_top.exp_n_dtr;
+  `endif
+`endif
 
 always @(posedge clk0) begin
   gpio_p_driver[7:6] <= gpio_n_rec[7:6];
 end
 
-
+// always @(posedge clk0) begin //
+//   if (ext_trig_cnt < 15000) begin
+//     ext_trig_cnt <= ext_trig_cnt + 1;
+//   end else begin
+//     ext_trig_cnt <= 32'h0;
+//   end
+//   if (ext_trig_cnt > 14900 && ext_trig_cnt < 15000) begin
+//     trig_ext <= 1'b1;
+//   end else begin
+//     trig_ext <= 1'b0;
+//   end
+// end
 
 initial
 begin:trig_gen
@@ -437,13 +533,14 @@ assign strm_adc_en = {NUM_ADC{1'b0}};
 
 clk_gen #(
   .CLKA_PERIOD  (  CLKA_PER ),
-  .CLKA_JIT     (  0     ),
-  .DEL          (  25     ) // in percent
+  .CLKA_JIT     (  10     ),
+  .DEL          (  15     ) // in percent
 )
 i_clgen_model
 (
   .clk_i  ( pll_in_clk ) ,
-  .clk_o  ( adc_clk0   )
+  //.clk_o  ( adc_clk0   )
+  .clka_o  ( adc_clk0   )
 );
 
 clk_gen #(
@@ -473,17 +570,20 @@ assign d_clki_n  = ~daisy_clk;
 assign d_trigi_p =  daisy_trig;
 assign d_trigi_n = ~daisy_trig;
 
+integer E3DEL = 100 ;
+always @ * begin
+  e3_clki_p <= #E3DEL e3_clko_p;
+  e3_clki_n <= #E3DEL e3_clko_n;
+  e3_dati_p <= #E3DEL e3_dato_p;
+  e3_dati_n <= #E3DEL e3_dato_n;
+  s1_link   <= 1'b0;
+  s1_orient <= 1'b0;
+end
 ////////////////////////////////////////////////////////////////////////////////
 // module instances
 ////////////////////////////////////////////////////////////////////////////////
 
-`ifdef Z20_16
-red_pitaya_top_Z20
-`elsif Z20_4ADC
-red_pitaya_top_4ADC
-`else
-red_pitaya_top
-`endif
+`rp_top
 #() 
 red_pitaya_top
 (
@@ -511,6 +611,26 @@ red_pitaya_top
   .dac_dat_o    (dac_dat),
   .dac_reset_o  (dac_rst),
   .exp_9_io     (gpio_9),
+  `elsif Z20_LL
+  // ADC
+  .adc_dclk_i  (adcll_odclk ),  // ADC data clock {p,n}
+  .adc_fclk_i  (adcll_fclk  ),  // ADC frame clock {p,n}
+  .adc_data_i  (adcll_dat1  ),  // ADC data {p,n}
+  .adc_datb_i  (adcll_dat2  ),  // ADC data {p,n}
+  .adc_dclk_o  (adcll_idclk ),  // ADC data clock {p,n}
+  .adc_rst_o   (),   // ADC reset
+  .adc_pdn_o   (),   // ADC power down
+  .adc_sen_o   (),   // ADC serial en
+  .adc_sclk_o  (),  // ADC serial clock
+  .adc_sdio_io (), // ADC serial data
+
+  // DAC
+  .dac_clk_i   (inclk0),  // DAC clock
+  // channels A and B are inverted in hardware
+  .dac_data_o  (dac_dat[1]),  // DAC data cha
+  .dac_datb_o  (dac_dat[0]),  // DAC data chb
+  .dac_wrta_o  (dac_wrt[1]),  // DAC write cha
+  .dac_wrtb_o  (dac_wrt[0]),  // DAC write chab
   `else        
   .dac_dat_o    (dac_dat[0]),
   .dac_wrt_o    (dac_wrt),
@@ -521,6 +641,15 @@ red_pitaya_top
   .adc_dat_i    (adc_drv[NUM_ADC-1:0]),
   .adc_clk_i    (inclk0),
   .adc_clk_o    (clko),
+  `endif
+
+  `ifdef Z20_G2
+  .exp_e3p_o    ({e3_clko_p,e3_dato_p}),
+  .exp_e3n_o    ({e3_clko_n,e3_dato_n}),
+  .exp_e3p_i    ({e3_clki_p,e3_dati_p}),
+  .exp_e3n_i    ({e3_clki_n,e3_dati_n}),
+  .s1_link_i    (s1_link),
+  .s1_orient_i  (s1_orient),
   `endif
   // LED
   .led_o(led));
@@ -533,8 +662,12 @@ red_pitaya_top
 top_tc20_strm top_tc20_strm();
 monitor_tcs_strm monitor_tcs_strm();
 `else
-top_tc20 top_tc20();
-monitor_tcs_094 monitor_tcs_094();
+  `ifdef LOGIC
+  top_tc20 top_tc20();
+  `else
+  monitor_tcs_094 monitor_tcs_094();
+  top_tc20 top_tc20();
+  `endif
 `endif
 
 ////////////////////////////////////////////////////////////////////////////////

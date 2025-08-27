@@ -34,6 +34,10 @@ module red_pitaya_hk #(
   // system signals
   input                clk_i      ,  // clock
   input                rstn_i     ,  // reset - active low
+
+  input                fclk_i     ,  // clock
+  input                frstn_i    ,  // reset - active low
+
   // LED
   output reg [DWL-1:0] led_o      ,  // LED output
   // idelay control
@@ -42,7 +46,7 @@ module red_pitaya_hk #(
   output reg [2*7-1:0] idly_inc_o,
   input      [2*5-1:0] idly_cnt_i,
   // global configuration
-  output reg           digital_loop,
+  output reg [  2-1:0] digital_loop,
   output reg [  3-1:0] daisy_mode_o,
   input                pll_sys_i,    // system clock
   input                pll_ref_i,    // reference clock
@@ -313,11 +317,33 @@ end
 
 //---------------------------------------------------------------------------------
 //
+//  Frequency meter
+wire [32-1: 0] fmtr_freq  ;
+
+freq_meter #(
+  .GCL  ( 32'd15625000 ), // Gate counter length - 1/8 of s, 125000000/8
+  .GCS  (  3           )  // Gate counter sections (1<<GCS)
+) i_freq_meter
+(
+  // measured clock
+  .mes_clk_i     (  clk_i        ),
+  .mes_rstn_i    (  rstn_i       ),
+  // reference clock
+  .ref_clk_i     (  fclk_i       ),
+  .ref_rstn_i    (  frstn_i      ),
+  // result
+  .freq_o        (  fmtr_freq    ),  // @ mes_clk_i
+  .freq_ref_o    (               )   // @ ref_clk_i
+);
+
+
+//---------------------------------------------------------------------------------
+//
 //  System bus connection
 
 always @(posedge clk_i)
 if (rstn_i == 1'b0) begin
-  digital_loop <= 1'b0 ;
+  digital_loop <= 2'h0 ;
   daisy_mode_o <= 3'h0;
   led_o        <= {DWL{1'b0}};
   exp_p_dat_o  <= {DWE{1'b0}};
@@ -327,7 +353,7 @@ if (rstn_i == 1'b0) begin
   pll_cfg_en   <= 1'b1 ;
   can_on_o     <= 1'b0;
 end else if (sys_wen) begin
-  if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[0];
+  if (sys_addr[19:0]==20'h0c)   digital_loop <= sys_wdata[1:0];
 
   if (sys_addr[19:0]==20'h10)   exp_p_dir_o  <= sys_wdata[DWE-1:0];
   if (sys_addr[19:0]==20'h14)   exp_n_dir_o  <= sys_wdata[DWE-1:0];
@@ -406,6 +432,8 @@ end else begin
     20'h00068: begin sys_ack <= sys_en;  sys_rdata <= {15'h0,spi_bsy[1],  spi_rd_l[1]}    ; end
 
     20'h00100: begin sys_ack <= sys_en;  sys_rdata <= {{32-  1{1'b0}}, fpga_rdy}          ; end
+    20'h00104: begin sys_ack <= sys_en;  sys_rdata <= {                fmtr_freq}         ; end
+
     20'h01000: begin sys_ack <= sys_en;  sys_rdata <= {{32-  3{1'b0}}, daisy_mode_o}      ; end
 
       default: begin sys_ack <= sys_en;  sys_rdata <=  32'h0                              ; end

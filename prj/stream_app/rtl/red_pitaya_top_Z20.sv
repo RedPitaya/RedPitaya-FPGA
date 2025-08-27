@@ -66,6 +66,17 @@ module red_pitaya_top_Z20 #(
   output logic [ 2-1:0] daisy_n_o  ,
   input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
   input  logic [ 2-1:0] daisy_n_i  ,
+
+  `ifdef Z20_G2
+  // Additional E3 connector
+  output logic [  4-1:0] exp_e3p_o  ,  // line 3 is clock capable (SRCC)
+  output logic [  4-1:0] exp_e3n_o  ,
+  input  logic [  4-1:0] exp_e3p_i  ,  // line 3 is clock capable (MRCC)
+  input  logic [  4-1:0] exp_e3n_i  ,
+
+  input  logic           s1_orient_i ,
+  input  logic           s1_link_i   ,
+  `endif
   // LED
   inout  logic [ 8-1:0] led_o
 );
@@ -277,6 +288,14 @@ IBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I")) i_IBUFDS_trig
   .IB ( daisy_n_i[0]  ),
   .O  ( trig_ext      )
 );
+
+
+`ifdef Z20_G2
+logic [4-1:0] ext_e3i;
+logic [4-1:0] ext_e3o = 4'bzzzz;
+IBUFDS i_IBUF_ext_e3 [4-1:0] (.I(exp_e3p_i), .IB(exp_e3n_i), .O(ext_e3i));
+OBUFDS o_OBUF_ext_e3 [4-1:0] (.O(exp_e3p_o), .OB(exp_e3n_o), .I(ext_e3o));
+`endif
 
 assign external_trig = trig_ext | gpio_trig;
 

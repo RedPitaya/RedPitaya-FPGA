@@ -52,10 +52,13 @@
 
 
 module red_pitaya_daisy_rx
+ #(
+   parameter N_DATS = 1
+)
 (
    // serial ports
    input                 ser_clk_i       ,  //!< RX high-speed clock
-   input                 ser_dat_i       ,  //!< RX high-speed data
+   input    [N_DATS-1:0] ser_dat_i       ,  //!< RX high-speed data
 
    // paralel ports
    input                 cfg_en_i        ,  //!< global module enable
@@ -64,10 +67,10 @@ module red_pitaya_daisy_rx
    input                 sync_mode_i     ,
    input                 dly_clk_i       ,  //!< IDELAY clock
 
-   output                par_clk_o       ,  //!< parallel clock
-   output reg            par_rstn_o      ,  //!< parallel reset - active low
-   output                par_dv_o        ,  //!< parallel data enable
-   output     [ 16-1: 0] par_dat_o          //!< parallel data
+   output                  par_clk_o       ,  //!< parallel clock
+   output reg              par_rstn_o      ,  //!< parallel reset - active low
+   output [N_DATS   -1: 0] par_dv_o        ,  //!< parallel data enable
+   output [N_DATS*16-1: 0] par_dat_o          //!< parallel data
 );
 
 
@@ -163,6 +166,11 @@ end
 //---------------------------------------------------------------------------------
 //
 //  De-serialize - data
+reg  [N_DATS-1: 0] par_ok       ;
+
+genvar GV;
+generate
+for(GV = 0 ; GV < N_DATS ; GV = GV + 1) begin
 
 reg  [ 4-1: 0] bitslip_r    ;
 reg            bitslip_l    ;
@@ -176,7 +184,6 @@ reg  [ 4-1: 0] rxp_dat_3r   ;
 reg            par_dv       ;
 reg  [16-1: 0] par_dat      ;
 reg  [16-1: 0] par_dat_r    ;
-reg            par_ok       ;
 reg  [ 2-1: 0] par_cnt      ;
 reg            par_val      ;
 reg  [ 2-1: 0] par_train_r  ;
@@ -214,7 +221,7 @@ i_iserdese
   .CLKB              ( !ser_clk       ),  // Locally inverted fast 
   .CLKDIV            (  par_clk       ),  // Slow clock from BUFR.
   .CLKDIVP           (  1'b0          ),
-  .D                 (  ser_dat_i     ),  // 1-bit Input signal from IOB 
+  .D                 (  ser_dat_i[GV] ),  // 1-bit Input signal from IOB 
   .DDLY              (  1'b0          ),  // 1-bit Input from Input Delay component 
   .RST               ( !cfg_en_i      ),  // 1-bit Asynchronous reset only.
   .SHIFTIN1          (  1'b0          ),
@@ -266,7 +273,7 @@ always @(posedge par_clk_o) begin
       bitslip_l   <=  1'b0 ;
       bitslip_cnt <=  5'b0 ;
       nibslip_cnt <=  3'h0 ;
-      par_ok      <=  1'b0 ;
+      par_ok[GV]  <=  1'b0 ;
       par_cnt     <=  2'h0 ;
       par_val     <=  1'b0 ;
       par_dv      <=  1'b0 ;
@@ -287,14 +294,14 @@ always @(posedge par_clk_o) begin
       else
          bitslip_cnt <= 5'h0 ; 
 
-      if ((bitslip_cnt[3:2] == 3'b10) && (par_dat_r != 16'h00FF) && par_dv && !par_ok)
+      if ((bitslip_cnt[3:2] == 3'b10) && (par_dat_r != 16'h00FF) && par_dv && !par_ok[GV])
          bitslip_l <= !bitslip_l ;
 
 
       // shifting input data by 4bits every 8 bitslips
-      if (par_train && bitslip && !par_ok)
+      if (par_train && bitslip && !par_ok[GV])
          nibslip_cnt <= nibslip_cnt + 3'h1 ;
-      else if (!par_train || par_ok)
+      else if (!par_train || par_ok[GV])
          nibslip_cnt <= 3'h0 ; 
 
       if ((nibslip_cnt == 3'h7) && bitslip)
@@ -308,9 +315,9 @@ always @(posedge par_clk_o) begin
 
       // testing if connection is trained
       if (par_train && (par_dat_r == 16'h00FF) && par_dv)
-         par_ok <= 1'b1 ;
+         par_ok[GV] <= 1'b1 ;
       else if ((bitslip_cnt[3:2] == 3'b10) && (par_dat_r != 16'h00FF) && par_dv)
-         par_ok <= 1'b0 ;
+         par_ok[GV] <= 1'b0 ;
 
    end
 end
@@ -325,19 +332,26 @@ reg          par_dv_or;
 reg [16-1:0] par_dat_or;
 
 always @(posedge par_clk_o) begin
-   par_dv_or   <= par_dv && par_ok && !par_train ;
+   par_dv_or   <= par_dv && par_ok[GV] && !par_train ;
    par_dat_or  <= par_dat_r;
 
-   par_rstn_o  <= par_rstn ;
+   //par_rstn_o  <= par_rstn[GV] ;
 end
 
-assign par_dat_o = sync_mode_i ? {8'h0,rxp_dat} : par_dat_or;
-assign par_dv_o  = sync_mode_i ? 1'b1 : par_dv_or;
+assign par_dat_o[GV*16 +: 16] = sync_mode_i ? {8'h0,rxp_dat} : par_dat_or;
+assign par_dv_o[GV] = sync_mode_i ? 1'b1 : par_dv_or;
+
+end
+endgenerate
+
 
 BUFG i_parclk_buf   (.O(par_clk_o), .I(par_clk));
 
-assign cfg_trained_o = par_ok   ;
+assign cfg_trained_o = &par_ok   ;
 
+always @(posedge par_clk_o) begin
+   par_rstn_o  <= par_rstn ;
+end
 
 
 

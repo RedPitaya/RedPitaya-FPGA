@@ -104,8 +104,10 @@ reg             adc_rst_do   ;
 //---------------------------------------------------------------------------------
 //  Input filtering
 wire [ 14-1: 0] adc_a_filt_in  ;
+wire [ 14-1: 0] adc_a_filtered ;
 wire [ 14-1: 0] adc_a_filt_out ;
 wire [ 14-1: 0] adc_b_filt_in  ;
+wire [ 14-1: 0] adc_b_filtered ;
 wire [ 14-1: 0] adc_b_filt_out ;
 reg  [ 18-1: 0] set_a_filt_aa  ;
 reg  [ 25-1: 0] set_a_filt_bb  ;
@@ -115,6 +117,7 @@ reg  [ 18-1: 0] set_b_filt_aa  ;
 reg  [ 25-1: 0] set_b_filt_bb  ;
 reg  [ 25-1: 0] set_b_filt_kk  ;
 reg  [ 25-1: 0] set_b_filt_pp  ;
+reg  [  2-1: 0] set_filt_byp   ;
 
 reg             filt_a_coef_wr;
 reg             filt_b_coef_wr;
@@ -132,7 +135,7 @@ red_pitaya_dfilt1 i_dfilt1_cha (
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
   .adc_rstn_i  ( filt_a_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_a_filt_in   ),  // ADC data
-  .adc_dat_o   ( adc_a_filt_out  ),  // ADC data
+  .adc_dat_o   ( adc_a_filtered  ),  // ADC data
    // configuration
   .cfg_aa_i    ( set_a_filt_aa   ),  // config AA coefficient
   .cfg_bb_i    ( set_a_filt_bb   ),  // config BB coefficient
@@ -145,13 +148,17 @@ red_pitaya_dfilt1 i_dfilt1_chb (
   .adc_clk_i   ( adc_clk_i       ),  // ADC clock
   .adc_rstn_i  ( filt_b_rstn     ),  // ADC reset - active low
   .adc_dat_i   ( adc_b_filt_in   ),  // ADC data
-  .adc_dat_o   ( adc_b_filt_out  ),  // ADC data
+  .adc_dat_o   ( adc_b_filtered  ),  // ADC data
    // configuration
   .cfg_aa_i    ( set_b_filt_aa   ),  // config AA coefficient
   .cfg_bb_i    ( set_b_filt_bb   ),  // config BB coefficient
   .cfg_kk_i    ( set_b_filt_kk   ),  // config KK coefficient
   .cfg_pp_i    ( set_b_filt_pp   )   // config PP coefficient
 );
+
+assign adc_a_filt_out = set_filt_byp[0] ? adc_a_i : adc_a_filtered ;
+assign adc_b_filt_out = set_filt_byp[1] ? adc_b_i : adc_b_filtered ;
+
 
 //---------------------------------------------------------------------------------
 //  Decimate input data
@@ -368,6 +375,7 @@ wire              adc_rd_dv     ;
 reg               adc_we        ;
 reg               adc_we_keep   ;
 reg               adc_trig      ;
+reg               trig_dis_clr  ;
 
 reg   [ RSZ-1: 0] adc_wp_trig   ;
 reg   [ RSZ-1: 0] adc_wp_cur    ;
@@ -429,9 +437,9 @@ always @(posedge adc_clk_i) begin
 
       if (adc_trig)
          adc_dly_do  <= 1'b1;
-      else if ((adc_dly_do && (adc_dly_cnt <= 32'h1)) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
+      else if ((adc_dly_do && (adc_dly_cnt <= 32'h1)) || adc_rst_do || adc_arm_do) //delay reached or reset; delay is shortened by 1
          adc_dly_do  <= 1'b0;
-      
+
       adc_dly_end_reg <= adc_dly_do; 
       
       if (adc_rst_do || adc_arm_do)
@@ -701,6 +709,8 @@ assign axi_b_trig       = axi_b_fifo_o[64] && axi_b_fifo_rdr;
 assign axi_b_sel        = axi_b_fifo_o[66:65];
 assign axi_b_val_byte_f = axi_b_fifo_o[74:67];
 
+
+
 always @(posedge axi1_clk_o) begin
    if (axi1_rstn_o == 1'b0) begin
       axi_b_dat_sel <=  2'h0 ;
@@ -834,8 +844,10 @@ reg               adc_trig_ap      ;
 reg               adc_trig_an      ;
 reg               adc_trig_bp      ;
 reg               adc_trig_bn      ;
-reg               adc_trig_sw      ;
-reg               trig_dis_clr     ;
+wire              adc_trig_sw      ;
+wire              adc_trig_sw_p    ;
+reg               adc_trig_sw_r    ;
+
 reg   [   4-1: 0] set_trig_src     ;
 wire              ext_trig_p       ;
 wire              ext_trig_n       ;
@@ -843,19 +855,29 @@ wire              asg_trig_p       ;
 wire              asg_trig_n       ;
 reg               adc_trg_dis      ;
 
+reg [2-1:0] dat_dly  = 2'h0;
+reg [2-1:0] prev_dly = 2'h0;
+
+assign adc_trig_sw_p = sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // trigger pulse
+assign adc_trig_sw   = (adc_trig_sw_r) && adc_dv_r[dat_dly];
+
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
    adc_arm_do    <= 1'b0 ;
    adc_rst_do    <= 1'b0 ;
-   adc_trig_sw   <= 1'b0 ;
+   adc_trig_sw_r <= 1'b0 ;
    trig_dis_clr  <= 1'b0 ;
    adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
 end else begin
    adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[0] ; // SW ARM
    adc_rst_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[1] ; // reset
-   adc_trig_sw  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // SW trigger
    trig_dis_clr <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_wdata[0]==1'b1);   // clear trigger protect/disable
+
+   if (adc_trig_sw_p)// extend wait for next valid sample 
+      adc_trig_sw_r <= 1'b1; 
+   else if (adc_dv_r[dat_dly])
+      adc_trig_sw_r <= 1'b0; 
 
    if (sys_wen && (sys_addr[19:0]==20'h4))
       set_trig_src <= sys_wdata[3:0] ;
@@ -893,8 +915,8 @@ always @(posedge adc_clk_i) begin
    last_src <= sys_wdata[3:0] ;
 end
 
-reg [2-1:0] dat_dly  = 2'h0;
-reg [2-1:0] prev_dly = 2'h0;
+
+
 always @(posedge adc_clk_i) begin //delay to trigger
    case (last_src)
        4'd2,
@@ -1080,6 +1102,7 @@ if (adc_rstn_i == 1'b0) begin
    set_deb_len   <=  20'd62500  ;
    set_a_axi_en  <=   1'b0      ;
    set_b_axi_en  <=   1'b0      ;
+   set_filt_byp  <=   2'h0      ;
 end else begin
    if (sys_wen) begin
       if (sys_addr[19:0]==20'h00)   adc_we_keep   <= sys_wdata[     3] ;
@@ -1112,7 +1135,7 @@ end else begin
       if (sys_addr[19:0]==20'h7C)   set_b_axi_en    <= sys_wdata[     0] ;
 
       if (sys_addr[19:0]==20'h90)   set_deb_len     <= sys_wdata[20-1:0] ;
-      // Offset 0x94 reserved for trigger unlock bit
+      if (sys_addr[19:0]==20'h98)   set_filt_byp    <= sys_wdata[ 2-1:0] ;
 
    end
 end
@@ -1187,6 +1210,7 @@ end else begin
                                                                  {16- 5{1'b0}}, axi_a_state }       ; end
 
      20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}}, set_deb_len}        ; end
+     20'h00098 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}}, set_filt_byp}       ; end
 
      20'h1???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_a_rd}              ; end
      20'h2???? : begin sys_ack <= adc_rd_dv;       sys_rdata <= {16'h0, 2'h0,adc_b_rd}              ; end

@@ -1,0 +1,36 @@
+diff --git a/fpga/prj/v0.94/ip/systemZ10.tcl b/fpga/prj/v0.94/ip/systemZ10.tcl
+index c2620a7c3..c78135e48 100644
+--- a/fpga/prj/v0.94/ip/systemZ10.tcl
++++ b/fpga/prj/v0.94/ip/systemZ10.tcl
+@@ -487,12 +487,8 @@ CONFIG.PCW_MIO_9_SLEW {slow} \
+ CONFIG.PCW_MIO_TREE_PERIPHERALS {GPIO#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#GPIO#UART 1#UART 1#SPI 1#SPI 1#SPI 1#SPI 1#UART 0#UART 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#USB Reset#GPIO#I2C 0#I2C 0#Enet 0#Enet 0} \
+ CONFIG.PCW_MIO_TREE_SIGNALS {gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]#qspi0_sclk#gpio[7]#tx#rx#mosi#miso#sclk#ss[0]#rx#tx#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#cd#wp#reset#gpio[49]#scl#sda#mdc#mdio} \
+ CONFIG.PCW_PRESET_BANK1_VOLTAGE {LVCMOS 2.5V} \
++CONFIG.PCW_QSPI_PERIPHERAL_ENABLE {0} \
+ CONFIG.PCW_QSPI_GRP_SINGLE_SS_ENABLE {1} \
+-CONFIG.PCW_QSPI_GRP_SINGLE_SS_IO {MIO 1 .. 6} \
+-CONFIG.PCW_QSPI_PERIPHERAL_CLKSRC {IO PLL} \
+-CONFIG.PCW_QSPI_PERIPHERAL_ENABLE {1} \
+-CONFIG.PCW_QSPI_PERIPHERAL_FREQMHZ {125} \
+-CONFIG.PCW_QSPI_QSPI_IO {MIO 1 .. 6} \
+ CONFIG.PCW_SD0_GRP_CD_ENABLE {1} \
+ CONFIG.PCW_SD0_GRP_CD_IO {MIO 46} \
+ CONFIG.PCW_SD0_GRP_WP_ENABLE {1} \
+diff --git a/fpga/prj/v0.94/ip/systemZ20.tcl b/fpga/prj/v0.94/ip/systemZ20.tcl
+index e8da4176a..6b4d7e0c3 100644
+--- a/fpga/prj/v0.94/ip/systemZ20.tcl
++++ b/fpga/prj/v0.94/ip/systemZ20.tcl
+@@ -495,12 +495,8 @@ CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_1 {-0.025} \
+ CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_2 {-0.006} \
+ CONFIG.PCW_PACKAGE_DDR_DQS_TO_CLK_DELAY_3 {-0.017} \
+ CONFIG.PCW_PRESET_BANK1_VOLTAGE {LVCMOS 2.5V} \
++CONFIG.PCW_QSPI_PERIPHERAL_ENABLE {0} \
+ CONFIG.PCW_QSPI_GRP_SINGLE_SS_ENABLE {1} \
+-CONFIG.PCW_QSPI_GRP_SINGLE_SS_IO {MIO 1 .. 6} \
+-CONFIG.PCW_QSPI_PERIPHERAL_CLKSRC {IO PLL} \
+-CONFIG.PCW_QSPI_PERIPHERAL_ENABLE {1} \
+-CONFIG.PCW_QSPI_PERIPHERAL_FREQMHZ {125} \
+-CONFIG.PCW_QSPI_QSPI_IO {MIO 1 .. 6} \
+ CONFIG.PCW_SD0_GRP_CD_ENABLE {1} \
+ CONFIG.PCW_SD0_GRP_CD_IO {MIO 46} \
+ CONFIG.PCW_SD0_GRP_WP_ENABLE {1} \

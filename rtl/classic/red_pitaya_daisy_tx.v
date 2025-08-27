@@ -43,20 +43,23 @@
 
 
 module red_pitaya_daisy_tx
+ #(
+   parameter N_DATS = 1
+)
 (
    // serial ports
    input                 ser_clk_i       ,  //!< reference high-speed clock
    output                ser_clk_o       ,  //!< TX high-speed clock
-   output                ser_dat_o       ,  //!< TX high-speed clock
+   output   [N_DATS-1:0] ser_dat_o       ,  //!< TX high-speed clock
 
    // paralel ports
    input                 sync_mode_i     ,
    input                 par_clk_i       ,  //!< parallel clock
    input                 par_rstn_i      ,  //!< parallel reset - active low
 
-   output                par_rdy_o       ,  //!< parallel data can be transmitted
-   input                 par_dv_i        ,  //!< parallel data valid
-   input      [ 16-1: 0] par_dat_i          //!< parallel data
+   output [N_DATS   -1: 0] par_rdy_o       ,  //!< parallel data can be transmitted
+   input  [N_DATS   -1: 0] par_dv_i        ,  //!< parallel data valid
+   input  [N_DATS*16-1: 0] par_dat_i          //!< parallel data
 );
 
 
@@ -89,8 +92,15 @@ ODDR #(
 //
 //  Serializer - data
 
+genvar GV;
+generate
+for(GV = 0 ; GV < N_DATS ; GV = GV + 1) begin
+
+wire [16-1: 0] par_dat_in;
 reg  [ 4-1: 0] par_dat   ;
 wire [ 4-1: 0] par_dat_s ;
+
+assign par_dat_in = par_dat_i[GV*16 +: 16];
 
 OSERDESE2
 #(
@@ -121,7 +131,7 @@ i_oserdese
   .OCE            (  1'b1           ),
   .CLK            (  ser_clk_i      ),
   .CLKDIV         (  par_clk_i      ),
-  .OQ             (  ser_dat_o      ),
+  .OQ             (  ser_dat_o[GV]  ),
   .TQ             (),
   .OFB            (),
   .TFB            (),
@@ -143,16 +153,16 @@ reg  [ 3-1: 0] par_dv        ;
 reg  [12-1: 0] par_dat_r     ;
 
 
-assign par_rdy_o = (par_sel==2'h0) ;
-assign par_dat_s = sync_mode_i ? par_dat_i[3:0] : par_dat;
+assign par_rdy_o[GV] = (par_sel==2'h0) ;
+assign par_dat_s = sync_mode_i ? par_dat_in[3:0] : par_dat;
 
 // First level of serializing. Break input 16-bits into nibbles.
 // If value is not valid sent 0.
 always @(posedge par_clk_i) begin
    case(par_sel)
     2'b00 : begin
-               if (par_dv_i)
-                  par_dat <= par_dat_i[3:0] ;
+               if (par_dv_i[GV])
+                  par_dat <= par_dat_in[3:0] ;
                else
                   par_dat <= 8'h0 ;
             end
@@ -188,14 +198,15 @@ always @(posedge par_clk_i) begin
    else begin
       par_sel <= par_sel + 2'h1 ;
 
-      par_dv  <= {par_dv[1:0], par_dv_i && par_rdy_o} ;
+      par_dv  <= {par_dv[1:0], par_dv_i[GV] && par_rdy_o[GV]} ;
 
-      if (par_dv_i && par_rdy_o)
-         par_dat_r <= par_dat_i[15:4] ;
+      if (par_dv_i[GV] && par_rdy_o[GV])
+         par_dat_r <= par_dat_in[15:4] ;
 
    end
 end
-
+end
+endgenerate
 
 
 

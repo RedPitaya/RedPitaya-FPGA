@@ -88,7 +88,7 @@ if { ${design_name} eq "" } {
    set errMsg "Design <$design_name> already exists in your project, please set the variable <design_name> to another value."
    set nRet 1
 } elseif { [get_files -quiet ${design_name}.bd] ne "" } {
-   # USE CASES: 
+   # USE CASES:
    #    6) Current opened design, has components, but diff names, design_name exists in project.
    #    7) No opened design, design_name exists in project.
 
@@ -122,7 +122,7 @@ set bCheckIPsPassed 1
 ##################################################################
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
-   set list_check_ips "\ 
+   set list_check_ips "\
 xilinx.com:ip:axi_protocol_converter:2.1\
 xilinx.com:ip:proc_sys_reset:5.0\
 xilinx.com:ip:processing_system7:5.5\
@@ -210,7 +210,7 @@ proc create_root_design { parentCell } {
    CONFIG.AWUSER_WIDTH {0} \
    CONFIG.BUSER_WIDTH {0} \
    CONFIG.DATA_WIDTH {64} \
-   CONFIG.FREQ_HZ {125000000} \
+   CONFIG.FREQ_HZ $::hp0_clk_freq \
    CONFIG.HAS_BRESP {1} \
    CONFIG.HAS_BURST {1} \
    CONFIG.HAS_CACHE {1} \
@@ -243,7 +243,7 @@ proc create_root_design { parentCell } {
    CONFIG.AWUSER_WIDTH {0} \
    CONFIG.BUSER_WIDTH {0} \
    CONFIG.DATA_WIDTH {64} \
-   CONFIG.FREQ_HZ {125000000} \
+   CONFIG.FREQ_HZ $::hp1_clk_freq \
    CONFIG.HAS_BRESP {1} \
    CONFIG.HAS_BURST {1} \
    CONFIG.HAS_CACHE {1} \
@@ -276,14 +276,14 @@ proc create_root_design { parentCell } {
    CONFIG.AWUSER_WIDTH {0} \
    CONFIG.BUSER_WIDTH {0} \
    CONFIG.DATA_WIDTH {64} \
-   CONFIG.FREQ_HZ {125000000} \
+   CONFIG.FREQ_HZ $::hp2_clk_freq \
    CONFIG.HAS_BRESP {1} \
    CONFIG.HAS_BURST {1} \
    CONFIG.HAS_CACHE {1} \
    CONFIG.HAS_LOCK {1} \
    CONFIG.HAS_PROT {1} \
    CONFIG.HAS_QOS {1} \
-   CONFIG.HAS_REGION {1} \
+   CONFIG.HAS_REGION {0} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
    CONFIG.ID_WIDTH {4} \
@@ -309,14 +309,14 @@ proc create_root_design { parentCell } {
    CONFIG.AWUSER_WIDTH {0} \
    CONFIG.BUSER_WIDTH {0} \
    CONFIG.DATA_WIDTH {64} \
-   CONFIG.FREQ_HZ {125000000} \
+   CONFIG.FREQ_HZ $::hp3_clk_freq \
    CONFIG.HAS_BRESP {1} \
    CONFIG.HAS_BURST {1} \
    CONFIG.HAS_CACHE {1} \
    CONFIG.HAS_LOCK {1} \
    CONFIG.HAS_PROT {1} \
    CONFIG.HAS_QOS {1} \
-   CONFIG.HAS_REGION {1} \
+   CONFIG.HAS_REGION {0} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
    CONFIG.ID_WIDTH {4} \
@@ -333,7 +333,7 @@ proc create_root_design { parentCell } {
    CONFIG.SUPPORTS_NARROW_BURST {1} \
    CONFIG.WUSER_BITS_PER_BYTE {0} \
    CONFIG.WUSER_WIDTH {0} \
-   ] $S_AXI_HP3   
+   ] $S_AXI_HP3
 
   set Vaux0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 Vaux0 ]
   set Vaux1 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_analog_io_rtl:1.0 Vaux1 ]
@@ -356,10 +356,10 @@ proc create_root_design { parentCell } {
   set_property -dict [ list \
    CONFIG.ASSOCIATED_BUSIF {M_AXI_GP0} \
  ] $M_AXI_GP0_ACLK
-  set S_AXI_HP0_aclk [ create_bd_port -dir I -type clk -freq_hz 125000000 S_AXI_HP0_aclk ]
-  set S_AXI_HP1_aclk [ create_bd_port -dir I -type clk -freq_hz 125000000 S_AXI_HP1_aclk ]
-  set S_AXI_HP2_aclk [ create_bd_port -dir I -type clk -freq_hz 125000000 S_AXI_HP2_aclk ]
-  set S_AXI_HP3_aclk [ create_bd_port -dir I -type clk -freq_hz 125000000 S_AXI_HP3_aclk ]
+  set S_AXI_HP0_aclk [ create_bd_port -dir I -type clk -freq_hz $::hp0_clk_freq S_AXI_HP0_aclk ]
+  set S_AXI_HP1_aclk [ create_bd_port -dir I -type clk -freq_hz $::hp1_clk_freq S_AXI_HP1_aclk ]
+  set S_AXI_HP2_aclk [ create_bd_port -dir I -type clk -freq_hz $::hp2_clk_freq S_AXI_HP2_aclk ]
+  set S_AXI_HP3_aclk [ create_bd_port -dir I -type clk -freq_hz $::hp3_clk_freq S_AXI_HP3_aclk ]
 
   # Create instance: axi_protocol_converter_0, and set properties
   set axi_protocol_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_protocol_converter:2.1 axi_protocol_converter_0 ]
@@ -733,7 +733,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_SDIO_PERIPHERAL_DIVISOR0 {10} \
    CONFIG.PCW_SDIO_PERIPHERAL_FREQMHZ {100} \
    CONFIG.PCW_SDIO_PERIPHERAL_VALID {1} \
-   CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x4} \
+   CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x1} \
    CONFIG.PCW_SMC_PERIPHERAL_DIVISOR0 {1} \
    CONFIG.PCW_SPI0_GRP_SS0_ENABLE {1} \
    CONFIG.PCW_SPI0_GRP_SS0_IO {EMIO} \
@@ -796,6 +796,12 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_USB_RESET_ENABLE {1} \
    CONFIG.PCW_USB_RESET_SELECT {Share reset pin} \
    CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
+   CONFIG.PCW_UIPARAM_DDR_ADV_ENABLE {1} \
+   CONFIG.PCW_QSPI_GRP_SINGLE_SS_ENABLE {1} \
+   CONFIG.PCW_DDR_PORT0_HPR_ENABLE {0} \
+   CONFIG.PCW_DDR_PORT1_HPR_ENABLE {0} \
+   CONFIG.PCW_DDR_PORT2_HPR_ENABLE {1} \
+   CONFIG.PCW_DDR_PORT3_HPR_ENABLE {1} \
    CONFIG.PCW_USE_M_AXI_GP1 {1} \
    CONFIG.PCW_USE_S_AXI_GP0 {1} \
    CONFIG.PCW_USE_S_AXI_HP0 {1} \
@@ -855,7 +861,7 @@ proc create_root_design { parentCell } {
 
   # Create port connections
   connect_bd_net -net m_axi_gp0_aclk_1 [get_bd_ports M_AXI_GP0_ACLK] [get_bd_pins processing_system7/M_AXI_GP0_ACLK]
-  connect_bd_net -net proc_sys_reset_0_interconnect_aresetn [get_bd_pins axi_protocol_converter_0/aresetn] [get_bd_pins proc_sys_reset/interconnect_aresetn] [get_bd_pins axi_register_slice_0/aresetn] 
+  connect_bd_net -net proc_sys_reset_0_interconnect_aresetn [get_bd_pins axi_protocol_converter_0/aresetn] [get_bd_pins proc_sys_reset/interconnect_aresetn] [get_bd_pins axi_register_slice_0/aresetn]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins proc_sys_reset/peripheral_aresetn] [get_bd_pins xadc/s_axi_aresetn]
   connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_ports FCLK_CLK0] [get_bd_pins processing_system7/FCLK_CLK0]
   connect_bd_net -net processing_system7_0_fclk_clk1 [get_bd_ports FCLK_CLK1] [get_bd_pins processing_system7/FCLK_CLK1]
