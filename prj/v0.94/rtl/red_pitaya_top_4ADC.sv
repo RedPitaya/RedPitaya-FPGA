@@ -139,6 +139,7 @@ logic [ 4-1:0] trig_ext_asg01;
 logic [  2-1: 0]      adc_clk_in;
 logic [  2-1: 0]      pll_adc_clk;
 logic                 pll_ser_clk;
+logic                 pll_adc_10mhz;
 logic                 pll_pwm_clk;
 logic [  2-1: 0]      pll_locked;
 logic                 adc_10mhz;
@@ -195,15 +196,14 @@ logic                 can_on;
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]   ), .rstn (frstn[0]   ));
 sys_bus_if   sys [8-1:0] (.clk (adc_clk_01), .rstn (adc_rstn_01));
-
 // GPIO interface
 gpio_if #(.DW (3*GDW)) gpio ();
 
 // AXI masters
-axi_sys_if axi0_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
-axi_sys_if axi1_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
-axi_sys_if axi2_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
-axi_sys_if axi3_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi0_sys (.clk(adc_clk_01    ), .rstn(adc_rstn_01    ));
+axi_sys_if axi1_sys (.clk(adc_clk_01    ), .rstn(adc_rstn_01    ));
+axi_sys_if axi2_sys (.clk(adc_clk_01    ), .rstn(adc_rstn_01    ));
+axi_sys_if axi3_sys (.clk(adc_clk_01    ), .rstn(adc_rstn_01    ));
 ////////////////////////////////////////////////////////////////////////////////
 // PLL (clock and reset)
 ////////////////////////////////////////////////////////////////////////////////
@@ -682,8 +682,8 @@ rp_scope_com #(
   .RSZ(14)) 
   i_scope_2_3(  // ADC
   .adc_dat_i     ({adc_dat[3], adc_dat[2]}  ),
-  .adc_clk_i     ({2{adc_clk_01}}  ),  // clock
-  .adc_rstn_i    ({2{adc_rstn_01}} ),  // reset - active low
+  .adc_clk_i     ({2{adc_clk_23}}  ),  // clock
+  .adc_rstn_i    ({2{adc_rstn_23}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
   .trig_ch_o     (trig_ch_2_3 ),  // output trigger to ADC for other 2 channels

@@ -153,7 +153,7 @@ if {($def_name == "STREAMING")} {
         source ${path_tbn}/systemZ20_14_sim.tcl
     }
     "Z20_4" {
-        set_property verilog_define {Z20_xx} [current_fileset]
+        set_property verilog_define {Z20_4ADC Z20_xx} [current_fileset]
         source ${path_tbn}/systemZ20_14_sim.tcl
     }
     "Z20_250" {
@@ -182,7 +182,7 @@ if {($def_name == "STREAMING")} {
         source ${path_ip}/systemZ20_14.tcl
     }
     "Z20_4" {
-        set_property verilog_define {Z20_xx} [current_fileset]
+        set_property verilog_define {Z20_4ADC Z20_xx} [current_fileset]
         source ${path_ip}/systemZ20_14.tcl
     }
     "Z20_250" {
@@ -216,10 +216,11 @@ generate_target all [get_files    system.bd]
 
 add_files                         ../../$path_rtl
 add_files                         $path_rtl
-# new metod of calibration with rp_scope_com
-#if {$prj_name == "v0.94"} {
-    #remove_files ../../$path_rtl/classic/red_pitaya_scope.v
-#}
+# sim adc 4 test  
+if {$def_model == "Z20_4"} {
+    remove_files $path_rtl/red_pitaya_top.sv
+    add_files $path_rtl/red_pitaya_top_4ADC.sv
+}
 add_files                         $path_bd
 add_files                         $path_tbn
 add_files                         $path_tbn_top
@@ -227,9 +228,9 @@ add_files -fileset sim_1 -norecurse $binfiles
 
 upgrade_ip [get_ips]
 
-if {[file isdirectory $path_tbn_top/axi_prot_check]} {
-add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
-}
+#if {[file isdirectory $path_tbn_top/axi_prot_check]} {
+#add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
+#}
 
 # set vhdl default to VHDL2008
 set_property FILE_TYPE {VHDL 2008} [get_files *.vhd]
@@ -243,13 +244,19 @@ set_property FILE_TYPE {VHDL 2008} [get_files *.vhd]
 ################################################################################
 # start gui
 ################################################################################
+# sim adc 4 test  
+if {$def_model == "Z20_4"} {
+    remove_files $path_rtl/red_pitaya_top.sv
+    add_files $path_rtl/red_pitaya_top_4ADC.sv
+}
 
-import_files -force
+#import_files -force
+import_files 
 
-update_compile_order -fileset sources_1
+#update_compile_order -fileset sim_1
 update_compile_order -fileset sim_1
+update_compile_order -fileset sources_1
 
 set_property top top_tb [get_filesets sim_1]
-update_compile_order -fileset sim_1
 
 launch_simulation
