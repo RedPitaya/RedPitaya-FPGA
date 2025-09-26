@@ -479,7 +479,7 @@ always @(posedge adc_clk_01) begin
 end
 
 // should here be adc_clk_23
-always @(posedge adc_clk_01) begin
+always @(posedge adc_clk_23) begin
   adc_dat_r[2] <= {adc_dat_t[2][14-1], ~adc_dat_t[2][14-2:0]};
   adc_dat_r[3] <= {adc_dat_t[3][14-1], ~adc_dat_t[3][14-2:0]};
 
