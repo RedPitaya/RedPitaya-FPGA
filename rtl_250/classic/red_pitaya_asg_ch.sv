@@ -239,7 +239,7 @@ begin
      
       if (do_read_end) // negative edge of dly_do, delayed for 4 cycles
          lastval <= 1'b1;
-      else if ((lastval && last_cnt == 'd0 && (|rep_cnt || (trig_in && !do_read)))  || set_zero_i || set_rst_i || not_burst) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
+      else if ((lastval && last_cnt == 'd0 && (|rep_cnt || (trig_in && !do_read)))  || set_zero_i || set_rst_i || not_burst || do_read_start) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
          lastval <= 1'b0; // reset from lastval when a new trigger arrives
    end
 end
@@ -311,7 +311,7 @@ always @(posedge dac_clk_i) begin
    end
 end
 
-assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0)) ;
+assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
 
 
 reg [PNT_SIZE: 0] dac_pnt_rem  ; // final step over size
@@ -333,7 +333,7 @@ end else begin
    end
 end
 
-assign dac_npnt = dac_pnt + {set_step_i[RSZ+15:0],set_step_lo_i};
+assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
 assign trig_done_o = !dac_rep && trig_in;
 
 //---------------------------------------------------------------------------------
