@@ -333,7 +333,7 @@ end else begin
    end
 end
 
-assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
+assign dac_npnt = dac_do ? dac_pnt + {set_step_i[RSZ+15:0],set_step_lo_i} : dac_pnt;
 assign trig_done_o = !dac_rep && trig_in;
 
 //---------------------------------------------------------------------------------
