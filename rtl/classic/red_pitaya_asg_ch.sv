@@ -68,7 +68,7 @@ module red_pitaya_asg_ch #(
    input     [  14-1: 0] set_dc_i        ,  //!< set output offset
    input     [  14-1: 0] set_first_i     ,  //!< set initial value before start
    input     [  14-1: 0] set_last_i      ,  //!< set final value in burst
-   input     [  32-1: 0] set_last_len_i  ,  //!< set length of final value in burst in ADC counts
+   input     [  32-1: 0] set_last_len_i  ,  //!< set length of final value in burst in ADC counts -- not used
    input                 set_zero_i      ,  //!< set output to zero
    input     [  16-1: 0] set_ncyc_i      ,  //!< set number of cycle
    input     [  16-1: 0] set_rnum_i      ,  //!< set number of repetitions
@@ -134,7 +134,7 @@ reg   [  16-1: 0] cyc_cnt   ;
 reg signed  [  28-1: 0] dac_mult  ;
 reg signed  [  15-1: 0] dac_sum   ;
 
-reg               lastval;
+reg   [  14-1: 0] set_last;
 reg   [   5-1: 0] lastval_sr;
 reg   [   5-1: 0] zero_sr;
 
@@ -145,7 +145,7 @@ assign not_burst = (&(~set_ncyc_i)) && (&(~set_rnum_i));
 
 assign out_sel[0] = |dac_do_sr[4:1];
 assign out_sel[1] = |axi_dac_do_sr[4:1];
-assign out_sel[2] = lastval || |lastval_sr;
+assign out_sel[2] = !init_run && &lastval_sr[1:0];
 assign out_sel[3] = rand_en_i;
 assign out_sel[4] = set_zero_i || |zero_sr;
 
@@ -158,7 +158,7 @@ begin
   casez (out_sel)
     5'b00001: dac_rdat <= dac_rd;
     5'b0001?: dac_rdat <= dac_axi_rd;
-    5'b001??: dac_rdat <= set_last_i;
+    5'b001??: dac_rdat <= set_last;
     5'b01???: dac_rdat <= lfsr_noise;
     5'b1????: dac_rdat <= 14'h0;
     default : dac_rdat <= set_first_i;
@@ -169,7 +169,7 @@ always @(posedge dac_clk_i) // shift regs are needed because of processing path 
 begin
    dac_do_sr     <= {dac_do_sr[3:0] , dac_do     };
    axi_dac_do_sr <= {axi_dac_do_sr[3:0], axi_dac_do };
-   lastval_sr    <= {lastval_sr[3:0], lastval    };
+   lastval_sr    <= {lastval_sr[3:0], !dac_do    };
    zero_sr       <= {zero_sr[3:0]   , set_zero_i };
 end
 
@@ -200,7 +200,8 @@ wire             ext_trig_n   ;
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
 reg  [   8-1: 0] dly_tick     ;
-reg  [  32-1: 0] last_cnt     ;
+// reg  [  32-1: 0] last_cnt     ;
+reg              init_run     ;
 
 reg  [  32-1: 0] set_step      ;  
 reg  [  32-1: 0] set_step_lo      ;  
@@ -222,22 +223,24 @@ assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt 
                                     dac_do_sr[1:0] == 2'b10;
 assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
 
-always @(posedge dac_clk_i)
-begin 
-   if (dac_rstn_i == 1'b0) begin
-      lastval  <= 1'b0;
-      last_cnt <= 32'h0;
-   end else begin
-      if (do_read_end) // negative edge of dly_do, delayed for 4 cycles
-         last_cnt <= set_last_len_i;
-      else if (last_cnt > 32'd0)
-         last_cnt <= last_cnt - 1;
-     
-      if (do_read_end) // negative edge of dly_do, delayed for 4 cycles
-         lastval <= 1'b1;
-      else if ((lastval && last_cnt == 'd0 && (|rep_cnt || (trig_in && !do_read)))  || set_zero_i || set_rst_i || not_burst || do_read_start) // release from last value when new cycle starts or a set_zero is written. After final cycle, stay on lastval. also resets if reset is set or continous mode is selected.
-         lastval <= 1'b0; // reset from lastval when a new trigger arrives
-   end
+reg init_delay;
+always_ff @(posedge dac_clk_i) begin
+    if (!dac_rstn_i) begin
+        init_run   <= 1'b1;
+        set_last   <= 1'b0;
+        init_delay <= 1'b0;
+    end else begin
+        if (set_rst_i) begin
+            init_run   <= 1'b1;
+            init_delay <= 1'b0;
+        end else if (trig_in) begin
+            init_delay <= 1'b1;
+            set_last   <= set_last_i;
+        end else if (init_delay) begin
+            init_run   <= 1'b0;
+            init_delay <= 1'b0;
+        end
+    end
 end
 
 // state machine
@@ -266,7 +269,7 @@ always @(posedge dac_clk_i) begin
       if (set_rst_i || do_read_start)
          dly_cnt <= set_rdly_i ;
       else if (|dly_cnt && (dly_tick == 8'd124)) begin// last value counter takes precedent
-         if(dly_cnt > 'h1 || (dly_cnt == 'h1 && ~|last_cnt))
+         if(dly_cnt > 'h1 || (dly_cnt == 'h1))
             dly_cnt <= dly_cnt - 32'h1 ;
       end
 
