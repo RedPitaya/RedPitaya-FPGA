@@ -62,7 +62,7 @@ module red_pitaya_asg_ch #(
    output    [  32-1: 0] get_step_lo_o   ,  //!< get pointer step, low frequency
    input     [  32-1: 0] set_ofs_i       ,  //!< set reset offset
    input                 set_rst_i       ,  //!< set FSM to reset
-   input                 set_once_i      ,  //!< set only once  -- not used
+   input                 set_rdly_mode_i ,  //!< sets the behavior of a constant signal before and after burst
    input                 set_wrap_i      ,  //!< set wrap enable
    input     [  14-1: 0] set_amp_i       ,  //!< set amplitude scale
    input     [  14-1: 0] set_dc_i        ,  //!< set output offset
@@ -106,6 +106,10 @@ wire [14-1:0] lfsr_noise;
 
 
 localparam PNT_SIZE = RSZ+16+32;
+typedef enum logic [0:0] {
+    RDLY_MODE_CONST  = 2'b00,
+    RDLY_MODE_COPY  = 2'b01
+} rdly_mode_t;
 
 reg   [  14-1: 0] dac_buf [0:(1<<RSZ)-1] ;
 reg   [  14-1: 0] dac_rd    ;
@@ -134,6 +138,7 @@ reg   [  16-1: 0] cyc_cnt   ;
 reg signed  [  28-1: 0] dac_mult  ;
 reg signed  [  15-1: 0] dac_sum   ;
 
+rdly_mode_t        rdly_mode;
 reg   [  14-1: 0] set_last;
 reg   [   5-1: 0] lastval_sr;
 reg   [   5-1: 0] zero_sr;
@@ -145,7 +150,7 @@ assign not_burst = (&(~set_ncyc_i)) && (&(~set_rnum_i));
 
 assign out_sel[0] = |dac_do_sr[4:1];
 assign out_sel[1] = |axi_dac_do_sr[4:1];
-assign out_sel[2] = !init_run && &lastval_sr[1:0];
+assign out_sel[2] = (!init_run) && (|lastval_sr[1:0]) && (!do_read_end);
 assign out_sel[3] = rand_en_i;
 assign out_sel[4] = set_zero_i || |zero_sr;
 
@@ -169,7 +174,7 @@ always @(posedge dac_clk_i) // shift regs are needed because of processing path 
 begin
    dac_do_sr     <= {dac_do_sr[3:0] , dac_do     };
    axi_dac_do_sr <= {axi_dac_do_sr[3:0], axi_dac_do };
-   lastval_sr    <= {lastval_sr[3:0], !dac_do    };
+   lastval_sr    <= {lastval_sr[3:0], ~do_read    };
    zero_sr       <= {zero_sr[3:0]   , set_zero_i };
 end
 
@@ -200,7 +205,6 @@ wire             ext_trig_n   ;
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
 reg  [   8-1: 0] dly_tick     ;
-// reg  [  32-1: 0] last_cnt     ;
 reg              init_run     ;
 
 reg  [  32-1: 0] set_step      ;  
@@ -223,24 +227,41 @@ assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt 
                                     dac_do_sr[1:0] == 2'b10;
 assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
 
-reg init_delay;
 always_ff @(posedge dac_clk_i) begin
-    if (!dac_rstn_i) begin
-        init_run   <= 1'b1;
-        set_last   <= 1'b0;
-        init_delay <= 1'b0;
-    end else begin
-        if (set_rst_i) begin
-            init_run   <= 1'b1;
-            init_delay <= 1'b0;
-        end else if (trig_in) begin
-            init_delay <= 1'b1;
-            set_last   <= set_last_i;
-        end else if (init_delay) begin
-            init_run   <= 1'b0;
-            init_delay <= 1'b0;
-        end
-    end
+   if (dac_rstn_i == 1'b0) begin
+      rdly_mode <= RDLY_MODE_COPY;
+   end
+
+   if (set_rst_i) begin
+      rdly_mode <= rdly_mode_t'(set_rdly_mode_i);
+   end
+end
+
+reg [2-1:0] init_delay;
+
+always_ff @(posedge dac_clk_i) begin
+   if (!dac_rstn_i) begin
+      init_run   <= 1'b1;
+      set_last   <= 1'b0;
+      init_delay <= 1'b0;
+   end else begin
+      if (set_rst_i) begin
+          init_run   <= 1'b1;
+          init_delay <= 1'b0;
+      end else if (trig_in || init_delay != 1'b0) begin
+          init_delay <= init_delay + 2'b1;
+          set_last   <= set_last_i;
+      end else if (rdly_mode == RDLY_MODE_COPY) begin
+          if (lastval_sr == 1'b1) begin
+             set_last <= dac_rd;
+          end
+      end
+
+      if (init_delay == 2'b11) begin
+         init_run   <= 1'b0;
+         init_delay <= 1'b0;
+      end 
+   end
 end
 
 // state machine
