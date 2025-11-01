@@ -16,6 +16,7 @@ MODEL ?= Z20_G2
 HWID  ?= ""
 DEFINES ?= ""
 DTS_VER ?= 2022.1
+VIVADO_OPTS ?= 
 
 # build artefacts
 FPGA_BIT    = prj/$(PRJ)/out/red_pitaya.bit
@@ -46,9 +47,9 @@ sim:
 
 project:
 ifneq ($(HWID),"")
-	vivado -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID)
+	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID)
 else
-	vivado -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
+	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
 endif
 
 $(FPGA_BIT):

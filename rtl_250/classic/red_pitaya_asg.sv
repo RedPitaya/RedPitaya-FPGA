@@ -91,7 +91,7 @@ reg   [RSZ+15: 0] set_a_size   , set_b_size   ;
 reg   [  32-1: 0] set_a_step   , set_b_step   ;
 reg   [  32-1: 0] set_a_ofs    , set_b_ofs    ;
 reg               set_a_rst    , set_b_rst    ;
-reg               set_a_once   , set_b_once   ;
+reg               set_a_rdly_mode   , set_b_rdly_mode   ;
 reg               set_a_wrap   , set_b_wrap   ;
 reg   [  14-1: 0] set_a_amp    , set_b_amp    ;
 reg   [  14-1: 0] set_a_dc     , set_b_dc     ;
@@ -158,7 +158,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
   .set_step_lo_i   ( step_a_lo                    ),  // set pointer step
   .set_ofs_i       ( set_a_ofs                    ),  // set reset offset
   .set_rst_i       ( set_a_rst                    ),  // set FMS to reset
-  .set_once_i      ( set_a_once                   ),  // set only once
+  .set_rdly_mode_i ( set_a_rdly_mode              ),  // set only once
   .set_wrap_i      ( set_a_wrap                   ),  // set wrap pointer
   .set_amp_i       ( set_a_amp                    ),  // set amplitude scale
   .set_dc_i        ( set_a_dc                     ),  // set output offset
@@ -209,7 +209,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chB
   .set_step_lo_i   ( step_b_lo                    ),  // set pointer step
   .set_ofs_i       ( set_b_ofs                    ),  // set reset offset
   .set_rst_i       ( set_b_rst                    ),  // set FMS to reset
-  .set_once_i      ( set_b_once                   ),  // set only once
+  .set_rdly_mode_i ( set_b_rdly_mode              ),  // set only once
   .set_wrap_i      ( set_b_wrap                   ),  // set wrap pointer
   .set_amp_i       ( set_b_amp                    ),  // set amplitude scale
   .set_dc_i        ( set_b_dc                     ),  // set output offset
@@ -265,7 +265,7 @@ if (sys_rstn == 1'b0) begin
    set_a_dc    <= 14'h0    ;
    set_a_zero  <=  1'b0    ;
    set_a_rst   <=  1'b0    ;
-   set_a_once  <=  1'b0    ;
+   set_a_rdly_mode  <=  1'b0    ;
    set_a_wrap  <=  1'b0    ;
    set_a_size  <= {RSZ+16{1'b1}} ;
    set_a_ofs   <= {32{1'b0}} ;
@@ -282,7 +282,7 @@ if (sys_rstn == 1'b0) begin
    set_b_dc    <= 14'h0    ;
    set_b_zero  <=  1'b0    ;
    set_b_rst   <=  1'b0    ;
-   set_b_once  <=  1'b0    ;
+   set_b_rdly_mode  <=  1'b0    ;
    set_b_wrap  <=  1'b0    ;
    set_b_size  <= {RSZ+16{1'b1}} ;
    set_b_ofs   <= {32{1'b0}} ;
@@ -342,8 +342,8 @@ end else begin
    else if (sys_wen && (sys_addr[19:0]==20'h0))   set_b_talm <= sys_wdata[26] ;
 
    if (sys_wen) begin
-      if (sys_addr[19:0]==20'h0)   {set_a_tpen, set_a_rgate, set_a_zero, set_a_rst, set_a_once, set_a_wrap} <= sys_wdata[ 9: 4] ;
-      if (sys_addr[19:0]==20'h0)   {set_b_tpen, set_b_rgate, set_b_zero, set_b_rst, set_b_once, set_b_wrap} <= sys_wdata[25:20] ;
+      if (sys_addr[19:0]==20'h0)   {set_a_tpen, set_a_rgate, set_a_zero, set_a_rst, set_a_rdly_mode, set_a_wrap} <= sys_wdata[ 9: 4] ;
+      if (sys_addr[19:0]==20'h0)   {set_b_tpen, set_b_rgate, set_b_zero, set_b_rst, set_b_rdly_mode, set_b_wrap} <= sys_wdata[25:20] ;
 
       if (sys_addr[19:0]==20'h4)   set_a_amp  <= sys_wdata[  0+13: 0] ;
       if (sys_addr[19:0]==20'h4)   set_a_dc   <= sys_wdata[ 16+13:16] ;
@@ -415,8 +415,8 @@ end else begin
    ack_dly <=  ren_dly[3-1] || sys_wen ;
 end
 
-wire [32-1: 0] r0_rd = {4'h0, temp_prot[1],set_b_talm,set_b_tpen,set_b_rgate, set_b_zero,set_b_rst,set_b_once,set_b_wrap, 1'b0,trig_b_src,
-                        4'h0, temp_prot[0],set_a_talm,set_a_tpen,set_a_rgate, set_a_zero,set_a_rst,set_a_once,set_a_wrap, 1'b0,trig_a_src };
+wire [32-1: 0] r0_rd = {4'h0, temp_prot[1],set_b_talm,set_b_tpen,set_b_rgate, set_b_zero,set_b_rst,set_b_rdly_mode,set_b_wrap, 1'b0,trig_b_src,
+                        4'h0, temp_prot[0],set_a_talm,set_a_tpen,set_a_rgate, set_a_zero,set_a_rst,set_a_rdly_mode,set_a_wrap, 1'b0,trig_a_src };
 
 wire sys_en;
 assign sys_en = sys_wen | sys_ren;
