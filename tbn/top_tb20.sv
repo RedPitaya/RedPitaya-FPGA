@@ -8,6 +8,8 @@
 
 module top_tb #(
 
+  `define   rp_top        red_pitaya_top
+
   `ifdef Z20_16
   parameter ADC_DW        = 16,
   parameter MNG           = 1,
@@ -214,7 +216,9 @@ initial #3.6ns clk0 = 1'b0;
 always #(TP/2) clk0 = ~clk0;
 
 initial #3.6ns clk_65 = 1'b0;
+`ifdef Z20_LL
 always #(ADC_TP/2)   clk_65 = ~clk_65;
+`endif
 
 initial            clk_250 = 1'b0;
 always #(TP_250/2) clk_250 = ~clk_250;
@@ -583,9 +587,9 @@ end
 // module instances
 ////////////////////////////////////////////////////////////////////////////////
 
-`rp_top
-#() 
-red_pitaya_top
+//`rp_top
+red_pitaya_top_4ADC
+ #() red_pitaya_top
 (
   .daisy_p_o    ({d_clko_p,d_trigo_p}),
   .daisy_n_o    ({d_clko_n,d_trigo_n}),
@@ -631,7 +635,7 @@ red_pitaya_top
   .dac_datb_o  (dac_dat[0]),  // DAC data chb
   .dac_wrta_o  (dac_wrt[1]),  // DAC write cha
   .dac_wrtb_o  (dac_wrt[0]),  // DAC write chab
-  `else        
+  `elsif        
   .dac_dat_o    (dac_dat[0]),
   .dac_wrt_o    (dac_wrt),
   .dac_sel_o    (dac_sel),
