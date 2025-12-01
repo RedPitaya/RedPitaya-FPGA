@@ -43,6 +43,7 @@ axi4_stream_if #(.DN (DN), .DT (DT)) std            (.ACLK (sti.ACLK), .ARESETn 
 axi4_stream_if #(.DN (DN), .DT (DT)) stt            (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from trigger
 axi4_stream_if #(.DN (DN), .DT (DT)) sta_str        (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
 axi4_stream_if #(.DN (DN), .DT (logic [8-1:0])) sta (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // from acquire
+axi4_stream_if #(.DN (DN), .DT (DT)) stm            (.ACLK (sti.ACLK), .ARESETn (sti.ARESETn));  // monitor for counter
 
 // acquire regset
 
@@ -321,6 +322,12 @@ rle #(
   .cfg_ena  (cfg_rle)
 );
 
+assign stm.TDATA  = sto.TDATA [0][8-1:0];
+assign stm.TKEEP  = sto.TKEEP ;
+assign stm.TLAST  = sto.TLAST ;
+assign stm.TVALID = sto.TVALID;
+assign stm.TREADY = sto.TREADY;
+
 axi4_stream_cnt #(
   .DN (DN),
   .CW (CW)
@@ -331,7 +338,7 @@ axi4_stream_cnt #(
   .sts_cur  (sts_cur),
   .sts_lst  (sts_lst),
   // stream monitor
-  .str      (sto)
+  .str      (stm)
 );
 
 endmodule: old_la_top

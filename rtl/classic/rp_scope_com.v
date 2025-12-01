@@ -20,17 +20,18 @@
  * application. It consists from three main parts.
  *
  *
- *                /--------\      /-----------\            /-----\
- *   ADC CHA ---> | DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
- *                \--------/      \-----------/     |      \-----/
- *                                                  ˇ         ^
- *                                              /------\      |
- *   ext trigger -----------------------------> | TRIG | -----+
- *                                              \------/      |
- *                                                  ^         ˇ
- *                /--------\      /-----------\     |      /-----\
- *   ADC CHB ---> | DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
- *                \--------/      \-----------/            \-----/ 
+*
+ *                /--------\      /--------\      /-----------\            /-----\
+ *   ADC CHA ---> | CALIB1 | ---> | DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
+ *                \--------/      \--------/      \-----------/     |      \-----/
+ *                                                                  ˇ         ^
+ *                                                              /------\      |
+ *   ext trigger ---------------------------------------------> | TRIG | -----+
+ *                                                              \------/      |
+ *                                                                  ^         ˇ
+ *                /--------\      /--------\      /-----------\     |      /-----\
+ *   ADC CHB ---> | CALIB1 | ---> | DFILT1 | ---> | AVG & DEC | ---------> | BUF | --->  SW
+ *                \--------/      \--------/      \-----------/            \-----/ 
  *
  *
  * Input data is optionaly averaged and decimated via average filter.
@@ -46,6 +47,11 @@
  * pre-trigger data.
  * 
  */
+/* 
+* May 2025 - Alen Luin
+* added calibration at the input from adc
+*
+*/
 
 module rp_scope_com #(
   parameter CHN  = 0 ,
@@ -93,34 +99,37 @@ module rp_scope_com #(
    output                    sys_ack           // bus acknowledge signal
 );
 
-wire [    N_CH-1: 0] axi_clk        ;
-wire [    N_CH-1: 0] axi_rstn       ;
+wire [    N_CH-1: 0] axi_clk           ;
+wire [    N_CH-1: 0] axi_rstn          ;
 
-wire [       4-1: 0] adc_arm_do     ;
-wire [       4-1: 0] adc_rst_do     ;
-wire [       4-1: 0] adc_trig_sw    ;
-wire [       4-1: 0] adc_we_keep    ;
-wire [       4-1: 0] trig_dis_clr   ;
-wire [       4-1: 0] axi_en_pulse   ;
-wire [       4-1: 0] new_trg_src    ;
-wire [   4*4  -1: 0] trg_src        ;
-wire [       4-1: 0] set_dec1       ;
-wire [       4-1: 0] filt_rstn      ;
-wire [   4*DW -1: 0] set_tresh      ;
-wire [   4*32 -1: 0] set_adc_dly    ;
-wire [   4*17 -1: 0] set_dec        ;
-wire [   4*DW -1: 0] set_hyst       ;
-wire [       4-1: 0] set_avg_en     ;
-wire [   4*18 -1: 0] set_filt_aa    ;
-wire [   4*25 -1: 0] set_filt_bb    ;
-wire [   4*25 -1: 0] set_filt_kk    ;
-wire [   4*25 -1: 0] set_filt_pp    ;
-wire [      20-1: 0] set_deb_len    ;
-wire [   4*32 -1: 0] set_axi_start  ;
-wire [   4*32 -1: 0] set_axi_stop   ;
-wire [   4*32 -1: 0] set_axi_dly    ;
-wire [       4-1: 0] set_axi_en     ;
-wire [       4-1: 0] indep_mode     ;
+wire [       4-1: 0] adc_arm_do        ;
+wire [       4-1: 0] adc_rst_do        ;
+wire [       4-1: 0] adc_trig_sw       ;
+wire [       4-1: 0] adc_we_keep       ;
+wire [       4-1: 0] trig_dis_clr      ;
+wire [       4-1: 0] axi_en_pulse      ;
+wire [       4-1: 0] new_trg_src       ;
+wire [   4*4  -1: 0] trg_src           ;
+wire [       4-1: 0] set_dec1          ;
+wire [       4-1: 0] filt_rstn         ;
+wire [   4*DW -1: 0] set_tresh         ;
+wire [   4*32 -1: 0] set_adc_dly       ;
+wire [   4*17 -1: 0] set_dec           ;
+wire [   4*DW -1: 0] set_hyst          ;
+wire [       4-1: 0] set_avg_en        ;
+wire [   4*18 -1: 0] set_filt_aa       ;
+wire [   4*25 -1: 0] set_filt_bb       ;
+wire [   4*25 -1: 0] set_filt_kk       ;
+wire [   4*25 -1: 0] set_filt_pp       ;
+wire [   4*DW -1: 0] set_calib_offset  ;
+wire [   4*16 -1: 0] set_calib_gain    ;
+wire [      4 -1: 0] set_filt_byp      ;
+wire [      20-1: 0] set_deb_len       ;
+wire [   4*32 -1: 0] set_axi_start     ;
+wire [   4*32 -1: 0] set_axi_stop      ;
+wire [   4*32 -1: 0] set_axi_dly       ;
+wire [       4-1: 0] set_axi_en        ;
+wire [       4-1: 0] indep_mode        ;
 
 wire [   4*8  -1: 0] axi_state    ;
 wire [   4*8  -1: 0] adc_state    ;
@@ -149,7 +158,9 @@ wire                 sys_en       ;
 wire [   4*RSZ-1: 0] adc_wp_act   ;
 wire [    4*DW-1: 0] adc_bram_in  ;
 wire [       4-1: 0] adc_we       ;
-wire [       4-1: 0] adc_dv_del;
+wire [       4-1: 0] adc_dv_del   ;
+wire [       4-1: 0] adc_dv_bram  ;
+wire [       4-1: 0] adc_dv_del_p ;
 
 assign sys_en = sys_wen | sys_ren;
 
@@ -160,7 +171,14 @@ assign trg_state_o = trg_state[15:0];
 genvar GV;
 generate
 for(GV = 0 ; GV < N_CH ; GV = GV + 1) begin
+//wire [ DW-1: 0] adc_calib_in  ;
+wire [ DW-1: 0] adc_calib_in  ;
+wire [ DW-1: 0] adc_calib_out ;
+//wire [ DW-1: 0] adc_calib_in  ;
+//wire [ DW-1: 0] adc_calib_out ;
 wire [ DW-1: 0] adc_filt_in  ;
+wire [ DW-1: 0] adc_filtered ;
+
 wire [ DW-1: 0] adc_dec_in   ;
 wire [ DW-1: 0] adc_dly_in   ;
 wire [ DW-1: 0] axi_ram_in   ;
@@ -168,22 +186,66 @@ wire            adc_dly_do   ;
 
 wire            axi_dv_del;
 wire            dec_val;
+wire            dec_val_65;
+wire            cal_val_65;
 
-assign adc_filt_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
+//assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
+wire  adc_sign_a = adc_dat_i[(GV+1)*DW-1];
+//assign adc_calib_in = {adc_dat_i[(GV+1)*DW-1:GV*DW], {(16-DW){adc_sign_a}}};
+assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
 
-red_pitaya_dfilt1 i_dfilt1_cha (
-   // ADC
-  .adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
-  .adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
-  .adc_dat_i   ( adc_filt_in   ),  // ADC raw data
-  .adc_dat_o   ( adc_dec_in    ),  // filtered data
-   // configuration
-  .cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
-  .cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
-  .cfg_kk_i    ( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
-  .cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
+assign cal_val_65 = 1'b1;
+
+rp_scope_calib #(
+    .DBITS(DW)
+    )
+    i_calib_ch(
+  .adc_clk_i            ( adc_clk_i[GV] ),  // ADC clock
+  .adc_rstn_i           ( adc_rstn_i[GV] ),  // ADC reset - active low
+
+  .calib_dat_i          (adc_calib_in),
+  //.calib_din_tvalid_i   (1'b1),
+  .calib_din_tvalid_i   (cal_val_65),
+
+  .calib_dat_o          (adc_calib_out),
+  .calib_dout_tvalid_o  (),
+  .cfg_calib_offset_i   ( set_calib_offset[(GV+1)*DW-1:GV*DW] ),
+  .cfg_calib_gain_i     ( set_calib_gain[(GV+1)*16-1:GV*16] )   
 );
 
+//assign adc_filt_in = adc_calib_out[16-1:2];
+assign adc_filt_in = adc_calib_out;
+
+osc_filter #(
+    .DW     ( DW ) 
+) i_dfilt1_ch (
+   // ADC
+  .clk         ( adc_clk_i[GV] ),  // ADC clock
+  .rst_n       ( filt_rstn[GV] ),  // ADC reset - active low
+  .s_axis_tdata( adc_filt_in   ),  // ADC raw data
+  .s_axis_tvalid(1'b1),
+  .m_axis_tdata( adc_filtered  ),  // filtered data
+  .cfg_bypass(1'b0),
+   // configuration
+  .cfg_coeff_aa( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
+  .cfg_coeff_bb( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
+  .cfg_coeff_kk( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
+  .cfg_coeff_pp( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
+);
+//red_pitaya_dfilt1 i_dfilt1_ch (
+   //// ADC
+  //.adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
+  //.adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
+  //.adc_dat_i   ( adc_filt_in   ),  // ADC raw data
+  //.adc_dat_o   ( adc_filtered  ),  // filtered data
+   //// configuration
+  //.cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
+  //.cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
+  //.cfg_kk_i    ( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
+  //.cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
+//);
+
+assign adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
 rp_decim #(
   .DW  (  DW    )
@@ -202,6 +264,7 @@ rp_decim #(
   .dec_dat_o    ( adc_dly_in    )   // decimated data out
 );
 
+assign dec_val_65 = dec_val;
 
 rp_delay #(
   .DW  (  DW    )
@@ -214,13 +277,14 @@ rp_delay #(
 
    // Connection to AXI master
   .dly_dat_i     ( adc_dly_in                     ),
-  .dly_val_i     ( dec_val                        ),
+  .dly_val_i     ( dec_val_65                        ),
   .set_trg_src_i ( trg_src[(GV+1)*4-1:GV*4]       ),
   .set_trg_new_i ( new_trg_src[GV]                ),
 
   .axidly_val_o  ( axi_dv_del                     ),
   .axidly_dat_o  ( axi_ram_in                     ), // delayed data to AXI
 
+  .dly_valp_o    ( adc_dv_del_p[GV]               ),
   .dly_val_o     ( adc_dv_del[GV]                 ),
   .dly_dat_o     ( adc_bram_in[(GV+1)*DW-1:GV*DW] )  // delayed data to BRAM
 );
@@ -234,7 +298,7 @@ rp_adc_trig #(
 
    // Connection to AXI master
   .adc_dat_i      ( adc_dly_in                      ),
-  .adc_dv_i       ( dec_val                         ),
+  .adc_dv_i       ( dec_val_65                         ),
   .set_tresh_i    ( set_tresh[(GV+1)*DW-1:GV*DW]    ),
   .set_hyst_i     ( set_hyst[(GV+1)*DW-1:GV*DW]     ),
 
@@ -256,6 +320,7 @@ rp_trig_src #(
 
   .set_trg_src_i  ( trg_src[(GV+1)*4-1:GV*4] ),
   .set_trg_new_i  ( new_trg_src[GV]          ),
+  .dly_valp_i     ( adc_dv_del_p[GV]         ),
 
   .adc_trig_sw_i  ( adc_trig_sw[GV]   ),
   .adc_trig_p_i   ( adc_trig_p        ),
@@ -270,6 +335,8 @@ rp_trig_src #(
   .adc_trig_o     ( adc_trig[GV]              )
 );
 
+assign adc_dv_bram[GV] = adc_dv_del[GV];
+
 rp_bram_sm #(
 ) i_bram_sm (
    // global signals
@@ -283,7 +350,7 @@ rp_bram_sm #(
   .adc_we_keep_i  ( adc_we_keep[GV]                   ),
   .adc_arm_do_i   ( adc_arm_do[GV]                    ),
   .adc_trig_i     ( adc_trig[GV]                      ),
-  .adc_dv_i       ( adc_dv_del[GV]                    ),
+  .adc_dv_i       ( adc_dv_bram[GV]                   ),
   .indep_mode_i   ( indep_mode[GV]                    ),
   .trig_dis_clr_i ( trig_dis_clr[GV]                  ),
 
@@ -307,7 +374,7 @@ rp_acq_bram #(
    // Connection to AXI master
   .bram_wp_i      ( adc_wp_act[(GV+1)*RSZ-1:GV*RSZ] ),
   .bram_dat_i     ( adc_bram_in[(GV+1)*DW-1:GV*DW]  ),
-  .bram_val_i     ( adc_dv_del[GV]                  ),
+  .bram_val_i     ( adc_dv_bram[GV]                 ),
   .bram_we_i      ( adc_we[GV]                      ),
   .bram_ack_i     ( sys_en                          ),
 
@@ -361,6 +428,8 @@ for(GM = N_CH ; GM < 4 ; GM = GM + 1) begin // pad out remaining channels
 
 assign adc_bram_in[(GM+1)*DW -1:GM*DW ] = {DW{1'b0}};
 assign adc_dv_del[GM]                   =  1'b0;
+assign adc_dv_bram[GM]                  =  1'b0;
+assign adc_dv_del_p[GM]                 =  1'b0;
 
 
 assign adc_state[(GM+1)*8  -1:GM*8  ]   =  8'h0;
@@ -410,62 +479,67 @@ rp_scope_cfg #(
   .DW  (  DW     )
 ) i_cfg (
    // global signals
-  .adc_clk_i        ( adc_clk_i[0]    ),  // ADC clock
-  .adc_rstn_i       ( adc_rstn_i[0]   ),  // ADC reset - active low
+  .adc_clk_i          ( adc_clk_i[0]    ),  // ADC clock
+  .adc_rstn_i         ( adc_rstn_i[0]   ),  // ADC reset - active low
 
   // System bus
-  .sys_addr         ( sys_addr        ),
-  .sys_wdata        ( sys_wdata       ),
-  .sys_wen          ( sys_wen         ),
-  .sys_ren          ( sys_ren         ),
-  .sys_rdata        ( sys_rdata       ),
-  .sys_err          ( sys_err         ),
-  .sys_ack          ( sys_ack         ),
+  .sys_addr           ( sys_addr        ),
+  .sys_wdata          ( sys_wdata       ),
+  .sys_wen            ( sys_wen         ),
+  .sys_ren            ( sys_ren         ),
+  .sys_rdata          ( sys_rdata       ),
+  .sys_err            ( sys_err         ),
+  .sys_ack            ( sys_ack         ),
 
 
-  .adc_state_i      ( adc_state       ),
-  .axi_state_i      ( axi_state       ),
-  .trg_state_i      ( trg_state       ),
+  .adc_state_i        ( adc_state       ),
+  .axi_state_i        ( axi_state       ),
+  .trg_state_i        ( trg_state       ),
 
-  .adc_state_ext_i  ( adc_state_i     ),
-  .axi_state_ext_i  ( axi_state_i     ),
-  .trg_state_ext_i  ( trg_state_i     ),
+  .adc_state_ext_i    ( adc_state_i     ),
+  .axi_state_ext_i    ( axi_state_i     ),
+  .trg_state_ext_i    ( trg_state_i     ),
 
-  .adc_wp_cur_i     ( adc_wp_cur      ),
-  .adc_wp_trig_i    ( adc_wp_trig     ),
-  .adc_we_cnt_i     ( adc_we_cnt      ),
+  .adc_wp_cur_i       ( adc_wp_cur      ),
+  .adc_wp_trig_i      ( adc_wp_trig     ),
+  .adc_we_cnt_i       ( adc_we_cnt      ),
 
-  .axi_wp_cur_i     ( axi_wp_cur      ),
-  .axi_wp_trig_i    ( axi_wp_trig     ),
+  .axi_wp_cur_i       ( axi_wp_cur      ),
+  .axi_wp_trig_i      ( axi_wp_trig     ),
 
-  .bram_rd_dat_i    ( bram_rd_dat     ),
-  .bram_ack_i       ( bram_ack        ),
+  .bram_rd_dat_i      ( bram_rd_dat     ),
+  .bram_ack_i         ( bram_ack        ),
 
-  .adc_arm_do_o     ( adc_arm_do      ),
-  .adc_rst_do_o     ( adc_rst_do      ),
-  .adc_trig_sw_o    ( adc_trig_sw     ),
-  .adc_we_keep_o    ( adc_we_keep     ),
-  .trig_dis_clr_o   ( trig_dis_clr    ),
-  .indep_mode_o     ( indep_mode      ),
-  .axi_en_pulse_o   ( axi_en_pulse    ),
-  .new_trg_src_o    ( new_trg_src     ),
-  .trg_src_o        ( trg_src         ),
-  .set_dec1_o       ( set_dec1        ),
-  .filt_rstn_o      ( filt_rstn       ),
-  .set_tresh_o      ( set_tresh       ),
-  .set_dly_o        ( set_adc_dly     ),
-  .set_dec_o        ( set_dec         ),
-  .set_hyst_o       ( set_hyst        ),
-  .set_avg_en_o     ( set_avg_en      ),
-  .set_filt_aa_o    ( set_filt_aa     ),
-  .set_filt_bb_o    ( set_filt_bb     ),
-  .set_filt_kk_o    ( set_filt_kk     ),
-  .set_filt_pp_o    ( set_filt_pp     ),
-  .set_deb_len_o    ( set_deb_len     ),
-  .set_axi_start_o  ( set_axi_start   ),
-  .set_axi_stop_o   ( set_axi_stop    ),
-  .set_axi_dly_o    ( set_axi_dly     ),
-  .set_axi_en_o     ( set_axi_en      )
+  .adc_arm_do_o       ( adc_arm_do      ),
+  .adc_rst_do_o       ( adc_rst_do      ),
+  .adc_trig_sw_o      ( adc_trig_sw     ),
+  .adc_we_keep_o      ( adc_we_keep     ),
+  .trig_dis_clr_o     ( trig_dis_clr    ),
+  .indep_mode_o       ( indep_mode      ),
+  .axi_en_pulse_o     ( axi_en_pulse    ),
+  .new_trg_src_o      ( new_trg_src     ),
+  .trg_src_o          ( trg_src         ),
+  .set_dec1_o         ( set_dec1        ),
+  .filt_rstn_o        ( filt_rstn       ),
+  .set_tresh_o        ( set_tresh       ),
+  .set_dly_o          ( set_adc_dly     ),
+  .set_dec_o          ( set_dec         ),
+  .set_hyst_o         ( set_hyst        ),
+  .set_avg_en_o       ( set_avg_en      ),
+  .set_filt_aa_o      ( set_filt_aa     ),
+  .set_filt_bb_o      ( set_filt_bb     ),
+  .set_filt_kk_o      ( set_filt_kk     ),
+  .set_filt_pp_o      ( set_filt_pp     ),
+
+  .set_calib_offset_o ( set_calib_offset),
+  .set_calib_gain_o   ( set_calib_gain  ),
+
+  .set_filt_byp_o     ( set_filt_byp    ),
+  .set_deb_len_o      ( set_deb_len     ),
+  .set_axi_start_o    ( set_axi_start   ),
+  .set_axi_stop_o     ( set_axi_stop    ),
+  .set_axi_dly_o      ( set_axi_dly     ),
+  .set_axi_en_o       ( set_axi_en      )
 );
 
 assign axi_clk    = adc_clk_i ;

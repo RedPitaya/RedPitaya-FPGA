@@ -12,12 +12,12 @@
 
 module axi_rd_fifo #(
   parameter   DW  =  64          , // data width (8,16,...,1024)
+  parameter   DWB =  DW/8        , // data width (8,16,...,1024)
   parameter   DWW =  $clog2(DW/8),
   parameter   AW  =  32          , // address width
   parameter   LW  =   8          , // length width
-//  parameter   FW  =   5          , // address width of FIFO pointers
+  parameter   BYTE_SEL = 0       ,
   parameter   FW  = LW + 1       , // address width of FIFO pointers
-  parameter   BW  = (LW >= 6) ? 6 : LW ,  // length is max 4k
   parameter   SW  = DW >> 3        // strobe width - 1 bit for every data byte
 )
 (
@@ -28,6 +28,7 @@ module axi_rd_fifo #(
    output reg  [ AW-1: 0] axi_raddr_o        , // read address
    input                  axi_rardy_i        , // read address ready
    output      [ LW-1: 0] axi_rlen_o         , // read burst length
+   output reg  [  3-1: 0] axi_rsize_o        , // read size
    output reg             axi_rfixed_o       , // read burst type (fixed / incremental)
    output reg             axi_rvalid_o       , // read address valid
    input       [ DW-1: 0] axi_rdata_i        , // read data
@@ -52,9 +53,11 @@ module axi_rd_fifo #(
    input       [ AW-1: 0] ctrl_msk_i         , // address mask
    input       [ AW-1: 0] ctrl_addr_i        , // request start address
    input       [ AW-1: 0] ctrl_size_i        , // request size
+   input       [  3-1: 0] ctrl_rsize_i       , // read size (in bytes)
    input                  ctrl_start_i       , // request transfer
    input                  ctrl_clr_i         , // request clear
 
+   output                 ctrl_busy_o        , // status @axi_clk
    output reg             stat_ovrrun_o      , // status @cfg_clk
    output reg             stat_busy_o          // status @cfg_clk
 );
@@ -225,15 +228,16 @@ begin
    else if (start_do) begin
       axi_rvalid_o  <= 1'h0        ;
       axi_raddr_o   <= ctrl_addr_i ;
+      axi_rsize_o   <= ctrl_rsize_i;
       mem_cnt       <= ctrl_size_i ;
       overrun       <= 2'h0        ;
    end
    else begin
 
       if (axi_rrdy_i && axi_rrdy_o) begin  // counting readed data
-         axi_raddr_o  <= ((axi_raddr_o + DW/8) & ctrl_msk_i) | (axi_raddr_o & ~ctrl_msk_i) ;
+         axi_raddr_o  <= ((axi_raddr_o + DWB) & ctrl_msk_i) | (axi_raddr_o & ~ctrl_msk_i) ;
 
-         mem_cnt      <= mem_cnt - DW/8 ;
+         mem_cnt      <= mem_cnt - DWB ;
       end
 
       if (wbuf_act)
@@ -291,6 +295,7 @@ begin
    end
 end
 
+assign ctrl_busy_o = axi_busy;
 
 
 

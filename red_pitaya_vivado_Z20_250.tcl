@@ -6,9 +6,11 @@
 ################################################################################
 
 set prj_name [lindex $argv 0]
+set prj_defs [lindex $argv 1]
 set prj_top "red_pitaya_top"
 set prj_dir "build"
 puts "Project name: $prj_name"
+puts "Defines: $prj_defs"
 cd prj/$prj_name
 #cd prj/$::argv 0
 
@@ -25,7 +27,8 @@ tclapp::install -quiet ultrafast
 
 set path_brd brd
 set path_rtl rtl_250
-set path_ip  ip
+set path_ip      ip
+set path_ip_top  ../../ip_250
 set path_sdc sdc_250
 set path_sdc_prj sdc
 set path_bd  $prj_dir/redpitaya.srcs/sources_1/bd/system/hdl
@@ -57,7 +60,13 @@ create_project -part $part -force redpitaya $prj_dir
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
+
 source                            $path_ip/systemZ20.tcl
+set_property verilog_define [concat Z20_250 $prj_defs] [current_fileset]
 
 # generate SDK files
 generate_target all [get_files    system.bd]
@@ -78,7 +87,15 @@ add_files                         $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
-add_files                         $ip_files
+read_ip                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+read_ip $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+read_ip $path_ip_top/sync_fifo/sync_fifo.xci
 }
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc

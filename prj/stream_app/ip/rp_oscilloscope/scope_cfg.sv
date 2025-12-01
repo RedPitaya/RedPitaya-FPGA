@@ -405,7 +405,7 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_POST_SAMP_ADDR)   )  cfg_trig_post_samp      <= reg_wdat_adc[TRIG_CNT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_LOW_LEVEL_ADDR)   )  cfg_trig_low_level      <= reg_wdat_adc[S_AXIS_DATA_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_HIGH_LEVEL_ADDR)  )  cfg_trig_high_level     <= reg_wdat_adc[S_AXIS_DATA_BITS-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_HIGH_LEVEL_ADDR)  )  cfg_trig_edge           <= reg_wdat_adc[0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_EDGE_ADDR)        )  cfg_trig_edge           <= reg_wdat_adc[0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==DEC_FACTOR_ADDR)       )  cfg_dec_factor          <= reg_wdat_adc[DEC_CNT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==DEC_RSHIFT_ADDR)       )  cfg_dec_rshift          <= reg_wdat_adc[DEC_SHIFT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==AVG_EN_ADDR)           )  cfg_avg_en              <= reg_wdat_adc[0];
@@ -460,6 +460,15 @@ begin
       TRIG_PRE_CNT_ADDR      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {sts_trig_pre_overflow_i   , sts_trig_pre_cnt_i[30:0]};  end
       TRIG_POST_CNT_ADDR     : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {sts_trig_post_overflow_i  , sts_trig_post_cnt_i[30:0]}; end
       FILT_BYPASS_ADDR       : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}               , cfg_filt_bypass};         end
+
+      TRIG_LOW_LEVEL_ADDR    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-S_AXIS_DATA_BITS{1'b0}}, cfg_trig_low_level};       end
+      TRIG_HIGH_LEVEL_ADDR   : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-S_AXIS_DATA_BITS{1'b0}}, cfg_trig_high_level};      end
+      TRIG_EDGE_ADDR         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}              , cfg_trig_edge};            end
+      DEC_FACTOR_ADDR        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-DEC_CNT_BITS{1'b0}}    , cfg_dec_factor};           end
+      DEC_RSHIFT_ADDR        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-DEC_SHIFT_BITS{1'b0}}  , cfg_dec_rshift};           end
+      AVG_EN_ADDR            : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}              , cfg_avg_en};               end
+      LOOPBACK_ADDR          : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                               cfg_loopback;              end
+      SHIFT_8BIT             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}              , cfg_8bit_dat};             end
 
       DIAG_REG1              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag1_i;                  end
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end

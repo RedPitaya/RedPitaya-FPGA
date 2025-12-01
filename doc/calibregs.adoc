@@ -1,0 +1,13 @@
+== Calibration registers
+
+|===
+| offset | size | register
+
+| 0x200 | DW | ch a offset
+
+| 0x204 | 16 | ch a gain
+
+| 0x208 | DW | ch b offset
+
+| 0x20c | 16 | ch b gain
+| ===

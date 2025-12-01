@@ -108,13 +108,14 @@ task check_dma_lost(
   int offset,
   int mode
 );
+  int lost={offset[31:8],8'h5C};
   if (mode == `ADC_INT_CHECK) begin
-    check_dma_lost_single(offset+'h000, 1);  // lost samples on chA
-    check_dma_lost_single(offset+'h040, 2);  // lost samples on chB
-    check_dma_lost_single(offset+'h100, 3);  // lost samples on chC
-    check_dma_lost_single(offset+'h140, 4);  // lost samples on chD
+    check_dma_lost_single(lost+'h000, 1);  // lost samples on chA
+    //check_dma_lost_single(lost+'h040, 2);  // lost samples on chB
+    //check_dma_lost_single(lost+'h100, 3);  // lost samples on chC
+    //check_dma_lost_single(lost+'h140, 4);  // lost samples on chD
   end else begin
-    check_dma_lost_single(offset+'h054, 1);  // lost samples on GPIO (checks B0 and B4)
+    check_dma_lost_single(lost+'h054, 1);  // lost samples on GPIO (checks B0 and B4)
   end
 endtask: check_dma_lost
 
@@ -126,8 +127,10 @@ task check_dma_lost_single(
   int buf1_lost;
   int buf2_lost;
 
-  axi_read(offset+'h5C, buf1_lost);  // lost in buffer 1
-  axi_read(offset+'h60, buf2_lost);  // lost in buffer 2
+  axi_read(offset+'h0, buf1_lost);  // lost in buffer 1
+  wait_clks(10);
+  axi_read(offset+'h4, buf2_lost);  // lost in buffer 2
+  wait_clks(10);
 
   if (buf1_lost > 0 || buf2_lost > 0) begin
     $display(`LFORMAT, `LVALS);
@@ -225,7 +228,7 @@ task set_osc_event(
   axi_write(offset+'h00, 1<<`RESET_EVENT  );  // reset
   axi_write(offset+'h00, 1<<`STOP_EVENT   );  // stop
   axi_write(offset+'h04, `OSC1_EVENT      );  // osc1 events
-  axi_write(offset+'h00, 1<<`START_EVENT  );  // start
+  //axi_write(offset+'h00, 1<<`START_EVENT  );  // start
 endtask: set_osc_event
 
 task set_osc_full(
@@ -290,7 +293,7 @@ task set_osc_full(
               .buf_adr1_ch4(buf_adr1_ch4),  .buf_adr2_ch4(buf_adr2_ch4));
 
   osc_dma_start(offset);
-
+  axi_write(offset+'h00, 1<<`START_EVENT  );  // start
 endtask: set_osc_full
 
 task scope_test(
@@ -298,7 +301,7 @@ task scope_test(
   int cycles,
   int delay
   );
-
+logic [32-1:0] dat;
 localparam TRIG_MASK          =   'h4;
 localparam TRIG_PRE_SAMP      =   'd100;
 localparam TRIG_POST_SAMP     =   'd1000;
@@ -311,16 +314,29 @@ localparam AVG_EN             =     0;
 localparam FILT_BYPASS        =     0;
 localparam LOOPBACK           =     0;
 localparam SHIFT_8BIT         =     0;
-localparam DMA_BUF_SIZE       = 32'h800;
+localparam DMA_BUF_SIZE       = 32'h20000;
 
+/*
 localparam DMA_DST_ADDR1_CH1  = 32'h110000;
 localparam DMA_DST_ADDR2_CH1  = 32'h118000;
 localparam DMA_DST_ADDR1_CH2  = 32'h210000;
 localparam DMA_DST_ADDR2_CH2  = 32'h218000;
+
 localparam DMA_DST_ADDR1_CH3  = 32'h310000;
 localparam DMA_DST_ADDR2_CH3  = 32'h318000;
 localparam DMA_DST_ADDR1_CH4  = 32'h410000;
 localparam DMA_DST_ADDR2_CH4  = 32'h418000;
+*/
+
+localparam DMA_DST_ADDR1_CH1  = 32'h1100C0;
+localparam DMA_DST_ADDR2_CH1  = 32'h130100;
+localparam DMA_DST_ADDR1_CH2  = 32'h2100C0;
+localparam DMA_DST_ADDR2_CH2  = 32'h230100;
+
+localparam DMA_DST_ADDR1_CH3  = 32'h3100C0;
+localparam DMA_DST_ADDR2_CH3  = 32'h330100;
+localparam DMA_DST_ADDR1_CH4  = 32'h4100C0;
+localparam DMA_DST_ADDR2_CH4  = 32'h430100;
 
 localparam FILT_COEFF_AA      = 32'h7D93;
 localparam FILT_COEFF_BB      = 32'h497C7;
@@ -334,6 +350,11 @@ id_test = {4'h0,offset[27:20]};
 
   ##100;
   // configure
+
+  axi_read(offset+'h10, dat);  // lost in buffer 1
+  wait_clks(10);
+  axi_read(offset+'h14, dat);  // lost in buffer 2
+  wait_clks(10);
 
   set_osc_full( .offset(offset),            .trig_mask(TRIG_MASK), 
                 .pre_trig_s(TRIG_PRE_SAMP), .post_trig_s(TRIG_POST_SAMP),
@@ -362,7 +383,7 @@ task osc_handling(
   int i;
 for (i=0; i<cycles; i++) begin: osc_testing
   int_ack(offset+'h50, `ADC_INT_CHECK);
-  int_ack(offset+'h50, `ADC_INT_CHECK);
+  //int_ack_dmachange(offset+'h50, `ADC_INT_CHECK);
   int_ack_del(offset+'h50, `ADC_INT_CHECK, delay);
 end
 
@@ -513,10 +534,12 @@ task wait_clks(
   int unsigned del
 );
   logic [32-1:0] cnt = 0;
+
   do begin
     @(posedge top_tb.clk0);
     cnt <= cnt + 1;
   end while (cnt < del);
+  cnt <= 0;
 endtask: wait_clks
 
 task create_resp(
@@ -593,6 +616,7 @@ task buf_ack_del(
   logic buf2_cha = 1'b0;
   logic buf2_chb = 1'b0;
   logic [32-1:0] resp;
+  $display("entered bufackdel,time %t",$time);
   do begin
     axi_read(sts_reg, dat);
       //$display("read out %x",dat[`END_STATE_BUF1]);
@@ -603,9 +627,11 @@ task buf_ack_del(
     @(posedge top_tb.clk0);
   end while ((buf1_cha || buf1_chb) != 1'b1); // BUF 1 is full
   create_resp(buf1_cha, buf2_cha, buf1_chb, buf2_chb, 1, resp);
+  $display("made response 1,time %t",$time);
 
   wait_clks(del);
   axi_write(ctl_reg, resp);  // BUF1 ACK
+  $display("wrote response 1,time %t",$time);
 
   do begin
     axi_read(sts_reg, dat);
@@ -616,9 +642,11 @@ task buf_ack_del(
     @(posedge top_tb.clk0);
   end while ((buf2_cha || buf2_chb) != 1'b1); // BUF 2 is full
   create_resp(buf1_cha, buf2_cha, buf1_chb, buf2_chb, 2, resp);
-  
+  $display("made response 2,time %t",$time);
+
   wait_clks(del);
   axi_write(ctl_reg, resp);  // BUF1 ACK
+  $display("wrote response 2,time %t",$time);
 
 endtask: buf_ack_del
 
@@ -629,6 +657,7 @@ task int_ack(
   int unsigned ctl_reg,
   int mode
 );
+
   ##20;
   do begin
     @(posedge top_tb.clk0);
@@ -637,6 +666,48 @@ task int_ack(
     @(posedge top_tb.clk0);
   axi_write(ctl_reg, 1<<`CTRL_INTR_ACK);  // INTR ACK
   ##500;
+  axi_write(ctl_reg, 1<<`CTRL_BUF1_ACK);  // BUF1 ACK
+  $display("before check lost");
+  check_dma_lost(ctl_reg, mode);
+  $display("after check lost");
+
+
+  do begin
+    @(posedge top_tb.clk0);
+  end while (`IP_PS_LOC.IRQ_F2P[15] != 1'b1); // BUF 2 is full
+  //  end while (1); // BUF 2 is full
+
+    @(posedge top_tb.clk0);
+  axi_write(ctl_reg, 1<<`CTRL_INTR_ACK);  // INTR ACK
+  ##500;
+  axi_write(ctl_reg, 1<<`CTRL_BUF2_ACK);  // BUF2 ACK 
+  $display("before check lost");
+    repeat(10)  @(posedge top_tb.clk0);
+
+  check_dma_lost(ctl_reg, mode);
+  $display("after check lost");
+
+endtask: int_ack
+
+task int_ack_dmachange(
+  int unsigned ctl_reg,
+  int mode
+);
+
+localparam DMA_DST_ADDR1_CH1_ALT  = 32'h140000;
+localparam DMA_DST_ADDR2_CH1_ALT  = 32'h148000;
+localparam DMA_DST_ADDR1_CH2_ALT  = 32'h240000;
+localparam DMA_DST_ADDR2_CH2_ALT  = 32'h248000;
+
+  ##20;
+  do begin
+    @(posedge top_tb.clk0);
+  end while (`IP_PS_LOC.IRQ_F2P[15] != 1'b1); // BUF 1 is full
+  //end while (1); // BUF 1 is full
+    @(posedge top_tb.clk0);
+  axi_write(ctl_reg, 1<<`CTRL_INTR_ACK);  // INTR ACK
+  ##500;
+  axi_write(32'h40000000+'h64, DMA_DST_ADDR1_CH1_ALT);  // INTR ACK
   axi_write(ctl_reg, 1<<`CTRL_BUF1_ACK);  // BUF1 ACK
   check_dma_lost(ctl_reg, mode);
 
@@ -648,10 +719,12 @@ task int_ack(
     @(posedge top_tb.clk0);
   axi_write(ctl_reg, 1<<`CTRL_INTR_ACK);  // INTR ACK
   ##500;
+  axi_write(32'h40000000+'h68, DMA_DST_ADDR2_CH1_ALT);  // INTR ACK
+
   axi_write(ctl_reg, 1<<`CTRL_BUF2_ACK);  // BUF2 ACK 
   check_dma_lost(ctl_reg, mode);
 
-endtask: int_ack
+endtask: int_ack_dmachange
 
 task int_ack_del(
   int unsigned ctl_reg,
@@ -698,14 +771,14 @@ task test_dac(
   localparam OFFS_CHA     = 16'h0;
   localparam GAIN_CHB     = 16'h2000;
   localparam OFFS_CHB     = 16'h0;
-  localparam STEP_CHA     = 32'h4000;
-  localparam STEP_CHB     = 32'h4000;
+  localparam STEP_CHA     = 32'h10000;
+  localparam STEP_CHB     = 32'h10000;
   localparam SHIFT_CHA    = 32'h0;
   localparam SHIFT_CHB    = 32'h0;
   localparam TRIG_SEL     = 32'h1;
-  localparam BUF_SIZE     = 32'h800;
-  localparam BUF1_ADR_CHA = 32'h710000;
-  localparam BUF2_ADR_CHA = 32'h718000;
+  localparam BUF_SIZE     = 32'h1000;
+  localparam BUF1_ADR_CHA = 32'h700000;
+  localparam BUF2_ADR_CHA = 32'h700000;
   localparam BUF1_ADR_CHB = 32'h810000;
   localparam BUF2_ADR_CHB = 32'h818000;
 
@@ -725,7 +798,16 @@ task test_dac(
 
   dac_dma_start(offset);
 
-  dac_handling(offset, cycles, delay);
+  //dac_handling(offset, cycles, delay);
+  //#20000;
+  dac_handling(offset, 2, delay);
+  dac_dma_start(offset);
+  dac_handling(offset, 2, delay);
+
+  //dac_handling(offset, 1, delay);
+  #10000;
+
+
 endtask: test_dac
 
 task set_dac_cal(
@@ -772,9 +854,11 @@ task dac_handling(
 
   int i;
 for (i=0; i<cycles; i++) begin: dac_testing
-  buf_ack(offset+'h2C, offset+'h28);
-  buf_ack(offset+'h2C, offset+'h28);
-  //buf_ack_del(offset, delay);
+  //buf_ack(offset+'h2C, offset+'h28);
+  $display("cycle number %d,time %t",i,$time);
+ // buf_ack(offset+'h2C, offset+'h28);
+  buf_ack_del(offset+'h2C, offset+'h28, delay);
+  axi_write(offset+'h28, 32'h0);
 end
 
 endtask: dac_handling
@@ -782,8 +866,14 @@ endtask: dac_handling
 task dac_dma_start(
   int offset
 );
-  axi_write(offset+'h28, ((1<<`CTRL_RESET_DAC+8)       + (1<<`CTRL_RESET_DAC)));
-  axi_write(offset+'h28, ((1<<`CTRL_MODE_STREAM_DAC+8) + (1<<`CTRL_MODE_STREAM_DAC)));
+  axi_write(offset+'h1C, 32'h4                );  // reset reg
+
+  //axi_write(offset+'h28, ((1<<`CTRL_RESET_DAC+8)       + (1<<`CTRL_RESET_DAC)));
+  //axi_write(offset+'h28, ((1<<`CTRL_MODE_STREAM_DAC+8) + (1<<`CTRL_MODE_STREAM_DAC)));
+  axi_write(offset+'h28, ((1<<`CTRL_RESET_DAC+8)       + (1<<`CTRL_RESET_DAC) +
+                          (1<<`CTRL_MODE_STREAM_DAC+8) + (1<<`CTRL_MODE_STREAM_DAC)));
+  axi_write(offset+'h1C, 32'h2                );  // reset reg
+
   axi_write(offset+'h28, ((1<<`CTRL_STRT+8)            + (1<<`CTRL_STRT)));
 endtask: dac_dma_start
 

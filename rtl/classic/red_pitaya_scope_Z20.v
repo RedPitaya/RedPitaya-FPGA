@@ -321,6 +321,7 @@ wire              adc_rd_dv     ;
 reg               adc_we        ;
 reg               adc_we_keep   ;
 reg               adc_trig      ;
+reg               trig_dis_clr  ;
 
 reg   [ RSZ-1: 0] adc_wp_trig   ;
 reg   [ RSZ-1: 0] adc_wp_cur    ;
@@ -382,7 +383,7 @@ always @(posedge adc_clk_i) begin
 
       if (adc_trig)
          adc_dly_do  <= 1'b1;
-      else if ((adc_dly_do && (adc_dly_cnt <= 32'h1)) || adc_rst_do || adc_arm_do) //delayed reached or reset; delay is shortened by 1
+      else if ((adc_dly_do && (adc_dly_cnt <= 32'h1)) || adc_rst_do || adc_arm_do) //delay reached or reset; delay is shortened by 1
          adc_dly_do  <= 1'b0;
       
       adc_dly_end_reg <= adc_dly_do; 
@@ -787,28 +788,38 @@ reg               adc_trig_ap      ;
 reg               adc_trig_an      ;
 reg               adc_trig_bp      ;
 reg               adc_trig_bn      ;
-reg               adc_trig_sw      ;
-reg               trig_dis_clr     ;
+wire              adc_trig_sw      ;
+wire              adc_trig_sw_p    ;
+reg               adc_trig_sw_r    ;
+
 reg   [   4-1: 0] set_trig_src     ;
 wire              ext_trig_p       ;
 wire              ext_trig_n       ;
 wire              asg_trig_p       ;
 wire              asg_trig_n       ;
 reg               adc_trg_dis      ;
+reg    [2-1:0]    dat_dly  = 2'h0  ;
+
+assign adc_trig_sw_p = sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // trigger pulse
+assign adc_trig_sw   = (adc_trig_sw_r) && adc_dv_r[dat_dly];
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
    adc_arm_do    <= 1'b0 ;
    adc_rst_do    <= 1'b0 ;
-   adc_trig_sw   <= 1'b0 ;
+   adc_trig_sw_r <= 1'b0 ;
    trig_dis_clr  <= 1'b0 ;
    adc_trg_dis   <= 1'b0 ;
    set_trig_src  <= 4'h0 ;
    end else begin
    adc_arm_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[0] ; // SW ARM
    adc_rst_do   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_wdata[1] ; // reset
-   adc_trig_sw  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_wdata[3:0]==4'h1); // SW trigger
    trig_dis_clr <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_wdata[0]==1'b1);   // clear trigger protect/disable
+
+   if (adc_trig_sw_p)// extend wait for next valid sample 
+      adc_trig_sw_r <= 1'b1; 
+   else if (adc_dv_r[dat_dly])
+      adc_trig_sw_r <= 1'b0; 
 
       if (sys_wen && (sys_addr[19:0]==20'h4))
       set_trig_src <= sys_wdata[3:0] ;
@@ -846,7 +857,6 @@ always @(posedge adc_clk_i) begin
    last_src <= sys_wdata[3:0] ;
 end
 
-reg [2-1:0] dat_dly  = 2'h0;
 reg [2-1:0] prev_dly = 2'h0;
 always @(posedge adc_clk_i) begin //delay to trigger
    case (last_src)

@@ -3,8 +3,8 @@
 module rp_dma_mm2s_data_ctrl(
   input  wire       m_axi_aclk,
   input  wire       m_axi_aresetn,
-  input  wire       fifo_rst,
   input  wire       fifo_full,
+  input  wire       fifo_rst,
   //
   //
   input  wire [8:0] req_data,
@@ -41,7 +41,7 @@ reg  [8:0]    req_xfer_cnt;
 
 always @(posedge m_axi_aclk)
 begin
-  if (m_axi_aresetn == 0) begin
+  if (m_axi_aresetn == 0 || fifo_rst == 1) begin
     state_cs <= IDLE;    
   end else begin
     state_cs <= state_ns;

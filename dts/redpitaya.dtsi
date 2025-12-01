@@ -9,6 +9,7 @@
 /include/ "usb0.dtsi"
 /include/ "gpio.dtsi"
 /include/ "clkc.dtsi"
-/include/ "led-system.dtsi"
 /include/ "watchdog.dtsi"
 /include/ "uio-api.dtsi"
+/include/ "led-system-red.dtsi"
+/include/ "qspi.dtsi"

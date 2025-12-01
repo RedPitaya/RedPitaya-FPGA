@@ -154,6 +154,7 @@ wire [31:0]                     diag1_ch1, diag1_ch2;
 wire [31:0]                     diag2_ch1, diag2_ch2;
 wire [31:0]                     diag3_ch1, diag3_ch2;
 wire [31:0]                     diag4_ch1, diag4_ch2;
+reg                             rstn_cfg;
 
 assign intr = 1'b0;
 assign dac1_event_op = cfg_event_op;
@@ -187,7 +188,6 @@ begin
 end
 
 
-reg rstn_cfg;
 always @(posedge clk)
 begin
   rstn_cfg <= rst_n;
@@ -294,8 +294,8 @@ dac_cfg #(
 
   .diag1_i                  (diag1_ch1),
   .diag2_i                  (diag2_ch1),
-  .diag3_i                  (diag3_ch1),
-  .diag4_i                  (diag4_ch1)
+  .diag3_i                  (diag1_ch2),
+  .diag4_i                  (diag2_ch2)
   );
 
 ////////////////////////////////////////////////////////////
@@ -314,8 +314,6 @@ dac_top #(
   U_dac1(
   .clk_axi          (m_axi_dac1_aclk),   
   .clk_adc          (clk),   
-  //.axi_rstn         (m_axi_dac1_aresetn), 
-  //.adc_rstn         (rst_n), 
   .axi_rstn         (rstn_cfgax), 
   .adc_rstn         (rstn_cfg), 
 
@@ -323,17 +321,12 @@ dac_top #(
   .event_ip_stop    (event_ip_stop),  
   .event_ip_start   (event_ip_start), 
   .event_ip_reset   (event_ip_reset),  
-  // .event_op_trig    (dac1_event_op[0]),
-  // .event_op_stop    (dac1_event_op[1]),
-  // .event_op_start   (dac1_event_op[2]),
-  // .event_op_reset   (dac1_event_op[3]),
+
   .event_sel        (cfg_event_sel),
   .event_val        (event_val),
   .trig_ip          (trig_ip),
   .trig_op          (dac1_trig_op),  
-  //.reg_ctrl         (ctrl_cha_o),
   .reg_sts          (sts_cha),
-  //.sts_val          (sts_cha),  
   .dac_conf         (dac_cha_conf),
   .dac_scale        (cfg_cha_scale),
   .dac_offs         (cfg_cha_offs),
@@ -347,8 +340,8 @@ dac_top #(
   .dac_buf1_adr     (cfg_buf1_adr_cha),
   .dac_buf2_adr     (cfg_buf2_adr_cha),
   .dac_data_o       (dac_data_cha),
-  .diag_reg         (diag_reg),
-  .diag_reg2        (diag_reg2),
+  .diag_reg         (diag1_ch1),
+  .diag_reg2        (diag2_ch1),
   .loopback_en      (cfg_loopback_cha),
 
   .m_axi_dac_arid_o     (m_axi_dac1_arid_o),
@@ -385,8 +378,6 @@ dac_top #(
   U_dac2(
   .clk_axi          (m_axi_dac2_aclk),   
   .clk_adc          (clk),   
-  //.axi_rstn         (m_axi_dac1_aresetn), 
-  //.adc_rstn         (rst_n), 
   .axi_rstn         (rstn_cfgax), 
   .adc_rstn         (rstn_cfg), 
   
@@ -394,17 +385,11 @@ dac_top #(
   .event_ip_stop    (event_ip_stop),  
   .event_ip_start   (event_ip_start), 
   .event_ip_reset   (event_ip_reset),  
-  // .event_op_trig    (dac2_event_op[0]),
-  // .event_op_stop    (dac2_event_op[1]),
-  // .event_op_start   (dac2_event_op[2]),
-  // .event_op_reset   (dac2_event_op[3]),
   .event_sel        (cfg_event_sel),
   .event_val        (event_val),
   .trig_ip          (trig_ip),
   .trig_op          (dac2_trig_op),  
-  //.reg_ctrl         (ctrl_chb_o),
   .reg_sts          (sts_chb),
-  //.sts_val          (sts_chb), 
   .dac_conf         (dac_chb_conf),
   .dac_scale        (cfg_chb_scale),
   .dac_offs         (cfg_chb_offs),
@@ -418,6 +403,8 @@ dac_top #(
   .dac_buf1_adr     (cfg_buf1_adr_chb),
   .dac_buf2_adr     (cfg_buf2_adr_chb),
   .dac_data_o       (dac_data_chb),
+  .diag_reg         (diag1_ch2),
+  .diag_reg2        (diag2_ch2),
   .loopback_en      (cfg_loopback_chb),
   
   .m_axi_dac_arid_o     (m_axi_dac2_arid_o),

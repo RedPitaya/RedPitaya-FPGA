@@ -11,7 +11,8 @@
 		drv-vbus;
 	};
 };
-&usb0 {
-	dr_mode = "host";
-	usb-phy = <&usb_phy0>;
-};
+/*&usb0 {*/
+
+	/*dr_mode = "host";*/
+	/*usb-phy = <&usb_phy0>;*/
+/*};*/

@@ -24,7 +24,8 @@ tclapp::install -quiet ultrafast
 
 set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
+set path_ip      ip
+set path_ip_top  ../../ip
 set path_bd  .srcs/sources_1/bd/system/hdl
 #set path_bd  .srcs/sources_1/bd/system
 set path_sdc ../../sdc
@@ -50,7 +51,7 @@ set_param iconstr.diffPairPulltype {opposite}
 set part xc7z020clg400-1
 
 create_project -in_memory -part $part
-set_property verilog_define $prj_defs [current_fileset]
+set_property verilog_define [concat Z20_4 Z20_xx $prj_defs] [current_fileset]
 
 ################################################################################
 # create PS BD (processing system block design)
@@ -59,6 +60,11 @@ set_property verilog_define $prj_defs [current_fileset]
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
 set ::gpio_width 33
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
+
 if {$prj_name == "stream_app_4ch"} {
 source                            $path_ip/systemZ20_4.tcl
 } else {
@@ -85,6 +91,14 @@ add_files                               $path_bd
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_4ADC.xdc

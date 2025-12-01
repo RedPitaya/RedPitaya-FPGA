@@ -82,7 +82,7 @@ localparam STS_CURR_BUF     = 4;  // Currently selected buffer
 
 
 localparam AXI_BURST_BYTES  = AXI_BURST_LEN*AXI_DATA_BITS/8;
-localparam BUF_SIZE_BITS    = 17;
+localparam BUF_SIZE_BITS    = 24;
 
 ////////////////////////////////////////////////////////////
 // Signals

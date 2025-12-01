@@ -6,7 +6,9 @@
 ################################################################################
 
 set prj_name [lindex $argv 0]
+set prj_defs [lindex $argv 1]
 puts "Project name: $prj_name"
+puts "Defines: $prj_defs"
 cd prj/$prj_name
 #cd prj/$::argv 0
 
@@ -16,7 +18,8 @@ cd prj/$prj_name
 
 set path_brd ../../brd
 set path_rtl rtl
-set path_ip  ip
+set path_ip      ip
+set path_ip_top  ../../ip
 set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_sdc_prj sdc
@@ -43,12 +46,17 @@ create_project -part $part -force redpitaya ./project
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
 set ::gpio_width 33
+set ::hp0_clk_freq 125000000
+set ::hp1_clk_freq 125000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
+
 if {$prj_name == "stream_app_4ch"} {
 source                            $path_ip/systemZ20_4.tcl
 } else {
 source                            $path_ip/systemZ20_14.tcl
 }
-
+set_property verilog_define [concat Z20_4 $prj_defs] [current_fileset]
 # generate SDK files
 generate_target all [get_files    system.bd]
 
@@ -66,6 +74,14 @@ add_files                         $path_bd
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
 add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+add_files $path_ip_top/sync_fifo/sync_fifo.xci
 }
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_4ADC.xdc

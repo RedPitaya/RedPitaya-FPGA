@@ -19,12 +19,13 @@
  *
  */
 
-module red_pitaya_dfilt1 (
+module red_pitaya_dfilt1 
+  #(parameter DW = 16)(
    // ADC
    input                        adc_clk_i ,  // ADC clock
    input                        adc_rstn_i,  // ADC reset - active low
-   input  logic signed [14-1:0] adc_dat_i ,  // ADC data
-   output logic signed [14-1:0] adc_dat_o ,  // ADC data
+   input  logic signed [DW-1:0] adc_dat_i ,  // ADC data
+   output logic signed [DW-1:0] adc_dat_o ,  // ADC data
    // configuration
    input  logic signed [18-1:0] cfg_aa_i,  // AA coefficient
    input  logic signed [25-1:0] cfg_bb_i,  // BB coefficient
@@ -35,12 +36,12 @@ module red_pitaya_dfilt1 (
 //---------------------------------------------------------------------------------
 //  FIR
 
-logic signed [39-1:0] bb_mult;
+logic signed [(DW+25)-1:0] bb_mult;
 logic signed [33-1:0] r2_sum ;
 logic signed [33-1:0] r1_reg ;
 logic signed [23-1:0] r2_reg ;
-logic signed [32-1:0] r01_reg;
-logic signed [28-1:0] r02_reg;
+logic signed [(DW+18)-1:0] r01_reg;
+logic signed [(DW+25)-1-10:0] r02_reg;
 
 assign bb_mult = adc_dat_i * cfg_bb_i;
 assign r2_sum  = r01_reg + r1_reg;
@@ -105,8 +106,8 @@ end
 //  Scaling
 
 logic signed [40-1:0] kk_mult  ;
-logic signed [15-1:0] r4_reg_r ;
-logic signed [15-1:0] r4_reg_rr;
+//logic signed [15-1:0] r4_reg_r ;
+//logic signed [15-1:0] r4_reg_rr;
 logic signed [14-1:0] r5_reg   ;
 
 always_ff @(posedge adc_clk_i)

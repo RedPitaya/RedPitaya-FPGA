@@ -3,8 +3,8 @@
 `define TRIG_ACT_LVL  0
 `define MASTER        1
 `define LOCALM        1
-`define FILERD        1
-`define SINE          0
+`define FILERD        0
+`define SINE          1
 `define DAC_SAMPS     100000
 
 `define AXI_MON       1
@@ -19,6 +19,7 @@
 `define PID_REG_OFS        3
 `define AMS_REG_OFS        4
 `define DAISY_REG_OFS      5
+`define EXP_E3_REG_OFS     6
 
 `define STRM_SCOPE_REG_OFS 0
 `define STRM_ASG_REG_OFS   1
