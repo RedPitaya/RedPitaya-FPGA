@@ -22,8 +22,8 @@ make PRJ=v0.94 MODEL=Z10
 
 Build guides:
 
-- Windows: [BUILD_WIN.md](/home/yura/projects/a014-redpitaya/redpitaya-fpga/BUILD_WIN.md:1)
-- Linux: [BUILD_LNX.md](/home/yura/projects/a014-redpitaya/redpitaya-fpga/BUILD_LNX.md:1)
+- Windows: [BUILD_WIN.md](/BUILD_WIN.md)
+- Linux: [BUILD_LNX.md](/BUILD_LNX.md)
 
 ## Repository structure
 
