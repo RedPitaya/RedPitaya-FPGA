@@ -12,6 +12,11 @@ set prj_dir "build"
 set prj_board "z20_14"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
+# Absolute path to this directory, captured before the cd below changes the
+# working directory.  Needed to source red_pitaya_vivado_timing_gate.tcl later:
+# by then the cwd is prj/<name>, so a relative path would resolve inside it.
+set ::RP_ROOT_DIR [file normalize [file dirname [info script]]]
+
 cd prj/$prj_name
 #cd prj/$::argv 0
 
@@ -182,6 +187,12 @@ foreach file $rptFiles {
 #wait_on_run impl_1
 
 open_run impl_1
+
+# Refuse to emit a bitstream that does not meet timing.
+# Override for a deliberate experimental build: make ... DEFINES=ALLOW_TIMING_FAIL
+source [file join $::RP_ROOT_DIR red_pitaya_vivado_timing_gate.tcl]
+rp_check_timing $path_out
+
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 write_bitstream -force            $path_out/red_pitaya
 write_cfgmem -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 $path_out/red_pitaya.bit" -file $path_out/red_pitaya.bin
