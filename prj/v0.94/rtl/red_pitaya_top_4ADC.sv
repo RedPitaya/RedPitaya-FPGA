@@ -195,7 +195,23 @@ logic                 can_on;
 
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]   ), .rstn (frstn[0]   ));
-sys_bus_if   sys [8-1:0] (.clk (adc_clk_01), .rstn (adc_rstn_01));
+// sys[2] is the slave bus of i_scope_2_3, which runs on adc_clk_23.  The
+// destination clock of each per-bus CDC comes from this port - see
+// sys_bus_interconnect: "assign bus_int_o[i].clk = bus_s[i].clk" - so with
+// adc_clk_01 here the CDC handed the transaction over into the pll_adc_clk_0
+// domain and i_scope_2_3 then sampled it in pll_adc_clk_1, making every config
+// write and read-back of that instance a combinational domain crossing.
+// Clocking sys[2] from adc_clk_23 moves the hand-off inside sys_bus_cdc, where
+// it is properly synchronised.  The ports are left unconnected and driven by
+// the assignments below, which is the same pattern sys_bus_interconnect already
+// uses for bus_int_o.
+sys_bus_if   sys [8-1:0] ();
+generate
+for (genvar i=0; i<8; i++) begin: for_sys_clk
+  assign sys[i].clk  = (i == 2) ? adc_clk_23  : adc_clk_01 ;
+  assign sys[i].rstn = (i == 2) ? adc_rstn_23 : adc_rstn_01;
+end: for_sys_clk
+endgenerate
 // GPIO interface
 gpio_if #(.DW (3*GDW)) gpio ();
 
