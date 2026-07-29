@@ -158,7 +158,44 @@ update_compile_order -fileset sources_1
 
 if {$dev_mode == 1} {return}
 
-launch_runs synth_1
+################################################################################
+# Parallel jobs for launch_runs.
+#
+# synth_1 depends on 8 out-of-context IP synthesis runs.  Without -jobs Vivado
+# defaults to 1 and runs them one after another; the top-level synthesis only
+# starts once the last one is done.  From a build log:
+#   09:38:18  Launched system_axi_protocol_converter_0_0_synth_1, ... (8 runs)
+#   09:48:54  **** Start of session      <- synth_1 began 10 min 36 s later
+#   09:52:55  synth_1 finished           <- and itself took about 4 min
+# synth_design is already multithreaded, so this queueing was the bottleneck.
+#
+# nproc is tried first because it honours sched_getaffinity, so taskset and a
+# cpuset-limited container are respected.  /proc/cpuinfo is a fallback for the
+# case where exec fails - under Vivado, exec inherits Vivado's LD_LIBRARY_PATH
+# and system binaries can fail to load.
+#
+# A CPU *quota* (cgroup cpu.max) is not visible to either probe, and every
+# parallel job is a separate Vivado process needing roughly 1-3 GB.  On a
+# constrained or memory-tight machine set the count explicitly:
+#   RP_JOBS=4 make PRJ=... MODEL=...
+################################################################################
+set rp_jobs 0
+if {[info exists ::env(RP_JOBS)] && [string is integer -strict $::env(RP_JOBS)]} {
+  set rp_jobs $::env(RP_JOBS)
+}
+if {$rp_jobs < 1} { catch {set rp_jobs [string trim [exec nproc]]} }
+if {![string is integer -strict $rp_jobs] || $rp_jobs < 1} {
+  set rp_jobs 0
+  catch {
+    set fh [open /proc/cpuinfo r]
+    set rp_jobs [regexp -all -line {^processor\s*:} [read $fh]]
+    close $fh
+  }
+}
+if {![string is integer -strict $rp_jobs] || $rp_jobs < 1} { set rp_jobs 1 }
+puts "launch_runs synth_1 -jobs $rp_jobs"
+
+launch_runs synth_1 -jobs $rp_jobs
 wait_on_run synth_1
 
 set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
