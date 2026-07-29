@@ -25,6 +25,38 @@ Build guides:
 - Windows: [BUILD_WIN.md](/BUILD_WIN.md)
 - Linux: [BUILD_LNX.md](/BUILD_LNX.md)
 
+## Timing check before bitstream generation
+
+Every `red_pitaya_vivado_<MODEL>.tcl` script runs a timing gate after implementation and before `write_bitstream`. The gate reads the worst setup and hold slack from the implemented design and stops the build if either is negative.
+
+This exists because a bitstream that does not meet timing is not merely slow - it is functionally unreliable. A build once shipped images with `WNS = -8.9 ns`, and on hardware the configuration registers of ADC channels 3 and 4 changed value on their own, because a clock-domain crossing had been left unconstrained. Vivado reported `CRITICAL WARNING: [Timing 38-282]` and generated the bitstream anyway, since nothing in the flow inspected the result.
+
+Gate outcomes:
+
+- `TIMING GATE: PASS` - setup and hold both met, the build continues.
+- `TIMING NOT MET` - the build stops with an error. The ten worst paths are printed and a full report is written to `prj/<PRJ>/out/timing_gate_FAILED.rpt`.
+- `TIMING GATE: NOT VERIFIED` - the design reports no timed paths, so nothing could be checked. Expected for a design without user clock constraints; otherwise look for `Vivado 12-627`, `Vivado 12-4739`, or `Common 17-165` earlier in the log, which mean constraints failed to apply.
+
+### ALLOW_TIMING_FAIL
+
+To generate a bitstream even though timing is not met, pass `ALLOW_TIMING_FAIL` through `DEFINES`:
+
+```bash
+make PRJ=v0.94 MODEL=Z20_4 DEFINES=ALLOW_TIMING_FAIL
+```
+
+`DEFINES` is forwarded to `-tclargs`, so the gate sees the flag and downgrades the error to a warning:
+
+```
+# WARNING: TIMING NOT MET: setup (WNS=-2.473 ns, TNS=-1696.150 ns). Bitstream generation aborted.
+# Overridden by ALLOW_TIMING_FAIL - DO NOT SHIP THIS BITSTREAM.
+```
+
+Use it only for debugging - for example to get an image for a hardware experiment while a timing problem is still being investigated. A bitstream produced this way must never be released, and CI must not set the flag.
+
+The gate itself is shared by all models and lives in `red_pitaya_vivado_timing_gate.tcl`.
+
+
 ## Repository structure
 
 - `prj/` - project directory; each subdirectory defines a separate build configuration and its own project-specific overrides.
