@@ -23,6 +23,8 @@ create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
 set_false_path -from [get_clocks par_clk] -to [get_clocks pll_adc_clk_0]
 set_false_path -from [get_clocks pll_adc_clk_0] -to [get_clocks par_clk]
+set_false_path -from [get_clocks par_clk] -to [get_clocks pll_adc_clk_1]
+set_false_path -from [get_clocks pll_adc_clk_1] -to [get_clocks par_clk]
 # set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks adc_clk_01]
 # set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks adc_clk_23]
 set_false_path -from [get_clocks adc_clk_01] -to [get_clocks pll_ser_clk]
@@ -31,6 +33,15 @@ set_false_path -from [get_clocks adc_clk_01] -to [get_clocks pll_ser_clk]
 #IDLY inputs can be async
 set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks pll_adc_clk_0]
 set_false_path -from [get_clocks pll_adc_clk_0] -to [get_clocks clk_fpga_0]
+# Same cut for the second ADC PLL, which was missing.  pll_23 -> pll_adc_clk_1
+# clocks i_scope_2_3 (CH3/CH4); without these two lines every sys-bus crossing
+# of that instance is timed as synchronous, giving WNS -8.9 ns / TNS -9318 ns
+# concentrated on i_scope_2_3/i_cfg/sys_rdata_reg[*].
+# NOTE: pll_adc_clk_0 <-> pll_adc_clk_1 is deliberately NOT cut - a single
+# oscillator feeds both PLLs, and the two scope instances exchange trig_ch_*
+# and the 16-bit adc_state/axi_state/trg_state buses without synchronisers.
+set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks pll_adc_clk_1]
+set_false_path -from [get_clocks pll_adc_clk_1] -to [get_clocks clk_fpga_0]
 ########################
 
 set_false_path -from [get_clocks pll_adc_clk_0] -to [get_clocks pll_adc_10mhz]
