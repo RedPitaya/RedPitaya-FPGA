@@ -141,10 +141,22 @@ if {[file exists $path_sdc_prj/red_pitaya.xdc]} {
 }
 
 ################################################################################
-# ser parameter containing Git hash
+# set parameter containing Git hash
 ################################################################################
+# Falls back to a placeholder hash when git is not installed, or when the
+# repository has no .git (e.g. it was extracted from a zip archive), so the
+# build does not abort just because git information is unavailable.
 
-set gith [exec git log -1 --format="%H"]
+set gith "0000000000000000000000000000000000000000"
+if {[catch {exec git --version}]} {
+    puts "WARNING: git executable not found - GITH will use a placeholder value."
+} elseif {![file exists [file join $::RP_ROOT_DIR .git]]} {
+    puts "WARNING: .git not found in $::RP_ROOT_DIR (repository may have been extracted from a zip archive) - GITH will use a placeholder value."
+} elseif {[catch {exec git -C $::RP_ROOT_DIR log -1 --format="%H"} git_hash_result]} {
+    puts "WARNING: git log failed ($git_hash_result) - GITH will use a placeholder value."
+} else {
+    set gith $git_hash_result
+}
 set_property generic "GITH=160'h$gith" [current_fileset]
 set_property top $prj_top [current_fileset]
 
