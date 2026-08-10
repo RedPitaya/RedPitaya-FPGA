@@ -2,13 +2,36 @@ proc configure_ps7 {ps_instance} {
     global clk0_freq clk1_freq clk2_freq clk3_freq
     global gpio_width bus_w_bit dram_w_bit
 
+    # FCLK_CLK1 frequency is derived from clk1_freq instead of being hardcoded,
+    # so a project can lower it (see the per-project blocks in
+    # red_pitaya_vivado_<MODEL>.tcl) without editing this shared file.
+    #
+    # PCW_OVERRIDE_BASIC_CLOCK is 1 below, which means the frequency the PS
+    # actually produces comes from PCW_FCLK1_PERIPHERAL_DIVISOR0/1, NOT from
+    # PCW_FPGA1_PERIPHERAL_FREQMHZ -- and the timing constraint on clk_fpga_1
+    # follows the divisors. Setting the requested MHz alone silently does
+    # nothing, so compute the divisors here as well.
+    set io_pll_mhz 1000.0
+    set fpga1_freq_mhz [expr {$clk1_freq / 1000000}]
+    set fpga1_div_total [expr {round($io_pll_mhz / ($clk1_freq / 1000000.0))}]
+    if {abs($io_pll_mhz / $fpga1_div_total - $clk1_freq / 1000000.0) > 1e-6} {
+        error "clk1_freq $clk1_freq Hz is not an exact division of the ${io_pll_mhz} MHz IO PLL"
+    }
+    # Match the style of the other FCLKs: divisor1 is 2 when the total is even.
+    set fpga1_div1 [expr {$fpga1_div_total % 2 == 0 ? 2 : 1}]
+    set fpga1_div0 [expr {$fpga1_div_total / $fpga1_div1}]
+    if {$fpga1_div0 > 63 || $fpga1_div1 > 63} {
+        error "clk1_freq $clk1_freq Hz needs FCLK1 divisors ${fpga1_div0}/${fpga1_div1}, out of range"
+    }
+    set fpga1_act_freq_mhz [format %.6f [expr {$io_pll_mhz / $fpga1_div_total}]]
+
     set_property -dict [list \
         CONFIG.PCW_ACT_APU_PERIPHERAL_FREQMHZ {666.666660} \
         CONFIG.PCW_ACT_DCI_PERIPHERAL_FREQMHZ {10.158730} \
         CONFIG.PCW_ACT_ENET0_PERIPHERAL_FREQMHZ {125.000000} \
         CONFIG.PCW_ACT_ENET1_PERIPHERAL_FREQMHZ {10.000000} \
         CONFIG.PCW_ACT_FPGA0_PERIPHERAL_FREQMHZ {125.000000} \
-        CONFIG.PCW_ACT_FPGA1_PERIPHERAL_FREQMHZ {250.000000} \
+        CONFIG.PCW_ACT_FPGA1_PERIPHERAL_FREQMHZ $fpga1_act_freq_mhz \
         CONFIG.PCW_ACT_FPGA2_PERIPHERAL_FREQMHZ {50.000000} \
         CONFIG.PCW_ACT_FPGA3_PERIPHERAL_FREQMHZ {200.000000} \
         CONFIG.PCW_ACT_PCAP_PERIPHERAL_FREQMHZ {200.000000} \
@@ -82,8 +105,8 @@ proc configure_ps7 {ps_instance} {
         CONFIG.PCW_EN_USB0 {1} \
         CONFIG.PCW_FCLK0_PERIPHERAL_DIVISOR0 {4} \
         CONFIG.PCW_FCLK0_PERIPHERAL_DIVISOR1 {2} \
-        CONFIG.PCW_FCLK1_PERIPHERAL_DIVISOR0 {2} \
-        CONFIG.PCW_FCLK1_PERIPHERAL_DIVISOR1 {2} \
+        CONFIG.PCW_FCLK1_PERIPHERAL_DIVISOR0 $fpga1_div0 \
+        CONFIG.PCW_FCLK1_PERIPHERAL_DIVISOR1 $fpga1_div1 \
         CONFIG.PCW_FCLK2_PERIPHERAL_DIVISOR0 {5} \
         CONFIG.PCW_FCLK2_PERIPHERAL_DIVISOR1 {4} \
         CONFIG.PCW_FCLK3_PERIPHERAL_DIVISOR0 {5} \
@@ -92,7 +115,7 @@ proc configure_ps7 {ps_instance} {
         CONFIG.PCW_FCLK_CLK2_BUF {TRUE} \
         CONFIG.PCW_FCLK_CLK3_BUF {TRUE} \
         CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ {125} \
-        CONFIG.PCW_FPGA1_PERIPHERAL_FREQMHZ {250} \
+        CONFIG.PCW_FPGA1_PERIPHERAL_FREQMHZ $fpga1_freq_mhz \
         CONFIG.PCW_FPGA2_PERIPHERAL_FREQMHZ {50} \
         CONFIG.PCW_FPGA3_PERIPHERAL_FREQMHZ {200} \
         CONFIG.PCW_FPGA_FCLK0_ENABLE {1} \
