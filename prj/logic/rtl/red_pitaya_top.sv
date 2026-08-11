@@ -580,7 +580,14 @@ for (genvar i=0; i<MNA; i++) begin: for_dac
   );
 
   // output registers + signed to unsigned (also to negative slope)
-  assign dac_dat[i] = {str_dac[i].TDATA[0][14-1], ~str_dac[i].TDATA[0][14-2:0]};
+  // A014RP-1409: this has to be a register, as it is in prj/v0.94. The ODDR
+  // below is left at its default DDR_CLK_EDGE ("OPPOSITE_EDGE"), so D2 is
+  // captured on the falling edge and the path into it gets only half a clock
+  // period (4 ns). Driving it combinationally through the output multiplexer
+  // added a LUT level and a pll_adc_clk -> pll_dac_clk_1x crossing into that
+  // half cycle, which does not close timing.
+  always_ff @(posedge dac_clk_1x)
+  dac_dat[i] <= {str_dac[i].TDATA[0][14-1], ~str_dac[i].TDATA[0][14-2:0]};
   assign str_dac[i].TREADY = 1'b1;
 
 end: for_dac
