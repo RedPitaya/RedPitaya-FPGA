@@ -2,15 +2,13 @@ proc configure_ps7 {ps_instance} {
     global clk0_freq clk1_freq clk2_freq clk3_freq
     global gpio_width bus_w_bit dram_w_bit
 
-    # FCLK_CLK1 frequency is derived from clk1_freq instead of being hardcoded,
-    # so a project can lower it (see the per-project blocks in
-    # red_pitaya_vivado_<MODEL>.tcl) without editing this shared file.
+    # FCLK_CLK1 is derived from clk1_freq so a project can override it in
+    # red_pitaya_vivado_<MODEL>.tcl without editing this shared file.
     #
-    # PCW_OVERRIDE_BASIC_CLOCK is 1 below, which means the frequency the PS
-    # actually produces comes from PCW_FCLK1_PERIPHERAL_DIVISOR0/1, NOT from
-    # PCW_FPGA1_PERIPHERAL_FREQMHZ -- and the timing constraint on clk_fpga_1
-    # follows the divisors. Setting the requested MHz alone silently does
-    # nothing, so compute the divisors here as well.
+    # The divisors must be computed too: PCW_OVERRIDE_BASIC_CLOCK is 1 below, so
+    # the produced frequency and the clk_fpga_1 constraint follow
+    # PCW_FCLK1_PERIPHERAL_DIVISOR0/1, and setting the requested MHz alone
+    # silently does nothing.
     set io_pll_mhz 1000.0
     set fpga1_freq_mhz [expr {$clk1_freq / 1000000}]
     set fpga1_div_total [expr {round($io_pll_mhz / ($clk1_freq / 1000000.0))}]

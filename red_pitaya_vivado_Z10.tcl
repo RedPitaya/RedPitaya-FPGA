@@ -96,12 +96,9 @@ if {$prj_name == "stream_app"} {
 
 if {$prj_name == "logic"} {
    set ::logic_freq 125000000
-   # A014RP-1409: the whole PS/AXI subsystem (4x axi_dma, 6x axi_interconnect,
-   # AXIS FIFOs, xadc) runs on FCLK_CLK1 and does not close timing at 250 MHz on
-   # xc7z010-1. Before the ps7_config.tcl refactoring (0e6922e) this project used
-   # 142 MHz here; 250 MHz came in with the shared config copied from barebones.
-   # 125 MHz matches the declared Logic Analyzer sample rate and logic_freq above,
-   # and leaves 4x headroom on the 64-bit HP ports for the 16-bit 125 MHz streams.
+   # The PS/AXI subsystem runs on FCLK_CLK1 and does not close timing at the
+   # default 250 MHz on xc7z010-1. 125 MHz matches the declared Logic Analyzer
+   # sample rate and logic_freq above.
    set ::clk1_freq 125000000
 }
 
