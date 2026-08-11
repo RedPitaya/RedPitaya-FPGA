@@ -1,6 +1,13 @@
 proc configure_ps7 {ps_instance} {
     global clk0_freq clk1_freq clk2_freq clk3_freq
     global gpio_width bus_w_bit dram_w_bit
+    global use_s_axi_gp1
+
+    # Off unless a project asks for it, so the other projects keep the PS
+    # configuration they were built and tested with.
+    if {![info exists use_s_axi_gp1]} {
+        set use_s_axi_gp1 0
+    }
 
     # FCLK_CLK1 is derived from clk1_freq so a project can override it in
     # red_pitaya_vivado_<MODEL>.tcl without editing this shared file.
@@ -454,6 +461,7 @@ proc configure_ps7 {ps_instance} {
         CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
         CONFIG.PCW_USE_M_AXI_GP1 {1} \
         CONFIG.PCW_USE_S_AXI_GP0 {1} \
+        CONFIG.PCW_USE_S_AXI_GP1 $use_s_axi_gp1 \
         CONFIG.PCW_USE_S_AXI_HP0 {1} \
         CONFIG.PCW_USE_S_AXI_HP1 {1} \
         CONFIG.PCW_USE_S_AXI_HP2 {1} \
