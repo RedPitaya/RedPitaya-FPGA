@@ -3,10 +3,8 @@
 // Author: Iztok Jeras <iztok.jeras@redpitaya.com>
 // (c) Red Pitaya  (redpitaya.com)
 //
-// Timing note: the datapath is pipelined (see the comments inside the channel
-// loop). The output is delayed by 2 clock cycles with respect to the original
-// non pipelined description; the generated pulse pattern (and therefore the
-// average pulse density for a given input code) is otherwise bit identical.
+// The datapath is pipelined to close timing; the output is delayed by 2 clock
+// cycles, the pulse pattern is bit identical.
 ////////////////////////////////////////////////////////////////////////////////
 
 module pdm #(
@@ -55,35 +53,20 @@ logic [DWC-1:0] dat_q;    // stream input data copy (pipelined)
 logic [DWC  :0] dsr;      // pre-computed (dat_q - rng), modulo 2**(DWC+1)
 
 logic [DWC-1:0] acu;  // accumulator
-logic [DWC  :0] sum;  // summation      (acu + dat_q)
-logic [DWC  :0] sub;  // subtraction    (acu + dat_q - rng)
+// `keep` is required to hold the two carry chains below in parallel
+(* keep = "true" *) logic [DWC  :0] sum;  // summation      (acu + dat_q)
+(* keep = "true" *) logic [DWC  :0] sub;  // subtraction    (acu + dat_q - rng)
 
 logic           pdm_d;  // PDM output (pipelined)
 
 // stream input data copy
 assign dat_nxt = ~rstn ? '0 : ((ena & str_rdy) ? str_dat[i] : dat);
 
-// The accumulator loop below needs both (acu+dat) and (acu+dat-rng). Computing
-// them as two chained adders (the straightforward description) puts two ripple
-// carry chains between the accumulator register and itself, which does not
-// close timing at 250MHz on a -1 speed grade part. Since `dat` is a register
-// and `rng` is a (quasi) static configuration value, (dat-rng) is pre-computed
-// here, so that both sums become a single carry chain fanning out from `acu`
-// in parallel (carry-select style modulo accumulator).
-//
-// Modulo 2**(DWC+1) arithmetic makes this bit exact: acu + ((dat-rng) mod
-// 2**(DWC+1)) == (acu + dat - rng) mod 2**(DWC+1), so `sub` (including its
-// sign/borrow bit sub[DWC]) is identical to the chained form.
-//
-// The only behavioural difference: a change of `rng` takes effect one clock
-// cycle later than before (`dsr` is registered). `rng` is a configuration
-// input, constant in all instantiations in this repository, so the average
-// output pulse density for a given input code is unchanged.
-//
-// `dsr` is computed from the already registered `dat` (not from its
-// combinational next value), so that the pre-computation is a plain
-// register-to-register subtraction. `dat_q` carries `dat` along the same extra
-// pipeline stage, keeping `dat_q` and `dsr` bit exactly aligned.
+// The accumulator loop needs both (acu+dat) and (acu+dat-rng). Chaining the two
+// adders puts two carry chains in series in the feedback loop, which does not
+// close timing; pre-computing (dat-rng) makes them parallel instead (carry
+// select modulo accumulator). Modulo 2**(DWC+1) arithmetic keeps this bit
+// exact, sub[DWC] included. `rng` takes effect one cycle later than before.
 always_ff @(posedge clk)
 if (~rstn) begin
   dat_q <= '0;
@@ -111,9 +94,8 @@ else begin
 end
 
 // PDM output
-// The output register is placed inside the IO block, which is far away from
-// the accumulator logic. The extra pipeline stage splits the (logic + long
-// route) path into a logic path and a route only path.
+// The output register sits in the IO block, far from the accumulator logic, so
+// this extra stage splits that path into a logic part and a route only part.
 always_ff @(posedge clk)
 if (~rstn)  pdm_d <= 1'b0;
 else        pdm_d <= ena & (~sub[DWC] | ~|sub[DWC-1:0]);

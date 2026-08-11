@@ -484,10 +484,19 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
 
   # Create instance: axi_interconnect_5, and set properties
   set axi_interconnect_5 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_5 ]
+  # Register slices on every port, to close timing on the shared bus arbiter:
+  # its four slave ports are DMA scatter gather masters spread across the die.
+  # Costs one cycle on descriptor fetches, which are not throughput critical.
+  # STRATEGY 2 would be the alternative, but it does not fit the part.
   set_property -dict [ list \
    CONFIG.NUM_MI {1} \
    CONFIG.NUM_SI {4} \
    CONFIG.STRATEGY {1} \
+   CONFIG.M00_HAS_REGSLICE {1} \
+   CONFIG.S00_HAS_REGSLICE {1} \
+   CONFIG.S01_HAS_REGSLICE {1} \
+   CONFIG.S02_HAS_REGSLICE {1} \
+   CONFIG.S03_HAS_REGSLICE {1} \
  ] $axi_interconnect_5
 
   # Create instance: axis_clock_converter_2, and set properties

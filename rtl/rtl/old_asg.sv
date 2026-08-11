@@ -135,9 +135,12 @@ logic [CWM    -1:0] buf_raddr;  // read address
 
 // pointers
 logic [CWM+CWF-1:0] ptr_cur; // current
-logic [CWM+CWF-0:0] ptr_nxt; // next
-logic [CWM+CWF-0:0] ptr_nxt_sub ;
+// `keep` is required to hold the two carry chains below in parallel
+(* keep = "true" *) logic [CWM+CWF-0:0] ptr_nxt; // next
+(* keep = "true" *) logic [CWM+CWF-0:0] ptr_nxt_sub ;
 logic               ptr_nxt_sub_neg;
+logic [CWM+CWF-0:0] cfg_stp_p1;  // pre-computed (cfg_stp + 1)
+logic [CWM+CWF-0:0] cfg_stp_sub; // pre-computed (cfg_stp - cfg_siz), modulo 2**(CWM+CWF+1)
 // counter end status
 logic               end_bdl;  // burst data length
 logic               end_bln;  // burst      length
@@ -275,8 +278,23 @@ end else begin
 end
 
 // next pointer value and overflow
-assign ptr_nxt     = ptr_cur + (cfg_stp + 1);
-assign ptr_nxt_sub = ptr_nxt - (cfg_siz + 1);
+//
+// Carry select modulo counter, as in pdm.sv. Chaining the two adders puts two
+// carry chains in series in the ptr_cur feedback loop, which does not close
+// timing; pre-computing (step - size) makes them parallel instead. Modulo
+// 2**(CWM+CWF+1) arithmetic keeps this bit exact, borrow bit included.
+// cfg_stp and cfg_siz take effect one cycle later than before.
+always_ff @(posedge sto.ACLK)
+if (~sto.ARESETn) begin
+  cfg_stp_p1  <= '0;
+  cfg_stp_sub <= '0;
+end else begin
+  cfg_stp_p1  <= cfg_stp + 1;
+  cfg_stp_sub <= cfg_stp - cfg_siz;
+end
+
+assign ptr_nxt     = ptr_cur + cfg_stp_p1;
+assign ptr_nxt_sub = ptr_cur + cfg_stp_sub;
 assign ptr_nxt_sub_neg = ptr_nxt_sub[CWM+CWF];
 
 ////////////////////////////////////////////////////////////////////////////////
