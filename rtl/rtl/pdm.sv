@@ -4,7 +4,8 @@
 // (c) Red Pitaya  (redpitaya.com)
 //
 // The datapath is pipelined to close timing; the output is delayed by 2 clock
-// cycles, the pulse pattern is bit identical.
+// cycles. In steady state the pulse pattern is bit identical, except for one
+// spurious output cycle on reset release, when the pre-computed dsr is still 0.
 ////////////////////////////////////////////////////////////////////////////////
 
 module pdm #(
