@@ -96,9 +96,8 @@ if {$prj_name == "stream_app"} {
 
 if {$prj_name == "logic"} {
    set ::logic_freq 125000000
-   # The PS/AXI subsystem runs on FCLK_CLK1 and does not close timing at the
-   # default 250 MHz on xc7z010-1. 125 MHz matches the declared Logic Analyzer
-   # sample rate and logic_freq above.
+   # AXI/DMA subsystem clock. Neither the 250 MHz default nor the project's
+   # historical 142.857 MHz closes timing here.
    set ::clk1_freq 125000000
 }
 

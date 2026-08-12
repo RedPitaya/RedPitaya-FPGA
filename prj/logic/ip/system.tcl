@@ -359,7 +359,9 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.ASSOCIATED_RESET {M_AXI_STR_TX2_arstn} \
  ] $M_AXI_STR_TX2_aclk
   set M_AXI_STR_TX2_arstn [ create_bd_port -dir I -type rst M_AXI_STR_TX2_arstn ]
-  set M_AXI_STR_TX3_aclk [ create_bd_port -dir I -type clk -freq_hz 142000000 M_AXI_STR_TX3_aclk ]
+  # Channel 3 hangs off axi_dma_3 with no axis_clock_converter, so it is in the
+  # FCLK_CLK1 domain, not the adc_clk domain the other channels use.
+  set M_AXI_STR_TX3_aclk [ create_bd_port -dir I -type clk -freq_hz $::clk1_freq M_AXI_STR_TX3_aclk ]
   set_property -dict [ list \
    CONFIG.ASSOCIATED_RESET {M_AXI_STR_TX3_arstn} \
  ] $M_AXI_STR_TX3_aclk
@@ -382,7 +384,8 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.ASSOCIATED_RESET {S_AXI_STR_RX2_arstn} \
  ] $S_AXI_STR_RX2_aclk
   set S_AXI_STR_RX2_arstn [ create_bd_port -dir I -type rst S_AXI_STR_RX2_arstn ]
-  set S_AXI_STR_RX3_aclk [ create_bd_port -dir I -type clk -freq_hz 142000000 S_AXI_STR_RX3_aclk ]
+  # FCLK_CLK1 domain, see M_AXI_STR_TX3_aclk above.
+  set S_AXI_STR_RX3_aclk [ create_bd_port -dir I -type clk -freq_hz $::clk1_freq S_AXI_STR_RX3_aclk ]
   set_property -dict [ list \
    CONFIG.ASSOCIATED_RESET {S_AXI_STR_RX3_arstn} \
  ] $S_AXI_STR_RX3_aclk
