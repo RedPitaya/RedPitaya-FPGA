@@ -599,7 +599,10 @@ for (genvar i=0; i<MNA; i++) begin: for_dac
   );
 
   // output registers + signed to unsigned (also to negative slope)
-  assign dac_dat[i] = {str_dac[i].TDATA[0][14-1], ~str_dac[i].TDATA[0][14-2:0]};
+  // Has to be a register: the ODDR below keeps its default DDR_CLK_EDGE, so D2
+  // is captured on the falling edge and gets only half a period.
+  always_ff @(posedge dac_clk_1x)
+  dac_dat[i] <= {str_dac[i].TDATA[0][14-1], ~str_dac[i].TDATA[0][14-2:0]};
   assign str_dac[i].TREADY = 1'b1;
 
 end: for_dac
