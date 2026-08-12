@@ -90,6 +90,14 @@ set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
+if {$prj_name == "logic"} {
+   # Without this block the logic build fails on an unset ::logic_freq.
+   set ::logic_freq 125000000
+   # AXI/DMA subsystem clock. Neither the 250 MHz default nor the project's
+   # historical 142.857 MHz closes timing here.
+   set ::clk1_freq 125000000
+}
+
 set_property verilog_define [concat Z20_LL $prj_defs] [current_fileset]
 source $path_ip/system.tcl
 
