@@ -26,7 +26,10 @@ module red_pitaya_pll_ll (
 );
 
 logic clk_fb;
-`define DAC_CLK_PHASE -180
+// -45 puts clk_dac_1p in phase with clk_dac_1x, so the inversion in the
+// dac_wrt ODDR lands the strobe edge half a period after the data launch,
+// centred between data changes.  Not yet verified on hardware.
+`define DAC_CLK_PHASE -45
 `define PHASE_OFFSET -45
 
 PLLE2_ADV #(
@@ -45,7 +48,7 @@ PLLE2_ADV #(
    .CLKOUT2_DIVIDE       ( 8         ), // 125 MHz -90 deg
    .CLKOUT2_PHASE        ( -90.000   ),
    .CLKOUT2_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT3_DIVIDE       ( 8         ), // 125 MHz -135 deg
+   .CLKOUT3_DIVIDE       ( 8         ), // 125 MHz -90 deg
    .CLKOUT3_PHASE        ( `DAC_CLK_PHASE + `PHASE_OFFSET ),
    //.CLKOUT3_PHASE        (-135.000   ),
    .CLKOUT3_DUTY_CYCLE   ( 0.5       ),
