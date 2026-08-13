@@ -22,9 +22,6 @@ set_property PACKAGE_PIN Y6  [get_ports {adc_dclk_i[0]}] ; # ADDCLK_n
 set_property PACKAGE_PIN Y7  [get_ports {adc_dclk_i[1]}] ; # ADDCLK_p
 set_property PACKAGE_PIN Y8  [get_ports {adc_fclk_i[0]}] ; # ADFCLK_n
 set_property PACKAGE_PIN Y9  [get_ports {adc_fclk_i[1]}] ; # ADFCLK_p
-set_property PACKAGE_PIN V10 [get_ports {adc_dclk_o[0]}] ; # ADDCLKIN_n
-set_property PACKAGE_PIN V11 [get_ports {adc_dclk_o[1]}] ; # ADDCLKIN_p
-
 set_property PACKAGE_PIN U8  [get_ports {adc_data_i[0][0]}] ; # ADA0_n
 set_property PACKAGE_PIN U9  [get_ports {adc_data_i[0][1]}] ; # ADA0_p
 set_property PACKAGE_PIN Y11 [get_ports {adc_data_i[1][0]}] ; # ADA1_n
@@ -208,7 +205,6 @@ create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
 
 create_generated_clock -name i_hk/dna_clk -source [get_pins pll/pll/CLKOUT1] -divide_by 16 [get_pins i_hk/dna_clk_reg/Q]
-#create_generated_clock -name {adc_dclk_o[1]} -source [get_pins ODDR_dclk/C] -divide_by 1 [get_ports {adc_dclk_o[1]}]
 create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 -invert [get_ports dac_wrta_o]
 create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divide_by 1 -invert [get_ports dac_wrtb_o]
 
@@ -268,6 +264,5 @@ set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_re
 set_false_path -from [get_pins {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins {dac_dat_*[*]/D}]
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-
 
 

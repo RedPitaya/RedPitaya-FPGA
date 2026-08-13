@@ -15,7 +15,6 @@ module red_pitaya_pll_ll (
   input  logic clk       ,  // clock
   input  logic rstn      ,  // reset - active low
   // output clocks
-  output logic clk_dclk  ,  // ADC DCO clock
   output logic clk_adc   ,  // ADC clock - system
   output logic clk_dac_1x,  // DAC clock
   output logic clk_dac_1p,  // DAC clock - 90 phase
@@ -63,7 +62,7 @@ PLLE2_ADV #(
 ) pll (
    // Output clocks
    .CLKFBOUT     (clk_fb    ),
-   .CLKOUT0      (clk_dclk  ),
+   .CLKOUT0      (          ),
    .CLKOUT1      (clk_adc   ),
    .CLKOUT2      (clk_dac_1x),
    .CLKOUT3      (clk_dac_1p),

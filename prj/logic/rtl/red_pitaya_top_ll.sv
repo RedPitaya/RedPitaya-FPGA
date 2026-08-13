@@ -42,7 +42,6 @@ module red_pitaya_top_ll #(
   input  logic           [ 2-1:0] adc_fclk_i,  // ADC frame clock {p,n}
   input  logic [ 2-1: 0] [ 2-1:0] adc_data_i,  // ADC data {p,n}
   input  logic [ 2-1: 0] [ 2-1:0] adc_datb_i,  // ADC data {p,n}
-  output logic           [ 2-1:0] adc_dclk_o,  // ADC data clock {p,n}
   output logic                    adc_rst_o,   // ADC reset
   output logic                    adc_pdn_o,   // ADC power down
   output logic                    adc_sen_o,   // ADC serial en
@@ -89,7 +88,6 @@ logic [4-1:0] fclk ;  // {clk3, clk2, clk1, clk0} = {200MHz, 50MHz, 125MHz, 125M
 logic [4-1:0] frstn;
 
 logic                 dac_clk_in;
-logic                 pll_adc_dclk;
 logic                 pll_adc_clk;
 logic                 pll_dac_clk_1x;
 logic                 pll_dac_clk_1p;
@@ -226,7 +224,6 @@ red_pitaya_pll_ll pll (
   .clk         (dac_clk_in),  // clock
   .rstn        (rstn_pll  ),  // reset - active low
   // output clocks
-  .clk_dclk    (pll_adc_dclk  ),  // ADC DCO clock - 250MHz
   .clk_adc     (pll_adc_clk   ),  // ADC clock - system
   .clk_dac_1x  (pll_dac_clk_1x),  // DAC clock 125MHz
   .clk_dac_1p  (pll_dac_clk_1p),  // DAC clock 125MHz -90DGR
@@ -292,7 +289,6 @@ logic                  adc_dat_rdv   ;
 assign adc_dat_p_in = {adc_datb_i[1][1], adc_datb_i[0][1], adc_data_i[1][1], adc_data_i[0][1], adc_fclk_i[1]} ;
 assign adc_dat_n_in = {adc_datb_i[1][0], adc_datb_i[0][0], adc_data_i[1][0], adc_data_i[0][0], adc_fclk_i[0]} ;
 
-OBUFDS  i_OBUFDS_adc_dco       (.I (pll_adc_dclk ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
 IBUFGDS i_IBUFGDS_adc_dco      (.I (adc_dclk_i[1]), .IB (adc_dclk_i[0]), .O  (adc_dclk_in)  );
 IBUFDS  i_IBUFDS_adc_dat [4:0] (.I (adc_dat_p_in),  .IB (adc_dat_n_in),  .O  (adc_ser)      );
 
