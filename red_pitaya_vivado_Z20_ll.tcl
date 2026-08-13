@@ -258,7 +258,7 @@ rp_check_timing $path_out
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 write_bitstream -force            $path_out/red_pitaya
-write_cfgmem -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 $path_out/red_pitaya.bit" -file $path_out/red_pitaya.bin
+write_cfgmem -force -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 $path_out/red_pitaya.bit" -file $path_out/red_pitaya.bin
 
 
 ################################################################################

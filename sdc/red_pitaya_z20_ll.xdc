@@ -46,7 +46,7 @@ set_property -dict {IOSTANDARD LVCMOS18  SLEW SLOW  DRIVE 8  PACKAGE_PIN Y13}  [
 
 
 
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y16 }  [get_ports out_sync_o] ; 
+set_property -quiet -dict {IOSTANDARD LVCMOS33 PACKAGE_PIN Y16} [get_ports -quiet out_sync_o]
 
 ### DAC
 
@@ -151,12 +151,12 @@ set_property PACKAGE_PIN K16 [get_ports exp_p_io[ 6]] ; # DIO6_P
 set_property PACKAGE_PIN J16 [get_ports exp_n_io[ 6]] ; # DIO6_N
 set_property PACKAGE_PIN M14 [get_ports exp_p_io[ 7]] ; # DIO7_P
 set_property PACKAGE_PIN M15 [get_ports exp_n_io[ 7]] ; # DIO7_N
-set_property PACKAGE_PIN M17 [get_ports exp_p_io[ 8]] ; # DIO8_P
-set_property PACKAGE_PIN M18 [get_ports exp_n_io[ 8]] ; # DIO8_N
-set_property PACKAGE_PIN N20 [get_ports exp_p_io[ 9]] ; # DIO9_P
-set_property PACKAGE_PIN P20 [get_ports exp_n_io[ 9]] ; # DIO9_N
-set_property PACKAGE_PIN N18 [get_ports exp_p_io[10]] ; # DIO10_P
-set_property PACKAGE_PIN P19 [get_ports exp_n_io[10]] ; # DIO10_N
+set_property -quiet PACKAGE_PIN M17 [get_ports -quiet exp_p_io[8]]  ; # DIO8_P
+set_property -quiet PACKAGE_PIN M18 [get_ports -quiet exp_n_io[8]]  ; # DIO8_N
+set_property -quiet PACKAGE_PIN N20 [get_ports -quiet exp_p_io[9]]  ; # DIO9_P
+set_property -quiet PACKAGE_PIN P20 [get_ports -quiet exp_n_io[9]]  ; # DIO9_N
+set_property -quiet PACKAGE_PIN N18 [get_ports -quiet exp_p_io[10]] ; # DIO10_P
+set_property -quiet PACKAGE_PIN P19 [get_ports -quiet exp_n_io[10]] ; # DIO10_N
 
 #set_property PULLDOWN TRUE [get_ports {exp_p_io[0]}]
 #set_property PULLDOWN TRUE [get_ports {exp_n_io[0]}]
@@ -192,8 +192,8 @@ set_property PACKAGE_PIN J14 [get_ports {led_o[7]}] ; # LED7
 
 
 ### I2C1
-set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8  PACKAGE_PIN T15}  [get_ports i2c1_sda_io] ; # 
-set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8  PACKAGE_PIN P14}  [get_ports i2c1_scl_io] ; # 
+set_property -quiet -dict {IOSTANDARD LVCMOS33 SLEW FAST DRIVE 8 PACKAGE_PIN T15} [get_ports -quiet i2c1_sda_io]
+set_property -quiet -dict {IOSTANDARD LVCMOS33 SLEW FAST DRIVE 8 PACKAGE_PIN P14} [get_ports -quiet i2c1_scl_io]
 
 ############################################################################
 # Clock constraints                                                        #
@@ -204,7 +204,8 @@ create_clock -period 8.000 -name dac_clk [get_ports dac_clk_i]
 create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
 
-create_generated_clock -name i_hk/dna_clk -source [get_pins pll/pll/CLKOUT1] -divide_by 16 [get_pins i_hk/dna_clk_reg/Q]
+create_generated_clock -quiet -name id/dna_clk -source [get_pins -quiet id/dna_clk_reg/C] -divide_by 8 [get_pins -quiet id/dna_clk_reg/Q]
+create_generated_clock -quiet -name i_hk/dna_clk -source [get_pins -quiet i_hk/dna_clk_reg/C] -divide_by 16 [get_pins -quiet i_hk/dna_clk_reg/Q]
 create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 -invert [get_ports dac_wrta_o]
 create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divide_by 1 -invert [get_ports dac_wrtb_o]
 
@@ -248,21 +249,27 @@ set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports
 
 
 
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff*/D}]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_write_csff*/D}]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_read_csff*/D}]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {spi_done_csff*/D}]
+# These are the first stages of the explicit request/acknowledge synchronizers.
+# Their source clock varies per slave, so constrain the synchronizer endpoint
+# rather than assuming every slave is in the same destination domain.
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff*/D}]
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
+# sys[5] is the only slave clocked by pll_pwm_clk.  These are the first
+# ASYNC_REG stages that capture the stable write/read qualifiers after the
+# request toggle has crossed; the second stages remain timed normally.
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[5].inst_sys_bus_cdc/reg_we_csff_reg[0]/D}]
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[5].inst_sys_bus_cdc/reg_re_csff_reg[0]/D}]
+# First stage of the explicit two-flop PDM reset synchronizer.  The second
+# stage and all reset consumers remain timed in pll_pwm_clk.
+set_false_path -to [get_pins {pdm_rst_sync_reg[0]/D}]
+set_false_path -quiet -from [get_clocks -quiet pll_adc_clk] -to [get_pins -quiet {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0] -to [get_pins -quiet {spi_done_csff*/D}]
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_do*/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_false_path -from [get_pins ps/axi_slave_gp0/wr_wdata*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata*[*]*/D]
-set_false_path -from [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata*[*]*/C] -to [get_pins ps/axi_slave_gp0/axi\\.RDATA*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
-set_false_path -from [get_pins {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins {dac_dat_*[*]/D}]
+set_false_path -quiet -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata*[*]*/C}] -to [get_pins -quiet {ps/axi_slave_gp0/axi\\.RDATA*[*]*/D}]
+set_max_delay -quiet -datapath_only 8.000 -from [get_pins -quiet i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins -quiet {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
+set_false_path -quiet -from [get_pins -quiet {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins -quiet {dac_dat_*[*]/D}]
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-
-
