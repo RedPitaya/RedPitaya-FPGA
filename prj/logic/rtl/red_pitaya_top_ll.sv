@@ -651,18 +651,20 @@ sys_bus_stub sys_bus_stub_6 (sys[6]);
 // Daisy dummy code
 ////////////////////////////////////////////////////////////////////////////////
 
-OBUFDS i_OBUF_0
+OBUFTDS #(.IOSTANDARD ("DIFF_SSTL18_I")) i_OBUFT_0
 (
   .O  ( daisy_p_o[0]  ),
   .OB ( daisy_n_o[0]  ),
-  .I  ( 1'bz          )
+  .I  ( 1'b0          ),
+  .T  ( 1'b1          )
 );
 
-OBUFDS i_OBUF_1
+OBUFTDS #(.IOSTANDARD ("DIFF_SSTL18_I")) i_OBUFT_1
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
-  .I  ( 1'bz          )
+  .I  ( 1'b0          ),
+  .T  ( 1'b1          )
 );
 
 
