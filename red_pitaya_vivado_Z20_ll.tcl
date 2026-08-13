@@ -120,6 +120,12 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 if {$prj_name != "pyrpl"} {
    add_files                         ../../$path_rtl
    add_files -fileset constrs_1      $path_sdc/red_pitaya_z20_ll.xdc
+   # Z20_ll defaults to STEMlab 125-14 TI (500 MHz ADC ADDCLK).  The 65-16 TI
+   # uses the same RTL and pins, but its ADDCLK is 250 MHz.
+   if {[lsearch -exact $prj_defs "LL_ADC_65"] >= 0} {
+      add_files -fileset constrs_1   $path_sdc/red_pitaya_z20_ll_65.xdc
+      set_property PROCESSING_ORDER LATE [get_files red_pitaya_z20_ll_65.xdc]
+   }
 }
 
 add_files                               $path_rtl_prj

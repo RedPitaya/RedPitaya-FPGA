@@ -199,7 +199,10 @@ set_property -quiet -dict {IOSTANDARD LVCMOS33 SLEW FAST DRIVE 8 PACKAGE_PIN P14
 # Clock constraints                                                        #
 ############################################################################
 
-create_clock -period 8.000 -name adc_dclk [get_ports {adc_dclk_i[1]}]
+# ADC3664 ADDCLK is the source-synchronous serial interface clock.  In the
+# 125 MSPS, 16-bit two-wire mode it runs at 4x the sample rate.  The BUFR /4
+# in adc366x_top generates the 125 MHz parallel clock used by the fabric.
+create_clock -period 2.000 -name adc_dclk [get_ports {adc_dclk_i[1]}]
 create_clock -period 8.000 -name dac_clk [get_ports dac_clk_i]
 create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
@@ -252,8 +255,8 @@ set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports
 # These are the first stages of the explicit request/acknowledge synchronizers.
 # Their source clock varies per slave, so constrain the synchronizer endpoint
 # rather than assuming every slave is in the same destination domain.
-set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff*/D}]
-set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff_reg[0]/D}]
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff_reg[0]/D}]
 # sys[5] is the only slave clocked by pll_pwm_clk.  These are the first
 # ASYNC_REG stages that capture the stable write/read qualifiers after the
 # request toggle has crossed; the second stages remain timed normally.
