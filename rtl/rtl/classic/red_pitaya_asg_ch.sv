@@ -210,6 +210,11 @@ wire             ext_trig_n   ;
 
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
+// (set_rdly_i - 1) is a 32 bit subtract on a configuration value. Computed in
+// the load path it sat behind dac_trig, which already arrives at the end of the
+// read pointer comparison, so the two carry chains ended up in series. It takes
+// effect one cycle after the register is written.
+reg  [  32-1: 0] set_rdly_m1  ;
 // Set after the first real output sample so AXI preload time is not counted
 // as part of the requested start-to-start burst period.
 reg              dly_started  ;
@@ -299,7 +304,7 @@ always @(posedge dac_clk_i) begin
          dly_started <= 1'b0;
       end else begin
          if (dly_start)
-            dly_cnt <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
+            dly_cnt <= set_rdly_m1;
          else if (dac_rep && dly_started && |dly_cnt)
             dly_cnt <= dly_cnt - 32'h1;
 
@@ -353,17 +358,119 @@ always @(posedge dac_clk_i) begin
    end
 end
 
+always @(posedge dac_clk_i)
+if (dac_rstn_i == 1'b0) set_rdly_m1 <= 32'h0;
+else                    set_rdly_m1 <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
+
 wire rep_arm   = dac_rep && |rep_cnt && dly_started && (dly_cnt == 32'h0);
 wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
 wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
 wire cycle_end_pre = set_axi_en_i ? axi_last_pre : (~dac_npnt_sub_neg);
 wire rep_end_pre   = (cyc_cnt == 16'h1) && cycle_end_pre;
-wire dac_trig_axi  = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end_pre));
 
-assign dac_trig = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end)) ;
+// Same expression as before, factored so that everything except the end of
+// cycle test is one term:
+//   E1 | (E2 & (E3 | (E4 & end))) == (E1 | E2&E3) | (E2&E4 & end)
+// dac_npnt_sub_neg is the slowest signal in this module (it ends a 62 bit carry
+// chain), and it reaches the pointer, the delay and the repetition counters
+// through this expression. Written this way it has a single term left to pass.
+wire trig_now     = (!dac_rep && trig_in) || (rep_arm && rep_idle);
+wire trig_on_wrap = rep_arm && (cyc_cnt == 16'h1);
 
-assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
+wire dac_trig_axi  = trig_now || (trig_on_wrap && cycle_end_pre);
+
+assign dac_trig = trig_now || (trig_on_wrap && cycle_end);
+
+////////////////////////////////////////////////////////////////////////////////
+// Read pointer arithmetic, carry select across the fixed point boundary.
+//
+// The pointer is 62 bits: 30 integer bits of table address and 32 fractional
+// bits of phase. Written plainly, (dac_pnt + step) and then (- size - 1) form
+// one 63 bit carry chain, and its last bit - the borrow, dac_npnt_sub_neg -
+// decides whether the pointer wraps, so it feeds the clock enable of dac_pnt
+// itself and of the counters beside it. That closed loop, 16 carry blocks plus
+// the decode, is what does not fit in 8 ns.
+//
+// Splitting at bit 32 makes the two halves independent. The fraction produces
+// only a carry into the integer half, and that carry can take three values
+// once the -1 of the subtraction is included, so the integer half is computed
+// for all of them in parallel and selected afterwards:
+//
+//   k = carry(fraction sum) - borrow(fraction sum - 1)   in {-1, 0, +1}
+//
+// Depth becomes one 34 bit chain (or one 31 bit chain, whichever is slower)
+// plus a multiplexer, instead of two chains in series. The result is bit exact,
+// including the borrow bit, because addition modulo 2**31 in the integer half
+// is exactly what the wide subtraction does to those bits.
+//
+// `keep` holds the variants apart; without it the tool folds them back into a
+// single chain and the split is undone.
+////////////////////////////////////////////////////////////////////////////////
+
+localparam PNT_LO = 32;                   // fractional bits
+localparam PNT_HI = PNT_SIZE - PNT_LO;    // integer bits (table address)
+
+wire [PNT_LO-1:0] pnt_lo = dac_pnt[PNT_LO-1:0];
+wire [PNT_HI-1:0] pnt_hi = dac_pnt[PNT_SIZE-1:PNT_LO];
+// The step is zero when the generator is not running, which is how the plain
+// form kept dac_pnt unchanged.
+wire [PNT_LO-1:0] stp_lo = dac_do ? set_step_lo             : {PNT_LO{1'b0}};
+wire [PNT_HI-1:0] stp_hi = dac_do ? set_step[PNT_HI-1:0]    : {PNT_HI{1'b0}};
+
+// fraction: the sum, and the sum less the one subtracted by the wrap test
+(* keep = "true" *) wire [PNT_LO  :0] frac_sum = {1'b0,pnt_lo} + {1'b0,stp_lo};
+(* keep = "true" *) wire [PNT_LO+1:0] frac_sub = {2'b0,pnt_lo} + {2'b0,stp_lo}
+                                              + {(PNT_LO+2){1'b1}};
+wire              frac_carry = frac_sum[PNT_LO];
+wire  [      1:0] frac_k     = frac_sub[PNT_LO+1:PNT_LO];  // 2'b11 = -1, 2'b01 = +1
+
+// integer half, one variant per possible carry from the fraction
+(* keep = "true" *) wire [PNT_HI:0] int_sum_c0 = {1'b0,pnt_hi} + {1'b0,stp_hi};
+(* keep = "true" *) wire [PNT_HI:0] int_sum_c1 = {1'b0,pnt_hi} + {1'b0,stp_hi} + 1'b1;
+wire [PNT_HI:0] int_sum = frac_carry ? int_sum_c1 : int_sum_c0;
+
+// The subtraction is the half that decides the wrap, so it is split once more,
+// by the same rule: its low part passes a carry of -1, 0 or +1 to its high
+// part, and the high part is computed for all three in advance. Total carry
+// length is unchanged (three chains of 31 bits become three of 17 and three of
+// 16), only the depth halves. sum needs no second split: it feeds the pointer
+// data input, which has a whole cycle, not the enables.
+localparam INT_LO = PNT_HI/2;
+localparam INT_HI = PNT_HI - INT_LO;
+
+wire [INT_LO-1:0] pnt_i_l = pnt_hi     [INT_LO-1:0];
+wire [INT_HI-1:0] pnt_i_h = pnt_hi     [PNT_HI-1:INT_LO];
+wire [INT_LO-1:0] stp_i_l = stp_hi     [INT_LO-1:0];
+wire [INT_HI-1:0] stp_i_h = stp_hi     [PNT_HI-1:INT_LO];
+wire [INT_LO-1:0] siz_i_l = set_size_i [INT_LO-1:0];
+wire [INT_HI-1:0] siz_i_h = set_size_i [PNT_HI-1:INT_LO];
+
+(* keep = "true" *) wire [INT_LO+1:0] isub_l_m1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
+                                                - {2'b0,siz_i_l} - 1'b1;
+(* keep = "true" *) wire [INT_LO+1:0] isub_l_z  = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
+                                                - {2'b0,siz_i_l};
+(* keep = "true" *) wire [INT_LO+1:0] isub_l_p1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
+                                                - {2'b0,siz_i_l} + 1'b1;
+
+wire [INT_LO+1:0] isub_l = frac_k[1] ? isub_l_m1 :
+                           frac_k[0] ? isub_l_p1 : isub_l_z;
+wire [       1:0] int_j  = isub_l[INT_LO+1:INT_LO];   // 2'b11 = -1, 2'b01 = +1
+
+(* keep = "true" *) wire [INT_HI:0] isub_h_m1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
+                                              - {1'b0,siz_i_h} - 1'b1;
+(* keep = "true" *) wire [INT_HI:0] isub_h_z  = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
+                                              - {1'b0,siz_i_h};
+(* keep = "true" *) wire [INT_HI:0] isub_h_p1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
+                                              - {1'b0,siz_i_h} + 1'b1;
+
+wire [INT_HI:0] isub_h = int_j[1] ? isub_h_m1 :
+                         int_j[0] ? isub_h_p1 : isub_h_z;
+
+wire [PNT_HI:0] int_sub = {isub_h, isub_l[INT_LO-1:0]};
+
+assign dac_npnt         = {int_sum, frac_sum[PNT_LO-1:0]};
+assign dac_npnt_sub     = {int_sub, frac_sub[PNT_LO-1:0]};
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
 
 // read pointer logic
@@ -379,7 +486,7 @@ end else begin
    end
 end
 
-assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
+// dac_npnt / dac_npnt_sub are built above, split at the fixed point boundary.
 assign trig_done_o = !dac_rep && trig_in;
 // output frequency on trigger
 assign get_step_o = set_step;
