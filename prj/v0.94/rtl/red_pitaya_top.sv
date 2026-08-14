@@ -260,7 +260,14 @@ red_pitaya_pll pll (
 BUFG bufg_adc_clk     (.O (adc_clk    ), .I (pll_adc_clk   ));
 BUFG bufg_dac_clk_1x  (.O (dac_clk_1x ), .I (pll_dac_clk_1x));
 BUFG bufg_dac_clk_2x  (.O (dac_clk_2x ), .I (pll_dac_clk_2x));
-BUFG bufg_dac_axi_clk (.O (dac_axi_clk), .I (pll_dac_clk_2x));
+// ASG AXI clock, as in red_pitaya_top_ll: the sample clock, not the DDR output
+// clock. The playback needs one 64 bit beat per four DAC samples, so 125 MHz
+// leaves four times the required bandwidth, and 250 MHz only made the AXI side
+// of the ASG the hardest domain in the design to close. The ASG data path runs
+// on adc_clk and is separated from this domain by the independent clock FIFOs
+// inside rp_asg_axi. Only the 250 MSPS board keeps 250 MHz here, where it is
+// the sample clock.
+BUFG bufg_dac_axi_clk (.O (dac_axi_clk), .I (pll_adc_clk));
 
 BUFG bufg_dac_clk_2p (.O (dac_clk_2p), .I (pll_dac_clk_2p));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
