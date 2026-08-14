@@ -128,7 +128,9 @@ always @(posedge clk)
 begin
   if (input_transfer) begin
     upsize_buf[mux_sel  ] <= (s_axis_tdata[16-1:8] & {8{ use_8bit}}) | (s_axis_tdata[8-1:0]   & {8{~use_8bit}});
-    upsize_buf[mux_sel+1] <= (s_axis_tdata[16-1:8] & {8{~use_8bit}}) | (upsize_buf[mux_sel+1] & {8{ use_8bit}});
+    if (!use_8bit) begin
+      upsize_buf[mux_sel+1] <= s_axis_tdata[16-1:8];
+    end
   end
 end
 
