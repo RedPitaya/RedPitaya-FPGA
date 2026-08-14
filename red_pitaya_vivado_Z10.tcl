@@ -210,26 +210,6 @@ if {![string is integer -strict $rp_jobs] || $rp_jobs < 1} {
 if {![string is integer -strict $rp_jobs] || $rp_jobs < 1} { set rp_jobs 1 }
 puts "launch_runs synth_1 -jobs $rp_jobs"
 
-# v0.94 does not close timing with the default synthesis flow: the scope
-# configuration reaches the decimator input register through a long route, and
-# that path cannot be pipelined (the decimation setting and the arm bit are
-# written by the same register write, so it has one clock) nor declared
-# multicycle for the same reason. AlternateRoutability restructures enough to
-# make it routable. It costs area - 57.7% -> 65.5% of the LUTs.
-#
-# RP_SYNTH_STRATEGY overrides this for an experiment.
-set rp_synth_strategy ""
-if {$prj_name == "v0.94"} {
-  set rp_synth_strategy Flow_AlternateRoutability
-}
-if {[info exists ::env(RP_SYNTH_STRATEGY)] && $::env(RP_SYNTH_STRATEGY) ne ""} {
-  set rp_synth_strategy $::env(RP_SYNTH_STRATEGY)
-}
-if {$rp_synth_strategy ne ""} {
-  puts "synth_1 strategy: $rp_synth_strategy"
-  set_property strategy $rp_synth_strategy [get_runs synth_1]
-}
-
 launch_runs synth_1 -jobs $rp_jobs
 wait_on_run synth_1
 
@@ -241,22 +221,6 @@ file copy -force $rptFiles ./$path_out/
 # report utilization and timing estimates
 # write checkpoint design
 ################################################################################
-
-# v0.94 fills 85% of the slices on this part and its worst paths spend two
-# thirds of their delay in routing, which the default strategy does not recover:
-# it stops at WNS -1.0 ns where this one reaches -0.28 ns (TNS -223 -> -28 ns).
-# The cost is roughly twice the implementation runtime, so it is not enabled for
-# the other projects until each one has been measured.
-# Performance_ExploreWithRemap was tried as well and is slightly worse (-0.34 ns).
-if {$prj_name == "v0.94"} {
-   # RP_IMPL_STRATEGY overrides it for a directive sweep without editing this file.
-   set rp_strategy Performance_ExplorePostRoutePhysOpt
-   if {[info exists ::env(RP_IMPL_STRATEGY)] && $::env(RP_IMPL_STRATEGY) ne ""} {
-      set rp_strategy $::env(RP_IMPL_STRATEGY)
-   }
-   puts "impl_1 strategy: $rp_strategy"
-   set_property strategy $rp_strategy [get_runs impl_1]
-}
 
 launch_runs impl_1 -jobs $rp_jobs
 wait_on_run impl_1
