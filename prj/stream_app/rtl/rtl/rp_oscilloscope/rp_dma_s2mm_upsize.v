@@ -28,8 +28,15 @@ reg         tlast;
 
 reg [8-1:0] upsize_buf [8-1:0];
 reg [3-1:0] mux_sel;
+wire        input_transfer;
+wire        output_transfer;
+wire        word_complete;
 
-assign s_axis_tready = 1'b1;
+assign s_axis_tready = ~m_axis_tvalid | m_axis_tready;
+assign input_transfer = s_axis_tvalid & s_axis_tready;
+assign output_transfer = m_axis_tvalid & m_axis_tready;
+assign word_complete = input_transfer &
+                       ((&(mux_sel | {2'b0, ~use_8bit})) | s_axis_tlast);
 assign req_len = xfer_cnt+1;
 assign upsize_lvl = mux_sel;
 
@@ -52,7 +59,7 @@ begin
   if (rst == 1) begin
     xfer_cnt <= 0;  
   end else begin
-    if ((m_axis_tvalid == 1) && (m_axis_tready == 1)) begin
+    if (output_transfer) begin
       if (xfer_cnt == AXI_BURST_LEN-1) begin
         xfer_cnt <= 0;      
       end else begin
@@ -83,7 +90,7 @@ begin
   if (rst == 1) begin
     req_we <= 0;  
   end else begin
-    if (((m_axis_tvalid == 1) && (m_axis_tready == 1) && ((tlast == 1) || (xfer_cnt == AXI_BURST_LEN-1)))) begin
+    if (output_transfer && ((tlast == 1) || (xfer_cnt == AXI_BURST_LEN-1))) begin
       req_we <= 1;      
     end else begin
       req_we <= 0;  
@@ -102,8 +109,8 @@ begin
   if (rst == 1) begin
     mux_sel <= 0;  
   end else begin
-    if ((s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-      if (&(mux_sel | {2'b0, ~use_8bit})) begin
+    if (input_transfer) begin
+      if ((&(mux_sel | {2'b0, ~use_8bit})) || s_axis_tlast) begin
         mux_sel <= 0;
       end else begin
         mux_sel <= mux_sel + {1'b0, ~use_8bit, use_8bit};
@@ -119,8 +126,10 @@ end
 
 always @(posedge clk)
 begin
-  upsize_buf[mux_sel  ] <= (s_axis_tdata[16-1:8] & {8{ use_8bit}}) | (s_axis_tdata[8-1:0]   & {8{~use_8bit}});
-  upsize_buf[mux_sel+1] <= (s_axis_tdata[16-1:8] & {8{~use_8bit}}) | (upsize_buf[mux_sel+1] & {8{ use_8bit}});
+  if (input_transfer) begin
+    upsize_buf[mux_sel  ] <= (s_axis_tdata[16-1:8] & {8{ use_8bit}}) | (s_axis_tdata[8-1:0]   & {8{~use_8bit}});
+    upsize_buf[mux_sel+1] <= (s_axis_tdata[16-1:8] & {8{~use_8bit}}) | (upsize_buf[mux_sel+1] & {8{ use_8bit}});
+  end
 end
 
 ////////////////////////////////////////////////////////////
@@ -133,10 +142,10 @@ always @(posedge clk)
 begin
   if (rst == 1) begin
     m_axis_tvalid <= 0;
-  end else begin 
-    if (( (&(mux_sel | {2'b0, ~use_8bit})) || (s_axis_tlast == 1)) && (s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
+  end else begin
+    if (word_complete) begin
       m_axis_tvalid <= 1;
-    end else begin
+    end else if (output_transfer) begin
       m_axis_tvalid <= 0;
     end
   end
@@ -151,10 +160,12 @@ always @(posedge clk)
 begin
   if (rst == 1) begin
     tlast <= 0;
-  end else begin 
-    if ((s_axis_tlast == 1) && (s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-      tlast <= 1;
-    end 
+  end else begin
+    if (word_complete) begin
+      tlast <= s_axis_tlast;
+    end else if (output_transfer) begin
+      tlast <= 0;
+    end
   end
 end
 
