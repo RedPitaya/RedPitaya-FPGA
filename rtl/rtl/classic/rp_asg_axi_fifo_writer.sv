@@ -51,7 +51,10 @@ typedef enum logic [1:0] {
   WR_FLUSH
 } wr_state_t;
 
-wr_state_t wr_state_q;
+// One hot removes the decoder LUT in front of the state comparisons, and the
+// fanout limit lets the tool replicate the state flops instead of routing one
+// of them to a few hundred loads; both sat on the request register enables.
+(* fsm_encoding = "one_hot", max_fanout = 64 *) wr_state_t wr_state_q;
 wr_state_t wr_state_d;
 
 logic [AW-1:0] start_addr_q;
@@ -78,6 +81,8 @@ logic [AW-1:0] stream_words_left_q;
 logic [OUT_BEAT_W-1:0]  outstanding_beats_q;
 logic [OUT_BURST_W-1:0] outstanding_bursts_q;
 logic [EXPECT_LVL_W-1:0] expected_fifo_lvl;
+logic lvl_room_q;
+logic words_left_nz_q;
 
 logic fsm_reset_sync;
 logic ar_accept;
@@ -244,12 +249,33 @@ always_comb begin
   expected_fifo_lvl = EXPECT_LVL_W'(dat_wr_fifo_lvl) + EXPECT_LVL_W'(outstanding_beats_q);
 end
 
+// The FIFO level test and the 32 bit "words left" reduction both ended on the
+// clock enable of the request registers, adding their logic levels in front of
+// a wide fanout net; at 250 MHz that does not close timing. Both are registered
+// instead.
+//
+// lvl_room_q is one cycle old, and in that cycle the level can grow by one
+// accepted beat, while a burst accepted in the same cycle is not yet counted in
+// outstanding_beats_q. Reserving a full burst plus that beat keeps the original
+// invariant (level + outstanding <= DATA_REQUEST_LEVEL when a request is
+// issued) intact. Prefetching therefore stops one burst earlier than before,
+// which the FIFO has ample room for.
+//
+// words_left_nz_q is exact: it is computed from the value issue_words_left_q
+// takes in the same cycle it is loaded.
+always_ff @(posedge axi_sys.clk) begin
+  if (!axi_sys.rstn)
+    lvl_room_q <= 1'b0;
+  else
+    lvl_room_q <= (expected_fifo_lvl + EXPECT_LVL_W'(AXI_BURST_LEN + 1)) <= EXPECT_LVL_W'(DATA_REQUEST_LEVEL);
+end
+
 assign prefetch_issue = (wr_state_q == WR_RUN) &&
                         !fsm_reset_sync &&
                         !axi_sys.rvalid &&
-                        (issue_words_left_q != {AW{1'b0}}) &&
+                        words_left_nz_q &&
                         (outstanding_bursts_q < MAX_OUTSTANDING_BURSTS) &&
-                        (expected_fifo_lvl <= DATA_REQUEST_LEVEL);
+                        lvl_room_q;
 
 assign ar_accept   = axi_sys.ARtransfer;
 assign beat_accept = axi_sys.Rtransfer;
@@ -262,6 +288,7 @@ always_ff @(posedge axi_sys.clk) begin
     req_next_addr_q  <= '0;
     req_next_words_q <= '0;
     issue_words_left_q <= '0;
+    words_left_nz_q  <= 1'b0;
     req_beats_q      <= '0;
     axi_sys.raddr    <= '0;
     axi_sys.rlen     <= '0;
@@ -274,17 +301,26 @@ always_ff @(posedge axi_sys.clk) begin
       req_next_addr_q <= req_start_addr;
       req_next_words_q <= period_words_q;
       issue_words_left_q <= period_words_q;
+      words_left_nz_q <= period_words_q != {AW{1'b0}};
       req_beats_q     <= '0;
       axi_sys.raddr   <= req_start_addr;
       axi_sys.rlen    <= '0;
       axi_sys.rvalid  <= 1'b0;
-    end else if (wr_state_d == WR_FLUSH) begin
+    // Registered signals only: taking the next state here put the FSM's own
+    // combinational logic in front of the clock enables of the request
+    // registers. Reaching this branch means wr_state_q is not WR_INIT, so the
+    // next state is WR_FLUSH exactly when a running transfer is being reset or
+    // the flush is still draining; the remaining case (flush complete, going
+    // back to WR_IDLE) can only clear rvalid here too, and everything else it
+    // would have updated is reloaded by WR_INIT before the next transfer.
+    end else if ((wr_state_q == WR_RUN && fsm_reset_sync) || (wr_state_q == WR_FLUSH)) begin
       axi_sys.rvalid <= 1'b0;
     end else begin
       if (ar_accept) begin
         axi_sys.rvalid <= 1'b0;
         issue_addr_q   <= req_next_addr_q;
         issue_words_left_q <= req_next_words_q;
+        words_left_nz_q    <= req_next_words_q != {AW{1'b0}};
       end else if (prefetch_issue) begin
         axi_sys.raddr   <= issue_addr_q;
         axi_sys.rlen    <= issue_len_c;
