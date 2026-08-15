@@ -21,14 +21,22 @@ module gpio_dma_s2mm_upsize
 );
 
 localparam MUX_MAX = AXI_DATA_BITS/AXIS_DATA_BITS;
+localparam [1:0] MUX_LAST = MUX_MAX[1:0]-1'b1;
 
 reg  [1:0]  mux_sel;
 reg  [6:0]  xfer_cnt;
 wire [6:0]  req_len;
 reg         tlast;
 genvar      i;
+wire        input_transfer;
+wire        output_transfer;
+wire        word_complete;
 
-assign s_axis_tready = 1'b1;
+assign s_axis_tready = ~m_axis_tvalid | m_axis_tready;
+assign input_transfer = s_axis_tvalid & s_axis_tready;
+assign output_transfer = m_axis_tvalid & m_axis_tready;
+assign word_complete = input_transfer &
+                       ((mux_sel == MUX_LAST) | s_axis_tlast);
 assign req_len = xfer_cnt+1;
 
 ////////////////////////////////////////////////////////////
@@ -41,7 +49,7 @@ begin
   if (rst == 1) begin
     xfer_cnt <= 0;  
   end else begin
-    if ((m_axis_tvalid == 1) && (m_axis_tready == 1)) begin
+    if (output_transfer) begin
       if (xfer_cnt == AXI_BURST_LEN-1) begin
         xfer_cnt <= 0;      
       end else begin
@@ -72,7 +80,7 @@ begin
   if (rst == 1) begin
     req_we <= 0;  
   end else begin
-    if (((m_axis_tvalid == 1) && (m_axis_tready == 1) && ((tlast == 1) || (xfer_cnt == AXI_BURST_LEN-1)))) begin
+    if (output_transfer && ((tlast == 1) || (xfer_cnt == AXI_BURST_LEN-1))) begin
       req_we <= 1;      
     end else begin
       req_we <= 0;  
@@ -91,8 +99,8 @@ begin
   if (rst == 1) begin
     mux_sel <= 0;  
   end else begin
-    if ((s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-      if (mux_sel == MUX_MAX-1) begin
+    if (input_transfer) begin
+      if ((mux_sel == MUX_LAST) || s_axis_tlast) begin
         mux_sel <= 0;
       end else begin
         mux_sel <= mux_sel + 1;
@@ -110,7 +118,7 @@ generate
   for (i=0; i<MUX_MAX; i=i+1) begin : gen_data
     always @(posedge clk)
     begin
-      if (mux_sel == i) begin
+      if ((mux_sel == i) && input_transfer) begin
         m_axis_tdata[i*AXIS_DATA_BITS +: AXIS_DATA_BITS] <= s_axis_tdata;
       end
     end
@@ -127,10 +135,10 @@ always @(posedge clk)
 begin
   if (rst == 1) begin
     m_axis_tvalid <= 0;
-  end else begin 
-    if (((mux_sel == MUX_MAX-1) || (s_axis_tlast == 1)) && (s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
+  end else begin
+    if (word_complete) begin
       m_axis_tvalid <= 1;
-    end else begin
+    end else if (output_transfer) begin
       m_axis_tvalid <= 0;
     end
   end
@@ -145,10 +153,12 @@ always @(posedge clk)
 begin
   if (rst == 1) begin
     tlast <= 0;
-  end else begin 
-    if ((s_axis_tlast == 1) && (s_axis_tvalid == 1) && (s_axis_tready == 1)) begin
-      tlast <= 1;
-    end 
+  end else begin
+    if (word_complete) begin
+      tlast <= s_axis_tlast;
+    end else if (output_transfer) begin
+      tlast <= 0;
+    end
   end
 end
 
