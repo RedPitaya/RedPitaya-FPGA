@@ -3,9 +3,7 @@
 // assumes single reads and writes
 ////////////////////////////////////////////////////////////////////////////////
 
-module sys_bus_cdc #(
-
-)(
+module sys_bus_cdc (
   input        pll_locked_i,
   sys_bus_if.s bus_s,   // from master
   sys_bus_if.m bus_m    // to   slaves
@@ -22,6 +20,8 @@ reg [32-1:0] ctrl_rdata;
 reg [2:0] ctrl_done_csff  ;
 reg ctrl_we         ;
 reg ctrl_re         ;
+reg [32-1:0] ctrl_addr;
+reg [32-1:0] ctrl_wdata;
 
 (* keep = "TRUE" *) wire ctrl_we_iw = bus_s.wen ;
 (* keep = "TRUE" *) wire ctrl_re_iw = bus_s.ren ;
@@ -65,11 +65,16 @@ begin
         ctrl_ack        <= 1'b0 ;
         ctrl_rdata      <= 32'h0;
         ctrl_done_csff  <= 3'h0 ;
+        ctrl_addr       <= 32'h0;
+        ctrl_wdata      <= 32'h0;
     end else
     begin
       if ((ctrl_do == ctrl_done_csff[2]) && !ctrl_ack &&
-          (ctrl_we_iw || ctrl_re_iw))
+          (ctrl_we_iw || ctrl_re_iw)) begin
          ctrl_do <= !ctrl_do ;
+         ctrl_addr  <= bus_s.addr;
+         ctrl_wdata <= bus_s.wdata;
+      end
 
       ctrl_done_csff  <= {ctrl_done_csff[1:0], reg_done} ;
       ctrl_ack <= ctrl_done_event;
@@ -152,8 +157,8 @@ always @ (posedge bus_m.clk)
 begin
    if (reg_write_synced || reg_read_synced)
    begin
-      bus_m.addr  <= bus_s.addr;
-      bus_m.wdata <= bus_s.wdata;
+      bus_m.addr  <= ctrl_addr;
+      bus_m.wdata <= ctrl_wdata;
    end
 end
 

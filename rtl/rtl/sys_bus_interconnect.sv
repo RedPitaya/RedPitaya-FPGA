@@ -64,13 +64,17 @@ assign bus_s_sync_cs = {SN{bus_s_cs[SYNC_IN_BUS]}} & {syncd_cs};
 generate
 for (genvar i=0; i<SN; i++) begin: for_bus
 
+// Mirrored writes must enter each destination's CDC independently.  Selecting
+// another destination bus after its CDC creates a direct clock-domain crossing
+// between the two slave clocks.  Decode from the controller-domain request and
+// include the mirror in the target CDC request instead.
 assign bus_s_sync_adr[i] = bus_s_sync_cs[i] &&
-                             ((`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS1) || 
-                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS2) || 
-                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS3) || 
-                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS4) ||
-                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS5) ||
-                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS6));      
+                             ((`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS1) ||
+                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS2) ||
+                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS3) ||
+                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS4) ||
+                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS5) ||
+                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS6));
 
 assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) || 
                          (i == SYNC_OUT_BUS2) || 
@@ -83,7 +87,7 @@ assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) ||
 
 assign `BUS_NAME_I1[i].addr  = `BUS_NAME_M.addr ;
 assign `BUS_NAME_I1[i].wdata = `BUS_NAME_M.wdata;
-assign `BUS_NAME_I1[i].wen   =  bus_s_cs[i] & `BUS_NAME_M.wen;
+assign `BUS_NAME_I1[i].wen   = (bus_s_cs[i] | bus_s_sync_adr[i]) & `BUS_NAME_M.wen;
 assign `BUS_NAME_I1[i].ren   =  bus_s_cs[i] & `BUS_NAME_M.ren;
 
 //enables different config clock for each module if needed
@@ -94,9 +98,9 @@ sys_bus_cdc inst_sys_bus_cdc
   .bus_s(`BUS_NAME_I1[i])
 );
 
-assign `BUS_NAME_S[i].addr   = bus_s_sync_adr[i] ? `BUS_NAME_I2[SYNC_IN_BUS].addr  : `BUS_NAME_I2[i].addr;
-assign `BUS_NAME_S[i].wdata  = bus_s_sync_adr[i] ? `BUS_NAME_I2[SYNC_IN_BUS].wdata : `BUS_NAME_I2[i].wdata;
-assign `BUS_NAME_S[i].wen    = bus_s_sync_adr[i] ? `BUS_NAME_I2[SYNC_IN_BUS].wen   : `BUS_NAME_I2[i].wen;
+assign `BUS_NAME_S[i].addr   = `BUS_NAME_I2[i].addr;
+assign `BUS_NAME_S[i].wdata  = `BUS_NAME_I2[i].wdata;
+assign `BUS_NAME_S[i].wen    = `BUS_NAME_I2[i].wen;
 assign `BUS_NAME_S[i].ren    = `BUS_NAME_I2[i].ren;
 
 assign `BUS_NAME_I2[i].rdata = `BUS_NAME_S[i].rdata;
