@@ -198,12 +198,6 @@ set_property PACKAGE_PIN J14     [get_ports {led_o[7]}]
 
 create_clock -period 8.000 -name adc_clk [get_ports adc_clk_i[1]]
 
-# LTC2145-14 full-rate CMOS is source-synchronous: data changes with the
-# falling edge of CLKOUT+ and is captured on the rising edge.  The datasheet
-# specifies DATA-to-CLKOUT skew (tD - tC) from 0.0 ns to 0.6 ns.
-set_input_delay -clock adc_clk -clock_fall -min 0.000 [get_ports adc_dat_i[*][*]]
-set_input_delay -clock adc_clk -clock_fall -max 0.600 [get_ports adc_dat_i[*][*]]
-
 create_clock -period 4.000 -name rx_clk  [get_ports daisy_p_i[1]]
 
 create_clock -quiet -period 8.000 -name dac_clk_o  [get_ports -quiet dac_clk_o]
