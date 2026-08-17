@@ -206,6 +206,7 @@ logic                    dac_clk_1x;
 logic                    dac_clk_2x;
 logic                    dac_clk_2p;
 logic                    dac_axi_clk;
+logic                    adc_clk_io;
 logic                    dac_rst;
 logic                    dac_axi_rstn;
 
@@ -258,6 +259,11 @@ red_pitaya_pll pll (
 );
 
 BUFG bufg_adc_clk     (.O (adc_clk    ), .I (pll_adc_clk   ));
+// Capture the source-synchronous ADC bus directly from the forwarded clock.
+// adc_clk_i is on an MRCC pin in bank 34 and all ADC data pins are in the same
+// bank, so BUFIO can drive their ILOGIC input registers without adding the PLL
+// and global-clock insertion delay to the external hold relationship.
+BUFIO bufio_adc_clk   (.O (adc_clk_io ), .I (adc_clk_in    ));
 BUFG bufg_dac_clk_1x  (.O (dac_clk_1x ), .I (pll_dac_clk_1x));
 BUFG bufg_dac_clk_2x  (.O (dac_clk_2x ), .I (pll_dac_clk_2x));
 // ASG AXI clock, as in red_pitaya_top_ll: the sample clock, not the DDR output
@@ -433,19 +439,22 @@ ODDR i_adc_clk_n ( .Q(adc_clk_o[1]), .D1(1'b0), .D2(1'b1), .C(adc_clk_daisy), .C
 
 assign adc_cdcs_o = 1'b1 ;
 
-logic [2-1:0] [ADW-1:0] adc_dat_raw;
+(* IOB = "TRUE" *) logic [2-1:0] [ADW-1:0] adc_dat_raw;
 
 // IO block registers should be used here
 // lowest 2 bits reserved for 16bit ADC
 
-assign adc_dat_raw[0] = adc_dat_i[0][16-1 -: ADW];
-assign adc_dat_raw[1] = adc_dat_i[1][16-1 -: ADW];
-
-// transform into 2's complement (negative slope)
-always @(posedge adc_clk) begin
-  adc_dat[0] <= digital_loop[0] ? dac_a : {adc_dat_raw[0][ADW-1], ~adc_dat_raw[0][ADW-2:0]};
-  adc_dat[1] <= digital_loop[0] ? dac_b : {adc_dat_raw[1][ADW-1], ~adc_dat_raw[1][ADW-2:0]};
+always @(posedge adc_clk_io) begin
+  adc_dat_raw[0] <= adc_dat_i[0][16-1 -: ADW];
+  adc_dat_raw[1] <= adc_dat_i[1][16-1 -: ADW];
 end
+
+// Transform into 2's complement (negative slope) after the dedicated input
+// registers.  Moving only this formatting/mux logic after the register keeps
+// the sample seen by all consumers on exactly the same clock as before while
+// allowing adc_dat_raw to be packed into the input IOBs.
+assign adc_dat[0] = digital_loop[0] ? dac_a : {adc_dat_raw[0][ADW-1], ~adc_dat_raw[0][ADW-2:0]};
+assign adc_dat[1] = digital_loop[0] ? dac_b : {adc_dat_raw[1][ADW-1], ~adc_dat_raw[1][ADW-2:0]};
 //always @(posedge adc_clk) begin
   //adc_dat[0] <= digital_loop[0] ? dac_a : adc_dat_raw[0];
   //adc_dat[1] <= digital_loop[0] ? dac_b : adc_dat_raw[1];

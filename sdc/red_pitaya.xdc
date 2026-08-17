@@ -198,28 +198,37 @@ set_property PACKAGE_PIN J14     [get_ports {led_o[7]}]
 
 create_clock -period 8.000 -name adc_clk [get_ports adc_clk_i[1]]
 
-set_input_delay -clock adc_clk 3.400 [get_ports adc_dat_i[*][*]]
+# LTC2145-14 full-rate CMOS is source-synchronous: data changes with the
+# falling edge of CLKOUT+ and is captured on the rising edge.  The datasheet
+# specifies DATA-to-CLKOUT skew (tD - tC) from 0.0 ns to 0.6 ns.
+set_input_delay -clock adc_clk -clock_fall -min 0.000 [get_ports adc_dat_i[*][*]]
+set_input_delay -clock adc_clk -clock_fall -max 0.600 [get_ports adc_dat_i[*][*]]
 
 create_clock -period 4.000 -name rx_clk  [get_ports daisy_p_i[1]]
 
-create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_o]
-create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_1x]
-create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_2x]
-create_clock -period 8.000 -name dac_clk_o  [get_ports dac_clk_2p]
+create_clock -quiet -period 8.000 -name dac_clk_o  [get_ports -quiet dac_clk_o]
+create_clock -quiet -period 8.000 -name dac_clk_o  [get_ports -quiet dac_clk_1x]
+create_clock -quiet -period 8.000 -name dac_clk_o  [get_ports -quiet dac_clk_2x]
+create_clock -quiet -period 8.000 -name dac_clk_o  [get_ports -quiet dac_clk_2p]
 
-set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_o]
-set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_2x]
-set_false_path -from [get_clocks adc_clk]     -to [get_clocks dac_clk_2p]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_clocks pll_dac_clk_2x]
-set_false_path -from [get_clocks adc_clk]     -to [get_clocks pll_adc_clk]
+# The DNA primitive is clocked by a fabric divider.  Quiet object lookup keeps
+# this shared XDC valid for designs which do not instantiate classic i_hk.
+create_generated_clock -quiet -name i_hk/dna_clk \
+  -source [get_pins -quiet i_hk/dna_clk_reg/C] \
+  -divide_by 16 \
+  [get_pins -quiet i_hk/dna_clk_reg/Q]
 
-set_false_path -from [get_clocks par_clk]     -to [get_clocks pll_adc_clk]
+set_false_path -quiet -from [get_clocks -quiet adc_clk]     -to [get_clocks -quiet dac_clk_o]
+set_false_path -quiet -from [get_clocks -quiet adc_clk]     -to [get_clocks -quiet dac_clk_2x]
+set_false_path -quiet -from [get_clocks -quiet adc_clk]     -to [get_clocks -quiet dac_clk_2p]
 
-set_false_path -from [get_clocks clk_fpga_0]  -to [get_clocks dac_clk_1x]
-set_false_path -from [get_clocks clk_fpga_0]  -to [get_clocks dac_clk_2x]
-set_false_path -from [get_clocks clk_fpga_0]  -to [get_clocks dac_clk_2p]
-set_false_path -from [get_clocks clk_fpga_0]  -to [get_clocks ser_clk]
-set_false_path -from [get_clocks clk_fpga_0]  -to [get_clocks pdm_clk]
-set_false_path -from [get_clocks dac_clk_o] -to [get_clocks dac_clk_2x]
-set_false_path -from [get_clocks dac_clk_o] -to [get_clocks dac_clk_2p]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_clocks par_clk]
+set_false_path -quiet -from [get_clocks -quiet par_clk]     -to [get_clocks -quiet pll_adc_clk]
+
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0]  -to [get_clocks -quiet dac_clk_1x]
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0]  -to [get_clocks -quiet dac_clk_2x]
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0]  -to [get_clocks -quiet dac_clk_2p]
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0]  -to [get_clocks -quiet ser_clk]
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0]  -to [get_clocks -quiet pdm_clk]
+set_false_path -quiet -from [get_clocks -quiet dac_clk_o] -to [get_clocks -quiet dac_clk_2x]
+set_false_path -quiet -from [get_clocks -quiet dac_clk_o] -to [get_clocks -quiet dac_clk_2p]
+set_false_path -quiet -from [get_clocks -quiet pll_adc_clk] -to [get_clocks -quiet par_clk]
