@@ -7,6 +7,14 @@ set_property -quiet LOC XADC_X0Y0 [get_cells -quiet i_ams/XADC_inst]
 # set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks adc_clk]
 # set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks par_clk]
 
+# The v0.94 Z10 ADC is an LTC2145-14 in full-rate CMOS mode.  It is
+# source-synchronous: data changes with CLKOUT+'s falling edge and is
+# captured on its rising edge.  The DATA-to-CLKOUT skew (tD - tC) is
+# specified from 0.0 ns to 0.6 ns.  Keep this board-specific constraint out
+# of the shared XDC because other projects can use a different ADC interface.
+set_input_delay -clock adc_clk -clock_fall -min 0.000 [get_ports adc_dat_i[*][*]]
+set_input_delay -clock adc_clk -clock_fall -max 0.600 [get_ports adc_dat_i[*][*]]
+
 ### SATA connector
 set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_p_o[*]}]
 set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_o[*]}]
@@ -66,8 +74,12 @@ set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_do*/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_false_path -from [get_pins ps/axi_slave_gp0/wr_wdata*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata*[*]*/D]
-set_max_delay -quiet -datapath_only 8.000 \
-  -from [get_pins -quiet {sys_bus_interconnect/for_bus\[*\].inst_sys_bus_cdc/reg_rdata_reg\[*\]/C}] \
-  -to [get_pins -quiet {sys_bus_interconnect/for_bus\[*\].inst_sys_bus_cdc/ctrl_rdata_reg\[*\]/D}]
+# Bundled read data is stable from the slave ACK until the synchronized
+# completion reaches ctrl_rdata.  These objects are mandatory for this top:
+# do not use -quiet here, otherwise an invalid hierarchy pattern can silently
+# remove the timing guarantee for the multi-bit transfer.
+set_max_delay -datapath_only 8.000 \
+  -from [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]/C}] \
+  -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_rdata_reg[*]/D}]
 set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
 set_false_path -from [get_pins {adc_dat*[*][*]/C}] -to [get_pins {dac_dat_*[*]/D}]
