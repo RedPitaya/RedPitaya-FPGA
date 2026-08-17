@@ -116,7 +116,6 @@ reg                    dac_scale_bypass;
 
 reg   [ RSZ-1: 0] dac_rp    ;
 reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
-reg   [PNT_SIZE-1: 0] dac_pntp  ; // previous read pointer
 wire  [PNT_SIZE-1: 0] axi_pnt   ; // read pointer AXI
 wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
@@ -231,6 +230,7 @@ reg  [  32-1: 0] set_step_lo_neg;
 reg              dac_rep      ;
 wire             dac_trig     ;
 reg              dac_trigr    ;
+reg              buf_cycle_q  ;
 
 wire             do_read      ;
 wire             do_read_end  ;
@@ -241,7 +241,12 @@ assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
 
 assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
-assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+// Non-AXI cycle completion is consumed one clock after the pointer wraps.  The
+// old implementation reconstructed that delayed event by comparing the full
+// previous and current 62-bit pointers.  Capture the wrap decision directly;
+// this preserves the cycle-counter timing while removing a second wide
+// pointer feedback cone from its clock enable.
+assign buf_cycle     = set_axi_en_i ? axi_last : buf_cycle_q;
 // AXI starts producing samples only after FIFO preload; non-AXI starts on dac_trig.
 assign dly_start     = set_axi_en_i ? axi_first   : dac_trig;
 
@@ -296,8 +301,8 @@ always @(posedge dac_clk_i) begin
       dac_do       <=  1'b0 ;
       dac_rep      <=  1'b0 ;
       trig_in      <=  1'b0 ;
-      dac_pntp     <= {PNT_SIZE{1'b0}} ;
       dac_trigr    <=  1'b0 ;
+      buf_cycle_q  <=  1'b0 ;
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
       set_step_lo_m1  <= 32'hffff_ffff;
@@ -329,8 +334,8 @@ always @(posedge dac_clk_i) begin
          rep_cnt <= 16'h0 ;
 
       // count number of table read cycles
-      dac_pntp  <= dac_pnt;
       dac_trigr <= dac_trig; // ignore trigger when count
+      buf_cycle_q <= dac_do && ~dac_npnt_sub_neg;
 
       if (dac_trig)
          cyc_cnt <= set_ncyc_i ;
@@ -421,10 +426,12 @@ localparam PNT_HI = PNT_SIZE - PNT_LO;    // integer bits (table address)
 
 wire [PNT_LO-1:0] pnt_lo = dac_pnt[PNT_LO-1:0];
 wire [PNT_HI-1:0] pnt_hi = dac_pnt[PNT_SIZE-1:PNT_LO];
-// The step is zero when the generator is not running, which is how the plain
-// form kept dac_pnt unchanged.
-wire [PNT_LO-1:0] stp_lo = dac_do ? set_step_lo             : {PNT_LO{1'b0}};
-wire [PNT_HI-1:0] stp_hi = dac_do ? set_step[PNT_HI-1:0]    : {PNT_HI{1'b0}};
+// dac_pnt already has an explicit dac_do enable below.  Do not put dac_do in
+// front of every arithmetic operand as well: that adds the run-state decode to
+// both carry-select cones and makes dac_do the critical feedback source.  The
+// arithmetic is don't-care while the pointer is held.
+wire [PNT_LO-1:0] stp_lo = set_step_lo;
+wire [PNT_HI-1:0] stp_hi = set_step[PNT_HI-1:0];
 
 // Fractional sum.  The low part of (sum - 1) is computed independently using
 // the registered (step - 1), while its signed carry into the integer part is
@@ -435,8 +442,8 @@ wire [PNT_HI-1:0] stp_hi = dac_do ? set_step[PNT_HI-1:0]    : {PNT_HI{1'b0}};
 // A zero low result is detected as pnt_lo == -step.  The exact value
 // 2**PNT_LO has both carry and a zero low result, and contributes zero.
 (* keep = "true" *) wire [PNT_LO  :0] frac_sum = {1'b0,pnt_lo} + {1'b0,stp_lo};
-wire [PNT_LO-1:0] stp_lo_m1  = dac_do ? set_step_lo_m1 : {PNT_LO{1'b1}};
-wire [PNT_LO-1:0] stp_lo_neg = dac_do ? set_step_lo_neg : {PNT_LO{1'b0}};
+wire [PNT_LO-1:0] stp_lo_m1  = set_step_lo_m1;
+wire [PNT_LO-1:0] stp_lo_neg = set_step_lo_neg;
 (* keep = "true" *) wire [PNT_LO-1:0] frac_sub_lo = pnt_lo + stp_lo_m1;
 wire              frac_carry = frac_sum[PNT_LO];
 wire              frac_zero  = (pnt_lo == stp_lo_neg);
