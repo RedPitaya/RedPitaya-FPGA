@@ -222,6 +222,10 @@ reg              init_run     ;
 
 reg  [  32-1: 0] set_step      ;  
 reg  [  32-1: 0] set_step_lo      ;  
+// Derived fractional-step values are configuration data as well.  Keeping
+// them in registers avoids putting a negate/decrement in the sample path.
+reg  [  32-1: 0] set_step_lo_m1 ;
+reg  [  32-1: 0] set_step_lo_neg;
 
 
 reg              dac_rep      ;
@@ -296,6 +300,8 @@ always @(posedge dac_clk_i) begin
       dac_trigr    <=  1'b0 ;
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
+      set_step_lo_m1  <= 32'hffff_ffff;
+      set_step_lo_neg <= 32'h0;
    end
    else begin
       // Count the requested start-to-start burst period from the first output sample.
@@ -342,6 +348,8 @@ always @(posedge dac_clk_i) begin
       if (trig_in) begin
         set_step <= set_step_i;
         set_step_lo <= set_step_lo_i;
+        set_step_lo_m1  <= set_step_lo_i - 32'h1;
+        set_step_lo_neg <= -set_step_lo_i;
       end
 
       // in cycle mode
@@ -418,12 +426,22 @@ wire [PNT_HI-1:0] pnt_hi = dac_pnt[PNT_SIZE-1:PNT_LO];
 wire [PNT_LO-1:0] stp_lo = dac_do ? set_step_lo             : {PNT_LO{1'b0}};
 wire [PNT_HI-1:0] stp_hi = dac_do ? set_step[PNT_HI-1:0]    : {PNT_HI{1'b0}};
 
-// fraction: the sum, and the sum less the one subtracted by the wrap test
+// Fractional sum.  The low part of (sum - 1) is computed independently using
+// the registered (step - 1), while its signed carry into the integer part is
+// derived without a second 34-bit carry chain:
+//   sum == 0             -> -1
+//   sum > 2**PNT_LO      -> +1
+//   otherwise            ->  0
+// A zero low result is detected as pnt_lo == -step.  The exact value
+// 2**PNT_LO has both carry and a zero low result, and contributes zero.
 (* keep = "true" *) wire [PNT_LO  :0] frac_sum = {1'b0,pnt_lo} + {1'b0,stp_lo};
-(* keep = "true" *) wire [PNT_LO+1:0] frac_sub = {2'b0,pnt_lo} + {2'b0,stp_lo}
-                                              + {(PNT_LO+2){1'b1}};
+wire [PNT_LO-1:0] stp_lo_m1  = dac_do ? set_step_lo_m1 : {PNT_LO{1'b1}};
+wire [PNT_LO-1:0] stp_lo_neg = dac_do ? set_step_lo_neg : {PNT_LO{1'b0}};
+(* keep = "true" *) wire [PNT_LO-1:0] frac_sub_lo = pnt_lo + stp_lo_m1;
 wire              frac_carry = frac_sum[PNT_LO];
-wire  [      1:0] frac_k     = frac_sub[PNT_LO+1:PNT_LO];  // 2'b11 = -1, 2'b01 = +1
+wire              frac_zero  = (pnt_lo == stp_lo_neg);
+wire  [      1:0] frac_k     = frac_carry ? (frac_zero ? 2'b00 : 2'b01) :
+                                frac_zero  ? 2'b11 : 2'b00;
 
 // integer half, one variant per possible carry from the fraction
 (* keep = "true" *) wire [PNT_HI:0] int_sum_c0 = {1'b0,pnt_hi} + {1'b0,stp_hi};
@@ -470,7 +488,7 @@ wire [INT_HI:0] isub_h = int_j[1] ? isub_h_m1 :
 wire [PNT_HI:0] int_sub = {isub_h, isub_l[INT_LO-1:0]};
 
 assign dac_npnt         = {int_sum, frac_sum[PNT_LO-1:0]};
-assign dac_npnt_sub     = {int_sub, frac_sub[PNT_LO-1:0]};
+assign dac_npnt_sub     = {int_sub, frac_sub_lo};
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
 
 // read pointer logic
@@ -481,8 +499,8 @@ end else begin
    if (set_rst_i || (dac_trig && !dac_do)) // manual reset or start
       dac_pnt <= {set_ofs_i[RSZ+15:0],32'h0};
    else if (dac_do) begin
-      if (~dac_npnt_sub_neg)  dac_pnt <= set_wrap_i ? dac_npnt_sub : {set_ofs_i[RSZ+15:0],32'h0}; // wrap or go to start
-      else                    dac_pnt <= dac_npnt[PNT_SIZE-1:0]; // normal increase
+      if (~dac_npnt_sub_neg)  dac_pnt <= set_wrap_i ? dac_npnt_sub : {set_ofs_i[RSZ+15:0],32'h0};
+      else                    dac_pnt <= dac_npnt[PNT_SIZE-1:0];
    end
 end
 
