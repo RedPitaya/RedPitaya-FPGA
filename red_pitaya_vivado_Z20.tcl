@@ -241,6 +241,15 @@ foreach file $rptFiles {
 
 open_run impl_1
 
+# The normal implementation run leaves the ASG wrap/control cone within a few
+# picoseconds of closure on this device.  A post-route physical optimization
+# can shorten those routed nets without changing the RTL or relaxing any path.
+# Re-route and regenerate the sign-off report before applying the timing gate.
+phys_opt_design -directive Explore
+route_design
+report_timing_summary -delay_type min_max -max_paths 20 \
+   -report_unconstrained -file $path_out/red_pitaya_top_Z20_timing_summary_routed.rpt
+
 # Refuse to emit a bitstream that does not meet timing.
 # Override for a deliberate experimental build: make ... DEFINES=ALLOW_TIMING_FAIL
 source [file join $::RP_ROOT_DIR red_pitaya_vivado_timing_gate.tcl]
