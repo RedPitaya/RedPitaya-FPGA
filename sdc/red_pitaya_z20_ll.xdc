@@ -243,7 +243,6 @@ set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [
 set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_fclk_i[*]}]
 set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_fclk_i[*]}]
 
-
 set_output_delay -clock [get_clocks dac_wrta_o] -min -add_delay -1.500 [get_ports {dac_data_o[*]}]
 set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports {dac_data_o[*]}]
 set_output_delay -clock [get_clocks dac_wrta_o] -min -add_delay -1.400 [get_ports {dac_datb_o[*]}]
@@ -264,14 +263,53 @@ set_false_path -to [get_pins {sys_bus_interconnect/for_bus[5].inst_sys_bus_cdc/r
 set_false_path -to [get_pins {sys_bus_interconnect/for_bus[5].inst_sys_bus_cdc/reg_re_csff_reg[0]/D}]
 # First stage of the explicit two-flop PDM reset synchronizer.  The second
 # stage and all reset consumers remain timed in pll_pwm_clk.
-set_false_path -to [get_pins {pdm_rst_sync_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {pdm_rst_sync_reg[0]/D}]
+# First stages of the explicit LL clock-domain synchronizers.  Their second
+# stages and all downstream logic remain timed in the destination domain.
+set_false_path -quiet -to [get_pins -quiet {loop_en_meta_reg/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk4[*].sync_mode_tx_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk4[*].sync_mode_rx_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/genblk1[*].sync_mode_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/genblk1[*].par_train_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_tx/sync_mode_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/cfg_en_sync_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/cfg_en_sync_r_reg[0]/CLR}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/cfg_en_par_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/cfg_en_par_r_reg[0]/CLR}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/ser_inv_meta_r_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/cfg_dly_meta_r_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/i_drst/dst_in_csff_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk3[*].i_test/tx_dat_rx_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk3[*].i_test/stat_clr_rx_meta_reg/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/rxp_dat_sys_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/tst_err_cnt_sys_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/tst_dat_cnt_sys_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/cfg_rx_trained_sys_reg[0]/D}]
 set_false_path -quiet -from [get_clocks -quiet pll_adc_clk] -to [get_pins -quiet {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
 set_false_path -quiet -from [get_clocks -quiet clk_fpga_0] -to [get_pins -quiet {spi_done_csff*/D}]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_do*/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_false_path -from [get_pins ps/axi_slave_gp0/wr_wdata*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata*[*]*/D]
-set_false_path -quiet -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata*[*]*/C}] -to [get_pins -quiet {ps/axi_slave_gp0/axi\\.RDATA*[*]*/D}]
+# The request/acknowledge toggles qualify these bundled buses.  Each source
+# register is held stable until the synchronized transaction completes, so the
+# data only has to settle within one destination-clock period.  Constrain the
+# actual register-to-register bundles instead of hiding the paths from the PS
+# clock pins with broad false paths.
+set_max_delay -quiet -datapath_only 8.000 \
+  -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_addr_reg[*]}] \
+  -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr_reg[*]*}]
+set_max_delay -quiet -datapath_only 8.000 \
+  -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_wdata_reg[*]}] \
+  -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]*}]
+set_max_delay -quiet -datapath_only 8.000 \
+  -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]}] \
+  -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_rdata_reg[*]}]
+set_bus_skew -quiet 6.000 \
+  -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_addr_reg[*]/Q}] \
+  -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr_reg[*]*/D}]
+set_bus_skew -quiet 6.000 \
+  -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_wdata_reg[*]/Q}] \
+  -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]*/D}]
+set_bus_skew -quiet 6.000 \
+  -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]/Q}] \
+  -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_rdata_reg[*]/D}]
 set_max_delay -quiet -datapath_only 8.000 -from [get_pins -quiet i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins -quiet {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
 set_false_path -quiet -from [get_pins -quiet {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins -quiet {dac_dat_*[*]/D}]
 

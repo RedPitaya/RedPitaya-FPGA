@@ -1,5 +1,12 @@
 `timescale 1ns / 1ps
 
+`ifdef Z20_G2
+`define RP_SCOPE_CALIB_PIPELINE
+`endif
+`ifdef Z20_LL
+`define RP_SCOPE_CALIB_PIPELINE
+`endif
+
 module rp_scope_calib
   #(parameter DBITS = 16)(
   input  wire                     adc_clk_i,
@@ -34,7 +41,7 @@ reg  signed [DBITS:0]             offset_calc;
 reg  signed [DBITS:0]             offset_calc_r;
 wire                              offs_max, offs_min;
 wire signed [DBITS:0]             offset_calc_limit;
-`ifdef Z20_G2
+`ifdef RP_SCOPE_CALIB_PIPELINE
 reg  signed [DBITS:0]             offset_calc_limit_r;
 `endif
 
@@ -103,7 +110,7 @@ begin
   end else begin
 
     //gain_calc_r <= $signed({offset_calc_limit,{15{1'b0}}}) * {{15{1'b0}},gain};
-`ifdef Z20_G2
+`ifdef RP_SCOPE_CALIB_PIPELINE
     gain_calc_r <= ($signed({offset_calc_limit_r,{15{1'b0}}}) * $signed({{15{1'b0}},gain})) >>> (30);
 `else
     gain_calc_r <= ($signed({offset_calc_limit,{15{1'b0}}}) * $signed({{15{1'b0}},gain})) >>> (30);
@@ -143,7 +150,7 @@ assign offs_min = (offset_calc_r[DBITS:DBITS-1] == 2'b10);
 
 assign offset_calc_limit = offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc_r);
 
-`ifdef Z20_G2
+`ifdef RP_SCOPE_CALIB_PIPELINE
 // Break the saturation mux -> DSP input path for Z20_G2.  This adds one sample
 // of latency to the calibration chain; all downstream scope processing sees
 // the same delayed sample stream.
@@ -189,3 +196,8 @@ begin
 end
 
 endmodule
+
+
+`ifdef RP_SCOPE_CALIB_PIPELINE
+`undef RP_SCOPE_CALIB_PIPELINE
+`endif

@@ -42,10 +42,39 @@ wire ser_clk ;
 wire par_clk ;
 
 wire dly_new;
+(* ASYNC_REG = "TRUE" *) reg [1:0] cfg_en_par_r;
+(* ASYNC_REG = "TRUE" *) reg [SW-1:0] ser_inv_meta_r;
+(* ASYNC_REG = "TRUE" *) reg [SW-1:0] ser_inv_par_r;
+(* ASYNC_REG = "TRUE" *) reg [24:0] cfg_dly_meta_r;
+(* ASYNC_REG = "TRUE" *) reg [24:0] cfg_dly_par_r;
+
+// cfg_en_i is generated in cfg_clk_i.  Synchronize its release into the
+// source-synchronous parallel clock before using it in parallel-domain logic.
+always @(posedge par_clk or negedge cfg_en_i) begin
+  if (!cfg_en_i)
+    cfg_en_par_r[0] <= 1'b0;
+  else
+    cfg_en_par_r[0] <= 1'b1;
+end
+
+always @(posedge par_clk) begin
+  cfg_en_par_r[1] <= cfg_en_par_r[0];
+  if (!cfg_en_par_r[1]) begin
+    ser_inv_meta_r <= '0;
+    ser_inv_par_r  <= '0;
+    cfg_dly_meta_r <= '0;
+    cfg_dly_par_r  <= '0;
+  end else begin
+    ser_inv_meta_r <= ser_inv_i;
+    ser_inv_par_r  <= ser_inv_meta_r;
+    cfg_dly_meta_r <= cfg_dly_i[24:0];
+    cfg_dly_par_r  <= cfg_dly_meta_r;
+  end
+end
 
 sync #(.DW (1), .PULSE (1) ) i_drst (
   .sclk_i (cfg_clk_i),  .srstn_i (cfg_en_i),  .src_i (cfg_dly_i[25] ),
-  .dclk_i (par_clk  ),  .drstn_i (cfg_en_i),  .dst_o (    dly_new  ) );
+  .dclk_i (par_clk  ),  .drstn_i (cfg_en_par_r[1]),  .dst_o (dly_new) );
 
 
 
@@ -98,7 +127,7 @@ for (GV=0; GV < SW; GV=GV+1) begin:ser_dat
   reg  [ 5-1: 0] cur_dly   ;
 
   always @(posedge par_clk ) begin
-    cur_dly <= cfg_dly_i[GV*5 +: 5]  ;
+    cur_dly <= cfg_dly_par_r[GV*5 +: 5]  ;
   end
 
   IDELAYE2 #(
@@ -130,9 +159,9 @@ for (GV=0; GV < SW; GV=GV+1) begin:ser_dat
 //  assign ddly = ser_dat_i[GV];
 
   always @(posedge par_clk) begin
-    qq  <= ser_inv_i[GV] ? ~q[7:0] : q[7:0] ;
+    qq  <= ser_inv_par_r[GV] ? ~q[7:0] : q[7:0] ;
     qqq <= qq     ;
-    rst <= !cfg_en_i ;
+    rst <= !cfg_en_par_r[1] ;
   end
 
   if (PDW==8) begin
@@ -242,7 +271,7 @@ assign bitslip_val = ((frame === 8'hFF) || (frame === 8'h00))   ; // has to be a
 assign bitslip     = bitslip_dly[0]  ;
 
 always @(posedge par_clk) begin
-    if (!cfg_en_i) begin
+    if (!cfg_en_par_r[1]) begin
         bitslip_dly <= 6'h0 ;
     end
     else begin
@@ -251,7 +280,7 @@ always @(posedge par_clk) begin
 end
 
 always @(posedge par_clk) begin
-    if (!cfg_en_i)
+    if (!cfg_en_par_r[1])
       slip_cnt <= 3'h0 ;
     else
       slip_cnt <= slip_cnt + bitslip ;
@@ -306,4 +335,3 @@ end
 
 
 endmodule
-

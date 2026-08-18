@@ -26,7 +26,8 @@ module sys_bus_interconnect #(
   SYNC_REG_OFS3   = -1, // synchronised reg 3
   SYNC_REG_OFS4   = -1, // synchronised reg 4
   SYNC_REG_OFS5   = -1, // synchronised reg 5
-  SYNC_REG_OFS6   = -1  // synchronised reg 6
+  SYNC_REG_OFS6   = -1, // synchronised reg 6
+  PIPE_IN_BUS     =  0  // register the controller request before CDC fanout
 )(
   input        pll_locked_i,
   sys_bus_if.s bus_m,          // from master
@@ -44,6 +45,40 @@ logic [SN-1:0]         bus_s_err  ;
 logic [SN-1:0]         bus_s_ack  ;
 logic [SN-1:0]         bus_s_sync_cs;
 logic [SN-1:0]         bus_s_sync_adr;
+logic [32-1:0]         req_addr;
+logic [32-1:0]         req_wdata;
+logic                  req_wen;
+logic                  req_ren;
+logic [SN-1:0][32-1:0] pipe_addr;
+logic [SN-1:0][32-1:0] pipe_wdata;
+logic [SN-1:0]         pipe_wen;
+logic [SN-1:0]         pipe_ren;
+
+generate
+if (PIPE_IN_BUS) begin : gen_input_pipeline
+  always_ff @(posedge bus_m.clk)
+  if (!bus_m.rstn) begin
+    req_addr  <= '0;
+    req_wdata <= '0;
+    req_wen   <= 1'b0;
+    req_ren   <= 1'b0;
+  end else begin
+    req_wen <= bus_m.wen;
+    req_ren <= bus_m.ren;
+    if (bus_m.wen || bus_m.ren) begin
+      req_addr  <= bus_m.addr;
+      req_wdata <= bus_m.wdata;
+    end
+  end
+end else begin : gen_input_bypass
+  always_comb begin
+    req_addr  = bus_m.addr;
+    req_wdata = bus_m.wdata;
+    req_wen   = bus_m.wen;
+    req_ren   = bus_m.ren;
+  end
+end
+endgenerate
 
 sys_bus_if             bus_int_i[SN-1:0](.clk (bus_m.clk), .rstn (bus_m.rstn)); //@FCLK0
 sys_bus_if             bus_int_o[SN-1:0]();
@@ -56,7 +91,7 @@ generate
     end
 endgenerate
 
-assign bus_s_a  = `BUS_NAME_M.addr[SW+:SL];
+assign bus_s_a  = req_addr[SW+:SL];
 assign bus_s_cs = SN'(1) << bus_s_a;
 
 assign bus_s_sync_cs = {SN{bus_s_cs[SYNC_IN_BUS]}} & {syncd_cs};
@@ -69,12 +104,12 @@ for (genvar i=0; i<SN; i++) begin: for_bus
 // between the two slave clocks.  Decode from the controller-domain request and
 // include the mirror in the target CDC request instead.
 assign bus_s_sync_adr[i] = bus_s_sync_cs[i] &&
-                             ((`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS1) ||
-                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS2) ||
-                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS3) ||
-                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS4) ||
-                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS5) ||
-                              (`BUS_NAME_M.addr[SW-1:0] == SYNC_REG_OFS6));
+                             ((req_addr[SW-1:0] == SYNC_REG_OFS1) ||
+                              (req_addr[SW-1:0] == SYNC_REG_OFS2) ||
+                              (req_addr[SW-1:0] == SYNC_REG_OFS3) ||
+                              (req_addr[SW-1:0] == SYNC_REG_OFS4) ||
+                              (req_addr[SW-1:0] == SYNC_REG_OFS5) ||
+                              (req_addr[SW-1:0] == SYNC_REG_OFS6));
 
 assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) || 
                          (i == SYNC_OUT_BUS2) || 
@@ -85,10 +120,30 @@ assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) ||
 
   
 
-assign `BUS_NAME_I1[i].addr  = `BUS_NAME_M.addr ;
-assign `BUS_NAME_I1[i].wdata = `BUS_NAME_M.wdata;
-assign `BUS_NAME_I1[i].wen   = (bus_s_cs[i] | bus_s_sync_adr[i]) & `BUS_NAME_M.wen;
-assign `BUS_NAME_I1[i].ren   =  bus_s_cs[i] & `BUS_NAME_M.ren;
+if (PIPE_IN_BUS) begin : gen_output_pipeline
+  always_ff @(posedge bus_m.clk)
+  if (!bus_m.rstn) begin
+    pipe_addr[i]  <= '0;
+    pipe_wdata[i] <= '0;
+    pipe_wen[i]   <= 1'b0;
+    pipe_ren[i]   <= 1'b0;
+  end else begin
+    pipe_addr[i]  <= req_addr;
+    pipe_wdata[i] <= req_wdata;
+    pipe_wen[i]   <= (bus_s_cs[i] | bus_s_sync_adr[i]) & req_wen;
+    pipe_ren[i]   <= bus_s_cs[i] & req_ren;
+  end
+
+  assign `BUS_NAME_I1[i].addr  = pipe_addr[i];
+  assign `BUS_NAME_I1[i].wdata = pipe_wdata[i];
+  assign `BUS_NAME_I1[i].wen   = pipe_wen[i];
+  assign `BUS_NAME_I1[i].ren   = pipe_ren[i];
+end else begin : gen_output_bypass
+  assign `BUS_NAME_I1[i].addr  = req_addr;
+  assign `BUS_NAME_I1[i].wdata = req_wdata;
+  assign `BUS_NAME_I1[i].wen   = (bus_s_cs[i] | bus_s_sync_adr[i]) & req_wen;
+  assign `BUS_NAME_I1[i].ren   = bus_s_cs[i] & req_ren;
+end
 
 //enables different config clock for each module if needed
 sys_bus_cdc inst_sys_bus_cdc

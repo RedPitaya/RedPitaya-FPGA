@@ -177,6 +177,17 @@ logic                 adc_clk;
 logic                 par_clk;
 logic                 par_clk_bf;
 logic                 adc_rstn;
+wire [1:0]           scope_rstn;
+logic                 par_bus_rstn;
+logic                 par_axi_rstn;
+logic                 pid_rstn;
+logic                 loop_rstn;
+(* ASYNC_REG = "TRUE", keep = "TRUE" *) logic scope_rstn_meta;
+(* keep = "TRUE", max_fanout = 32 *) logic scope_rstn_common;
+(* ASYNC_REG = "TRUE", keep = "TRUE" *) logic [1:0] par_bus_rstn_sync;
+(* ASYNC_REG = "TRUE", keep = "TRUE" *) logic [1:0] par_axi_rstn_sync;
+(* ASYNC_REG = "TRUE", keep = "TRUE", max_fanout = 64 *) logic [1:0] pid_rstn_sync;
+(* ASYNC_REG = "TRUE", keep = "TRUE" *) logic [1:0] loop_rstn_sync;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
 
@@ -240,14 +251,28 @@ IOBUF i_i2c1_sda (.O(i2c1_sda_i), .IO(i2c1_sda_io), .I(i2c1_sda_o), .T(i2c1_sda_
 
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]), .rstn (frstn[0]));
-sys_bus_if   sys [8-1:0] (.clk (adc_clk), .rstn (adc_rstn));
+wire sys_clk  [8-1:0];
+wire sys_rstn [8-1:0];
+sys_bus_if   sys [8-1:0] (.clk (sys_clk), .rstn (sys_rstn));
+
+generate
+for (genvar i = 0; i < 8; i++) begin : gen_sys_clock
+  if ((i == 1) || (i == 3)) begin
+    assign sys_clk [i] = par_clk;
+    assign sys_rstn[i] = par_bus_rstn;
+  end else begin
+    assign sys_clk [i] = adc_clk;
+    assign sys_rstn[i] = adc_rstn;
+  end
+end
+endgenerate
 
 // GPIO interface
 gpio_if #(.DW (3*GDW)) gpio ();
 
 // AXI masters
-axi_sys_if axi0_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
-axi_sys_if axi1_sys (.clk(adc_clk    ), .rstn(adc_rstn    ));
+axi_sys_if axi0_sys (.clk(par_clk    ), .rstn(par_axi_rstn));
+axi_sys_if axi1_sys (.clk(par_clk    ), .rstn(par_axi_rstn));
 axi_sys_if axi2_sys (.clk(dac_axi_clk), .rstn(dac_axi_rstn));
 axi_sys_if axi3_sys (.clk(dac_axi_clk), .rstn(dac_axi_rstn));
 ////////////////////////////////////////////////////////////////////////////////
@@ -301,6 +326,45 @@ assign rst_after_locked = |rst_cnt;
 // ADC reset (active low)
 always @(posedge adc_clk)
 adc_rstn     <=  frstn[0] & ~rst_after_locked;
+
+// The ADC receiver's divided clock is independent of pll_adc_clk.  Use small,
+// separate async-assert/sync-release reset trees so a single reset register does
+// not become a several-thousand-load timing path across Scope, AXI and bus logic.
+always_ff @(posedge par_clk or negedge adc_rstn)
+if (!adc_rstn)
+  scope_rstn_meta <= 1'b0;
+else
+  scope_rstn_meta <= 1'b1;
+
+always_ff @(posedge par_clk)
+  scope_rstn_common <= scope_rstn_meta;
+
+assign scope_rstn = {2{scope_rstn_common}};
+
+always_ff @(posedge par_clk or negedge adc_rstn)
+if (!adc_rstn) begin
+  par_bus_rstn_sync[0] <= 1'b0;
+  par_axi_rstn_sync[0] <= 1'b0;
+  pid_rstn_sync[0]     <= 1'b0;
+  loop_rstn_sync[0]    <= 1'b0;
+end else begin
+  par_bus_rstn_sync[0] <= 1'b1;
+  par_axi_rstn_sync[0] <= 1'b1;
+  pid_rstn_sync[0]     <= 1'b1;
+  loop_rstn_sync[0]    <= 1'b1;
+end
+
+always_ff @(posedge par_clk) begin
+  par_bus_rstn_sync[1] <= par_bus_rstn_sync[0];
+  par_axi_rstn_sync[1] <= par_axi_rstn_sync[0];
+  pid_rstn_sync[1]     <= pid_rstn_sync[0];
+  loop_rstn_sync[1]    <= loop_rstn_sync[0];
+end
+
+assign par_bus_rstn = par_bus_rstn_sync[1];
+assign par_axi_rstn = par_axi_rstn_sync[1];
+assign pid_rstn     = pid_rstn_sync[1];
+assign loop_rstn    = loop_rstn_sync[1];
 
 // DAC reset (active high)
 always @(posedge dac_clk_1x)
@@ -394,7 +458,8 @@ red_pitaya_ps_ll ps (
 
 sys_bus_interconnect #(
   .SN (8),
-  .SW (20)
+  .SW (20),
+  .PIPE_IN_BUS (1)
 ) sys_bus_interconnect (
   .pll_locked_i(pll_locked),
   .bus_m (ps_sys),
@@ -503,7 +568,7 @@ adc366x_top i_adc366x
   .ser_inv_i       (  ser_inv        ),  //!< lane invert
 
    // configuration
-  .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
+  .cfg_clk_i       (  adc_clk        ),  //!< Configuration clock
   .cfg_en_i        (  adc_rstn         ),  //!< global module enable
   .cfg_dly_i       (  ser_ddly       ),  //!< delay control
   .cfg_bslip_o     (  bitslip        ),
@@ -528,9 +593,63 @@ assign adc_pdn_o   = 1'b0 ;   // ADC power down
 
 
 // optional digital loop
-assign adc_dat[0] = digital_loop[0] ? (dac_a<<<2) : adc_dat_raw[0];
-assign adc_dat[1] = digital_loop[0] ? (dac_b<<<2) : adc_dat_raw[1];
-assign adc_dv     = digital_loop[0] ?       1'b1  : adc_dat_rdv;
+(* ASYNC_REG = "TRUE" *) logic [13:0] loop_a_meta, loop_a_sync;
+(* ASYNC_REG = "TRUE" *) logic [13:0] loop_b_meta, loop_b_sync;
+(* ASYNC_REG = "TRUE" *) logic        loop_en_meta, loop_en_sync;
+logic signed [13:0] loop_a_src, loop_b_src;
+
+// Register the complete source words before the mesochronous transfer.  The
+// accompanying max-delay/bus-skew constraints keep every bit within the same
+// destination sampling aperture.
+always_ff @(posedge adc_clk) begin
+  if (!adc_rstn) begin
+    loop_a_src <= '0;
+    loop_b_src <= '0;
+  end else begin
+    loop_a_src <= dac_a;
+    loop_b_src <= dac_b;
+  end
+end
+
+always_ff @(posedge par_clk)
+if (!loop_rstn) begin
+  loop_a_meta <= '0;
+  loop_a_sync <= '0;
+  loop_b_meta <= '0;
+  loop_b_sync <= '0;
+  loop_en_meta <= 1'b0;
+  loop_en_sync <= 1'b0;
+end else begin
+  loop_a_meta <= loop_a_src;
+  loop_a_sync <= loop_a_meta;
+  loop_b_meta <= loop_b_src;
+  loop_b_sync <= loop_b_meta;
+  loop_en_meta <= digital_loop[0];
+  loop_en_sync <= loop_en_meta;
+end
+
+assign adc_dat[0] = loop_en_sync ? (loop_a_sync<<<2) : adc_dat_raw[0];
+assign adc_dat[1] = loop_en_sync ? (loop_b_sync<<<2) : adc_dat_raw[1];
+assign adc_dv     = loop_en_sync ?              1'b1 : adc_dat_rdv;
+
+logic signed [15:0] pid_adc_dat [1:0];
+always_ff @(posedge par_clk) begin
+  if (!pid_rstn) begin
+    pid_adc_dat[0] <= '0;
+    pid_adc_dat[1] <= '0;
+  end else begin
+    pid_adc_dat[0] <= adc_dat[0];
+    pid_adc_dat[1] <= adc_dat[1];
+  end
+end
+
+wire trig_asg_par;
+sync #(.DW(1), .PULSE(1)) i_trig_asg_sync (
+  .sclk_i  (adc_clk),   .srstn_i(adc_rstn),
+  .dclk_i  (par_clk),   .drstn_i(loop_rstn),
+  .src_i   (trig_asg_out),
+  .dst_o   (trig_asg_par)
+);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -538,8 +657,35 @@ assign adc_dv     = digital_loop[0] ?       1'b1  : adc_dat_rdv;
 ////////////////////////////////////////////////////////////////////////////////
 
 // Sumation of ASG and PID signal perform saturation before sending to DAC
-assign dac_a_sum = asg_dat[0] + pid_dat[0];
-assign dac_b_sum = asg_dat[1] + pid_dat[1];
+(* ASYNC_REG = "TRUE" *) logic signed [13:0] pid_a_meta, pid_a_sync;
+(* ASYNC_REG = "TRUE" *) logic signed [13:0] pid_b_meta, pid_b_sync;
+logic signed [13:0] pid_a_src, pid_b_src;
+
+always_ff @(posedge par_clk) begin
+  if (!pid_rstn) begin
+    pid_a_src <= '0;
+    pid_b_src <= '0;
+  end else begin
+    pid_a_src <= pid_dat[0];
+    pid_b_src <= pid_dat[1];
+  end
+end
+
+always_ff @(posedge adc_clk)
+if (!adc_rstn) begin
+  pid_a_meta <= '0;
+  pid_a_sync <= '0;
+  pid_b_meta <= '0;
+  pid_b_sync <= '0;
+end else begin
+  pid_a_meta <= pid_a_src;
+  pid_a_sync <= pid_a_meta;
+  pid_b_meta <= pid_b_src;
+  pid_b_sync <= pid_b_meta;
+end
+
+assign dac_a_sum = asg_dat[0] + pid_a_sync;
+assign dac_b_sum = asg_dat[1] + pid_b_sync;
 
 // saturation
 assign dac_a = (^dac_a_sum[15-1:15-2]) ? {dac_a_sum[15-1], {13{~dac_a_sum[15-1]}}} : dac_a_sum[14-1:0];
@@ -680,9 +826,9 @@ rp_scope_com #(
   // ADC
   .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
   .adc_clk_i     ({2{par_clk}}  ),  // clock
-  .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
+  .adc_rstn_i    (scope_rstn     ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
-  .trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_asg_i    (trig_asg_par),  // synchronized ASG trigger
   .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
   .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .trig_ext_asg_o(trig_ext_asg01),
@@ -778,10 +924,10 @@ red_pitaya_asg i_asg (
 
 red_pitaya_pid i_pid (
    // signals
-  .clk_i           (adc_clk   ),  // clock
-  .rstn_i          (adc_rstn  ),  // reset - active low
-  .dat_a_i         (adc_dat[0][16-1 -: 14]),  // in 1
-  .dat_b_i         (adc_dat[1][16-1 -: 14]),  // in 2
+  .clk_i           (par_clk      ),  // clock
+  .rstn_i          (pid_rstn     ),  // reset - active low
+  .dat_a_i         (pid_adc_dat[0][16-1 -: 14]),  // in 1
+  .dat_b_i         (pid_adc_dat[1][16-1 -: 14]),  // in 2
   .dat_a_o         (pid_dat[0]),  // out 1
   .dat_b_o         (pid_dat[1]),  // out 2
   // System bus
