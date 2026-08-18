@@ -222,26 +222,87 @@ create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divi
 #set_false_path -from [get_clocks pll_adc_clk2d] -to [get_clocks pll_pwm_clk]
 #set_false_path -from [get_clocks pll_adc_10mhz] -to [get_clocks pll_adc_clk2d]
 
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_fclk_i[*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_fclk_i[*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_fclk_i[*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_fclk_i[*]}]
+############################################################################
+# ADC366x serial LVDS receive interface                                    #
+############################################################################
+#
+# Contract, from the RTL and from the ADC3664 data sheet (TI SBAS888B,
+# December 2020, revised July 2022):
+#
+#   * The link is source synchronous: the ADC forwards its bit clock on
+#     ADDCLK (adc_dclk_i) together with the data lanes and the frame clock.
+#     adc366x_top clocks the ISERDESE2 directly from that pin through a BUFIO
+#     (ser_clk) and derives the parallel clock with a BUFR /4, so there is no
+#     PLL in the capture path and every input delay below is relative to
+#     adc_dclk.
+#   * 125 MSPS in the 16 bit two wire mode is 1000 Mbps per lane, DDR, so
+#     ADDCLK runs at 500 MHz (create_clock -period 2.000 above) and one bit
+#     lasts 1.000 ns.  Data is edge aligned: the data sheet specifies tCD,
+#     "DCLK rising edge to output data delay", not a centred window.
+#   * Data sheet numbers for the two wire mode at 125 MSPS (875 Mbps row,
+#     the closest specified two wire operating point):
+#         tCD  MIN -0.2 ns   NOM 0.1 ns     (data transition vs DCLK edge)
+#         tDV  MIN  0.6 ns   NOM 0.8 ns     (data valid per bit)
+#     The 1000 Mbps row of the data sheet (1 wire, 16 bit, 62.5 MSPS) gives
+#     tCD MIN -0.6 ns and tDV MIN 0.5 ns; see the risk note at the end.
+#
+# The input delays therefore describe where the data transition sits with
+# respect to the ADDCLK edge that produced it:
+#
+#     -min = tCD(min) = -0.200 ns      earliest transition
+#     -max = tCD(max) =  0.100 ns      latest transition
+#
+# Both DDR edges are constrained (-clock_fall -add_delay).  Board skew between
+# ADDCLK and the data lanes is not included: it is not documented in this
+# repository, see the risk note.
+#
+# Written out per port group instead of factored into a procedure: Vivado
+# rejects 'proc' in an XDC file (Designutils 20-1307), so red_pitaya_z20_ll_65.xdc
+# repeats these constraints after it replaces the adc_dclk object.
+set_input_delay -clock [get_clocks adc_dclk]             -min -add_delay -0.200 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+set_input_delay -clock [get_clocks adc_dclk]             -max -add_delay  0.100 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay -0.200 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay  0.100 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+
+# Capture edge relationship.  The clock reaches the ISERDESE2 through
+# IBUFDS + BUFIO, the data through IBUFDS + IDELAYE2, and the two are not
+# equal: measured on the routed design, with the IDELAY tap that software
+# loads by default (6, see red_pitaya_hk_ll.v),
+#
+#     pad -> ISERDESE2/CLK    2.136 ns (fast) .. 3.320 ns (slow)
+#     pad -> ISERDESE2/DDLY   1.281 ns (fast) .. 2.143 ns (slow)
+#
+# so the sampling instant sits 0.83 ns (fast) .. 1.21 ns (slow) after the
+# ADDCLK edge that launched the bit: the bit is captured by the edge one unit
+# interval *before* the one the tool pairs it with by default.  One unit
+# interval is half an ADDCLK period, and a hold multicycle of 1 moves the hold
+# capture edge by exactly that pair of DDR edges, which restores the real
+# relationship.  With the data sheet skew above this leaves +0.386 ns of hold
+# margin.
+#
+# The setup check of the same segment keeps the default pairing, which is two
+# unit intervals away from the physical one, so its reported margin is not a
+# physical margin; it is kept only as a structural check that nothing but the
+# IBUFDS/IDELAYE2 pair sits in front of the deserializer.  The sampling point
+# itself is established at run time, per board, by the per lane VAR_LOAD IDELAY
+# taps and the fabric bitslip in adc366x_top.
+set_multicycle_path -hold 1 \
+  -from [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}] \
+  -to   [get_pins {i_adc366x/ser_dat[*].ISERDESE2_inst/DDLY}]
+
+# Risk note - data that would turn the numbers above into a verified budget:
+#   * tCD / tDV rows for the 16 bit two wire mode at 125 MSPS (1000 Mbps).
+#     The rows used are the 875 Mbps two wire ones; the 1000 Mbps row of a
+#     different output mode is wider (tCD MIN -0.6 ns), which would consume
+#     the whole hold margin.
+#   * ADDCLK to data lane skew of the STEMlab 125-14 TI board.
+#   * The IDELAY tap value production software actually loads, if it differs
+#     from the 25'h6318c6 (six taps per lane) default in red_pitaya_hk_ll.v.
+# The interface budget is tight by construction: 1.000 ns unit interval
+# against 0.221 ns of ISERDESE2 setup + hold, 0.035 ns clock uncertainty,
+# 0.38 ns of corner spread in the BUFIO/IBUFDS clock path and 0.3 ns of ADC
+# output skew.  It closes because the taps are calibrated per board, not
+# because a fixed set of delays covers every corner.
 
 set_output_delay -clock [get_clocks dac_wrta_o] -min -add_delay -1.500 [get_ports {dac_data_o[*]}]
 set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports {dac_data_o[*]}]

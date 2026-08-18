@@ -135,7 +135,13 @@ for (GV=0; GV < SW; GV=GV+1) begin:ser_dat
     .DELAY_SRC             ( "IDATAIN"   ),  // Delay input (IDATAIN, DATAIN)
     .HIGH_PERFORMANCE_MODE ( "TRUE"      ),  // Reduced jitter ("TRUE"), Reduced power ("FALSE")
     .IDELAY_TYPE           ( "VAR_LOAD"  ),  // FIXED, VARIABLE, VAR_LOAD, VAR_LOAD_PIPE
-    .IDELAY_VALUE          ( 0           ),  // Input delay tap setting (0-31)
+    // Power-on tap value.  cfg_dly_i overrides it as soon as software pulses
+    // the load bit, but until then - and in every timing report, which only
+    // knows this attribute - the interface used tap 0, about 0.47 ns less
+    // delay than the value software actually programs.  Match the default of
+    // the delay register in red_pitaya_hk_ll.v (25'h6318c6, six taps on each
+    // of the five lanes) so the analysed sampling point is the operating one.
+    .IDELAY_VALUE          ( 6           ),  // Input delay tap setting (0-31)
     .PIPE_SEL              ( "FALSE"     ),  // Select pipelined mode, FALSE, TRUE
     .REFCLK_FREQUENCY      ( 200.0       ),  // IDELAYCTRL clock input frequency in MHz (190.0-210.0, 290.0-310.0).
     .SIGNAL_PATTERN        ( "DATA"      )   // DATA, CLOCK input signal
