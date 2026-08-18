@@ -34,6 +34,14 @@
  * 
  */
 
+`ifdef Z20_G2
+`define RP_ASG_TIMING_PIPELINE
+`endif
+`ifdef Z20_LL
+`define RP_ASG_TIMING_PIPELINE
+`define RP_ASG_TRIG_SELECT
+`endif
+
 module red_pitaya_asg_ch #(
    parameter RSZ = 14
 )(
@@ -225,7 +233,7 @@ reg  [  32-1: 0] set_step_lo      ;
 // them in registers avoids putting a negate/decrement in the sample path.
 reg  [  32-1: 0] set_step_lo_m1 ;
 reg  [  32-1: 0] set_step_lo_neg;
-`ifdef Z20_G2
+`ifdef RP_ASG_TIMING_PIPELINE
 reg  [RSZ+16-1:0] set_size;
 `endif
 
@@ -239,6 +247,31 @@ wire             do_read      ;
 wire             do_read_end  ;
 wire             buf_cycle    ;
 wire             dly_start    ;
+`ifdef RP_ASG_TRIG_SELECT
+// The wrap decision and the two values it can give to the signals derived from
+// it.  Assigned next to trig_now / dac_trig, used by the state machine below.
+wire             pnt_wrap     ;
+wire             cycle_end_0  ;
+wire             cycle_end_1  ;
+wire             dac_trig_0   ;
+wire             dac_trig_1   ;
+wire             dly_start_0  ;
+wire             dly_start_1  ;
+// Next state variants, one per value of the wrap decision.  `keep` holds them
+// apart, see the comment next to their assignments.
+(* keep = "true" *) wire [  32-1: 0] dly_cnt_nxt_0     ;
+(* keep = "true" *) wire [  32-1: 0] dly_cnt_nxt_1     ;
+(* keep = "true" *) wire             dly_started_nxt_0 ;
+(* keep = "true" *) wire             dly_started_nxt_1 ;
+(* keep = "true" *) wire [  16-1: 0] rep_cnt_nxt_0     ;
+(* keep = "true" *) wire [  16-1: 0] rep_cnt_nxt_1     ;
+(* keep = "true" *) wire [  16-1: 0] cyc_cnt_nxt_0     ;
+(* keep = "true" *) wire [  16-1: 0] cyc_cnt_nxt_1     ;
+(* keep = "true" *) wire             dac_do_nxt_0      ;
+(* keep = "true" *) wire             dac_do_nxt_1      ;
+(* keep = "true" *) wire             dac_rep_nxt_0     ;
+(* keep = "true" *) wire             dac_rep_nxt_1     ;
+`endif
 
 assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
 
@@ -310,12 +343,32 @@ always @(posedge dac_clk_i) begin
       set_step_lo  <= 32'h0 ;
       set_step_lo_m1  <= 32'hffff_ffff;
       set_step_lo_neg <= 32'h0;
-`ifdef Z20_G2
+`ifdef RP_ASG_TIMING_PIPELINE
       set_size     <= {(RSZ+16){1'b0}};
 `endif
    end
    else begin
       // Count the requested start-to-start burst period from the first output sample.
+`ifdef RP_ASG_TRIG_SELECT
+      // Both next state variants are built from registers only, the wrap
+      // decision selects between them.  See the comment at their definition.
+      if (set_rst_i) begin
+         dly_cnt <= 32'h0;
+         dly_started <= 1'b0;
+      end else begin
+         dly_cnt     <= pnt_wrap ? dly_cnt_nxt_1     : dly_cnt_nxt_0     ;
+         dly_started <= pnt_wrap ? dly_started_nxt_1 : dly_started_nxt_0 ;
+      end
+
+      // repetitions counter
+      rep_cnt <= pnt_wrap ? rep_cnt_nxt_1 : rep_cnt_nxt_0 ;
+
+      // count number of table read cycles
+      dac_trigr <= dac_trig; // ignore trigger when count
+      buf_cycle_q <= dac_do && ~dac_npnt_sub_neg;
+
+      cyc_cnt <= pnt_wrap ? cyc_cnt_nxt_1 : cyc_cnt_nxt_0 ;
+`else
       if (set_rst_i) begin
          dly_cnt <= 32'h0;
          dly_started <= 1'b0;
@@ -347,6 +400,7 @@ always @(posedge dac_clk_i) begin
          cyc_cnt <= set_ncyc_i ;
       else if (!dac_trigr && |cyc_cnt && buf_cycle)
          cyc_cnt <= cyc_cnt - 16'h1 ;
+`endif
 
       // trigger arrived
       case (trig_src_i & {3{!set_rst_i}})
@@ -361,11 +415,18 @@ always @(posedge dac_clk_i) begin
         set_step_lo <= set_step_lo_i;
         set_step_lo_m1  <= set_step_lo_i - 32'h1;
         set_step_lo_neg <= -set_step_lo_i;
-`ifdef Z20_G2
+`ifdef RP_ASG_TIMING_PIPELINE
         set_size <= set_size_i;
 `endif
       end
 
+`ifdef RP_ASG_TRIG_SELECT
+      // in cycle mode
+      dac_do  <= pnt_wrap ? dac_do_nxt_1  : dac_do_nxt_0  ;
+
+      // in repetition mode
+      dac_rep <= pnt_wrap ? dac_rep_nxt_1 : dac_rep_nxt_0 ;
+`else
       // in cycle mode
       if (dac_trig && !set_rst_i && !set_axi_en_i)
          dac_do <= 1'b1 ;
@@ -377,6 +438,7 @@ always @(posedge dac_clk_i) begin
          dac_rep <= 1'b1 ;
       else if (set_rst_i || (rep_cnt==16'h0))
          dac_rep <= 1'b0 ;
+`endif
    end
 end
 
@@ -403,6 +465,78 @@ wire trig_on_wrap = rep_arm && (cyc_cnt == 16'h1);
 wire dac_trig_axi  = trig_now || (trig_on_wrap && cycle_end_pre);
 
 assign dac_trig = trig_now || (trig_on_wrap && cycle_end);
+
+`ifdef RP_ASG_TRIG_SELECT
+////////////////////////////////////////////////////////////////////////////////
+// State machine, carry select on the wrap decision.
+//
+// dac_npnt_sub_neg ends the 62 bit pointer comparison and is the last signal to
+// settle in this module.  Through cycle_end and dac_trig it reached the delay,
+// the repetition and the cycle counter over two logic levels: one for dac_trig
+// itself, a net with more than thirty loads, and a second one for every
+// counter's own load / decrement multiplexer.
+//
+// Everything in those multiplexers except the wrap test is a function of
+// registers only, so both next state variants are computed in advance and the
+// wrap decision selects between them - the same rewrite as for the pointer
+// arithmetic below.  Each variant is the original expression with the wrap bit
+// substituted by a constant, so the selected value is bit identical and every
+// register still changes in exactly the same clock cycle.
+//
+// `keep` holds the variants apart; without it they are folded back into one
+// cone with dac_trig in front of it and the transformation is undone.
+////////////////////////////////////////////////////////////////////////////////
+
+assign pnt_wrap    = ~dac_npnt_sub_neg;
+assign cycle_end_0 = set_axi_en_i ? axi_last  : 1'b0;
+assign cycle_end_1 = set_axi_en_i ? axi_last  : 1'b1;
+assign dac_trig_0  = trig_now || (trig_on_wrap && cycle_end_0);
+assign dac_trig_1  = trig_now || (trig_on_wrap && cycle_end_1);
+assign dly_start_0 = set_axi_en_i ? axi_first : dac_trig_0;
+assign dly_start_1 = set_axi_en_i ? axi_first : dac_trig_1;
+
+// Terms shared by both variants: everything that does not depend on the wrap
+// decision, i.e. only registers and configuration.
+wire             dly_dec   = dac_rep && dly_started && |dly_cnt;
+wire [  32-1: 0] dly_hold  = dly_dec ? dly_cnt - 32'h1 : dly_cnt;
+wire             rep_ld    = trig_in && !do_read;
+wire             rep_dec   = !set_rgate_i && |rep_cnt && dac_rep && !dac_trigr
+                             && (set_rnum_i != 16'hffff); // 16'hffff is infinite pulses
+wire             rep_clr   = set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2)
+                                          || ( trig_ext_i && trig_src_i==3'd3));
+wire             cyc_dec   = !dac_trigr && |cyc_cnt && buf_cycle;
+wire             do_clr    = set_rst_i;                  // wrap term added per variant
+wire             rep_end_c = set_rst_i || (rep_cnt==16'h0);
+
+// The two next state variants.  Each pair differs only in which value of the
+// wrap decision was substituted, so the selected result is the original
+// expression.
+assign dly_cnt_nxt_0     = dly_start_0 ? set_rdly_m1 : dly_hold;
+assign dly_cnt_nxt_1     = dly_start_1 ? set_rdly_m1 : dly_hold;
+
+assign dly_started_nxt_0 = dly_start_0 ? 1'b1 : (dac_trig_0 ? 1'b0 : dly_started);
+assign dly_started_nxt_1 = dly_start_1 ? 1'b1 : (dac_trig_1 ? 1'b0 : dly_started);
+
+assign rep_cnt_nxt_0     = rep_ld                 ? set_rnum_i      :
+                           (rep_dec && dac_trig_0) ? rep_cnt - 16'h1 :
+                           rep_clr                ? 16'h0           : rep_cnt;
+assign rep_cnt_nxt_1     = rep_ld                 ? set_rnum_i      :
+                           (rep_dec && dac_trig_1) ? rep_cnt - 16'h1 :
+                           rep_clr                ? 16'h0           : rep_cnt;
+
+assign cyc_cnt_nxt_0     = dac_trig_0 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
+assign cyc_cnt_nxt_1     = dac_trig_1 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
+
+// dac_do is cleared by the end of the last cycle, which is the wrap decision
+// itself: 1'b0 in variant 0, 1'b1 in variant 1.
+assign dac_do_nxt_0      = (dac_trig_0 && !set_rst_i && !set_axi_en_i) ? 1'b1 :
+                           do_clr                                     ? 1'b0 : dac_do;
+assign dac_do_nxt_1      = (dac_trig_1 && !set_rst_i && !set_axi_en_i) ? 1'b1 :
+                           (do_clr || (cyc_cnt==16'h1))               ? 1'b0 : dac_do;
+
+assign dac_rep_nxt_0     = (dac_trig_0 && !set_rst_i) ? 1'b1 : (rep_end_c ? 1'b0 : dac_rep);
+assign dac_rep_nxt_1     = (dac_trig_1 && !set_rst_i) ? 1'b1 : (rep_end_c ? 1'b0 : dac_rep);
+`endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Read pointer arithmetic, carry select across the fixed point boundary.
@@ -477,7 +611,7 @@ wire [INT_LO-1:0] pnt_i_l = pnt_hi     [INT_LO-1:0];
 wire [INT_HI-1:0] pnt_i_h = pnt_hi     [PNT_HI-1:INT_LO];
 wire [INT_LO-1:0] stp_i_l = stp_hi     [INT_LO-1:0];
 wire [INT_HI-1:0] stp_i_h = stp_hi     [PNT_HI-1:INT_LO];
-`ifdef Z20_G2
+`ifdef RP_ASG_TIMING_PIPELINE
 wire [INT_LO-1:0] siz_i_l = set_size [INT_LO-1:0];
 wire [INT_HI-1:0] siz_i_h = set_size [PNT_HI-1:INT_LO];
 `else
@@ -517,7 +651,7 @@ always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) begin
    dac_pnt  <= {PNT_SIZE{1'b0}};
 end else begin
-`ifdef Z20_G2
+`ifdef RP_ASG_TIMING_PIPELINE
    // A trigger generated by the current wrap is only an FSM event: while
    // dac_do is active the pointer already performs that wrap below.  Feeding
    // it back into the start branch is redundant, but makes the wide boundary
@@ -613,3 +747,10 @@ rp_asg_axi #(
 );
 
 endmodule
+
+`ifdef RP_ASG_TIMING_PIPELINE
+`undef RP_ASG_TIMING_PIPELINE
+`endif
+`ifdef RP_ASG_TRIG_SELECT
+`undef RP_ASG_TRIG_SELECT
+`endif
