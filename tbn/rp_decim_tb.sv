@@ -258,6 +258,89 @@ begin
 end
 endtask
 
+// Change the complete decimator setting together with ARM, as rp_scope_com
+// does at its registered configuration boundary.  This specifically checks
+// that the first completed window after ARM contains only samples acquired
+// with the new setting.
+task automatic run_rearm_case(
+  input string name,
+  input int unsigned dec,
+  input bit avg_en,
+  input bit hres_en
+);
+  int signed sum;
+  int signed expected;
+  int signed got;
+  int unsigned i;
+  int unsigned valid_count;
+  int unsigned errors_before;
+begin
+  $display("CASE START: %s", name);
+  errors_before = errors;
+  reset_dut(8, 1'b0, 1'b0);
+
+  // Move the old decimator away from its reset state before applying the new
+  // package.  If old and new settings are mixed, this makes the error visible.
+  for (i = 0; i < 5; i++) begin
+    @(negedge adc_clk_i);
+    dec_dat_i <= sample_bits(80 + i);
+  end
+
+  sum = 0;
+  @(negedge adc_clk_i);
+  set_dec_i     <= dec[16:0];
+  set_avg_en_i  <= avg_en;
+  set_hres_en_i <= hres_en;
+  adc_arm_do_i  <= 1'b1;
+  dec_dat_i     <= sample_bits(0);
+  sum += apply_hres_scale(sample_pattern(0), hres_en);
+  @(posedge adc_clk_i);
+  #1ps;
+
+  @(negedge adc_clk_i);
+  adc_arm_do_i <= 1'b0;
+
+  valid_count = 0;
+  got = 0;
+  for (i = 1; i <= dec; i++) begin
+    dec_dat_i <= sample_bits(i);
+    @(posedge adc_clk_i);
+    #1ps;
+    if (i < dec)
+      sum += apply_hres_scale(sample_pattern(i), hres_en);
+    if (dec_val_o) begin
+      valid_count++;
+      got = to_sint_dw(dec_dat_o);
+    end
+    if (i != dec)
+      @(negedge adc_clk_i);
+  end
+
+  if (avg_en) begin
+    case (dec)
+      1:       expected = apply_hres_scale(sample_pattern(0), hres_en);
+      2, 4, 8: expected = trunc_dw(sum >>> log2_pow2(dec));
+      default: expected = apply_hres_scale(sample_pattern(dec), hres_en);
+    endcase
+  end else begin
+    expected = apply_hres_scale(sample_pattern(dec), hres_en);
+  end
+
+  if (valid_count != 1) begin
+    $display("  ERROR: expected one valid after ARM, got %0d", valid_count);
+    errors++;
+  end else if (got !== expected) begin
+    $display("  ERROR: first post-ARM sample exp=%0d got=%0d", expected, got);
+    errors++;
+  end
+
+  if (errors == errors_before)
+    $display("CASE PASS: %s", name);
+  else
+    $display("CASE DONE WITH ERRORS: %s", name);
+end
+endtask
+
 //------------------------------------------------------------------------------
 // test sequence
 //------------------------------------------------------------------------------
@@ -285,6 +368,9 @@ initial begin
   run_case("hres_on_avg_on_dec8",       8, 1'b1, 1'b1, 128);
   run_case("hres_on_avg_on_dec3_fallback", 3, 1'b1, 1'b1, 128);
   run_case("hres_on_avg_on_dec64_divider", 64, 1'b1, 1'b1, 512);
+
+  run_rearm_case("atomic_rearm_dec4_avg_hres", 4, 1'b1, 1'b1);
+  run_rearm_case("atomic_rearm_dec3_passthrough", 3, 1'b0, 1'b0);
 
   if (errors == 0)  $display("SUCCESS: rp_decim_tb");
   else              $display("FAILURE: rp_decim_tb errors=%0d", errors);
