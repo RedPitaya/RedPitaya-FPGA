@@ -444,6 +444,7 @@ end
         .frstn_1(frstn[1]),
         .frstn_2(frstn[2]),
         .frstn_3(frstn[3]),
+        .trig_in(trig_i),
         .adc_clk(adc_clk_in),
         .adc_data_ch1(adc_dat_sw[0]),
         .adc_data_ch2(adc_dat_sw[1]),

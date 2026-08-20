@@ -2,3 +2,4 @@ build
 *.log
 *.jou
 synReport.txt*
+tmp

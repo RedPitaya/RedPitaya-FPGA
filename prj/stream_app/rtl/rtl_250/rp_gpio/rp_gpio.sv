@@ -40,6 +40,7 @@ module rp_gpio #(
   input  wire [EVENT_SRC_NUM-1:0]               event_ip_start,
   input  wire [EVENT_SRC_NUM-1:0]               event_ip_reset,
   input  wire [TRIG_SRC_NUM-1:0]                trig_ip,
+  input  wire                                   ext_trig_i,
   //
   output reg [3:0]                              la_event_op,    
   output wire                                   la_trig_op,    
@@ -260,7 +261,7 @@ assign gpion_o = gpio_outdat[ 7:0] ;
 
 assign dirp = dir_p;
 assign dirn = dir_n;
-wire ext_trig_raw = gpiop_i[0];
+wire ext_trig_raw = ext_trig_i | gpiop_i[0];
 
 `else
 IOBUF iobuf_gpio_p [8-1:0] (.O (gpio_p_i), .IO(exp_p_io), .I(gpio_p_o), .T(dir_p));
@@ -271,7 +272,7 @@ assign sti.TDATA[1] = gpio_n_i ;
 
 assign gpio_p_o = sto.TDATA[0][15:8] ;
 assign gpio_n_o = sto.TDATA[0][ 7:0] ;
-wire ext_trig_raw = gpio_p_i[0];
+wire ext_trig_raw = ext_trig_i | gpio_p_i[0];
 
 `endif
 

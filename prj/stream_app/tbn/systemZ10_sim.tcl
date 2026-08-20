@@ -463,14 +463,14 @@ set_property -dict [list CONFIG.CLK_DOMAIN {clk_gen_clk_out1} CONFIG.FREQ_HZ {25
   connect_bd_net -net rp_concat_0_event_start [get_bd_pins rp_concat/event_start] [get_bd_pins rp_dac/event_ip_start] [get_bd_pins rp_gpio/event_ip_start] [get_bd_pins rp_oscilloscope/event_ip_start]
   connect_bd_net -net rp_concat_0_event_stop [get_bd_pins rp_concat/event_stop] [get_bd_pins rp_dac/event_ip_stop] [get_bd_pins rp_gpio/event_ip_stop] [get_bd_pins rp_oscilloscope/event_ip_stop]
   connect_bd_net -net rp_concat_event_trig [get_bd_pins rp_concat/event_trig] [get_bd_pins rp_dac/event_ip_trig] [get_bd_pins rp_gpio/event_ip_trig] [get_bd_pins rp_oscilloscope/event_ip_trig]
-  connect_bd_net -net rp_concat_ext_trig_ip [get_bd_ports trig_in] [get_bd_pins rp_concat/ext_trig_ip]
+  connect_bd_net -net rp_ext_trig_raw [get_bd_ports trig_in] [get_bd_pins rp_gpio/ext_trig_i]
   connect_bd_net -net rp_concat_trig [get_bd_pins rp_concat/trig] [get_bd_pins rp_dac/trig_ip] [get_bd_pins rp_gpio/trig_ip] [get_bd_pins rp_oscilloscope/trig_ip]
   connect_bd_net -net rp_dac_dac1_event_op [get_bd_pins rp_concat/gen1_event_ip] [get_bd_pins rp_dac/dac1_event_op]
   connect_bd_net -net rp_dac_dac1_trig_op [get_bd_pins rp_concat/gen1_trig_ip] [get_bd_pins rp_dac/dac1_trig_op]
   connect_bd_net -net rp_dac_dac2_event_op [get_bd_pins rp_concat/gen2_event_ip] [get_bd_pins rp_dac/dac2_event_op]
   connect_bd_net -net rp_dac_dac2_trig_op [get_bd_pins rp_concat/gen2_trig_ip] [get_bd_pins rp_dac/dac2_trig_op]
   connect_bd_net -net rp_dac_intr [get_bd_pins intr_concat/In14] [get_bd_pins rp_dac/intr]
-  connect_bd_net -net rp_gpio_gpio_trig_o [get_bd_ports gpio_trig] [get_bd_pins rp_gpio/gpio_trig_o]
+  connect_bd_net -net rp_gpio_gpio_trig_o [get_bd_ports gpio_trig] [get_bd_pins rp_gpio/gpio_trig_o] [get_bd_pins rp_concat/ext_trig_ip]
   connect_bd_net -net rp_gpio_intr [get_bd_pins intr_concat/In13] [get_bd_pins rp_gpio/intr]
   connect_bd_net -net rp_gpio_la_event_op [get_bd_pins rp_concat/la_event_ip] [get_bd_pins rp_gpio/la_event_op]
   connect_bd_net -net rp_gpio_la_trig_op [get_bd_pins rp_concat/la_trig_ip] [get_bd_pins rp_gpio/la_trig_op]
@@ -523,5 +523,4 @@ set_property -dict [list CONFIG.CLK_DOMAIN {clk_gen_clk_out1} CONFIG.FREQ_HZ {25
 common::send_gid_msg -ssname BD::TCL -id 2052 -severity "CRITICAL WARNING" "This Tcl script was generated from a block design that is out-of-date/locked. It is possible that design <$design_name> may result in errors during construction."
 
 create_root_design ""
-
 

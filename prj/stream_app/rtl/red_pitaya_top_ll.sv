@@ -363,7 +363,7 @@ assign pll_lo_o  = 1'b1;
         .FCLK_RESET1_N     (frstn[1]     ),
         .FCLK_RESET2_N     (frstn[2]     ),
         .FCLK_RESET3_N     (frstn[3]     ),
-        .trig_in(external_trig),
+        .trig_in(trig_ext),
         .gpio_trig(gpio_trig),
         .trig_out(trig_out),
         .clksel(clksel),
@@ -415,6 +415,5 @@ IBUFDS #(.IOSTANDARD ("DIFF_HSTL18_I")) i_IBUFDS_trig
 );
 
 
-assign external_trig = trig_ext | gpio_trig;
 
 endmodule
