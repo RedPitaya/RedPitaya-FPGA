@@ -62,6 +62,8 @@ module dac_cfg
    input  wire [               4-1:0]  cfg_event_sts_i         ,
    output wire [               3-1:0]  cfg_event_sel_o         ,
    output wire [    TRIG_SRC_NUM-1:0]  cfg_trig_mask_o         ,
+   output wire [                1:0]  cfg_trigger_mode_o      ,
+   input  wire [                1:0]  sts_armed_i             ,
    output reg                          clksel_o                ,
    input  wire                         daisy_slave_i           ,
 
@@ -172,6 +174,7 @@ localparam LOOPBACK_EN          = 12'h5C;
 
 localparam OUT_SHIFT_CH1        = 12'h60;
 localparam OUT_SHIFT_CH2        = 12'h64;
+localparam TRIG_MODE_ADDR       = 12'h68; // Per-channel trigger mode control and armed status address
 
 localparam DIAG_REG_ADDR1       = 12'h70;
 localparam DIAG_REG_ADDR2       = 12'h74;
@@ -203,6 +206,7 @@ reg [16-1:0]                    cfg_chb_setdec;
 
 reg [EVENT_SRC_NUM-1:0]         cfg_event_sel;
 reg [TRIG_SRC_NUM -1:0]         cfg_trig_mask;
+reg [                1:0]       cfg_trigger_mode;
 
 reg [ 8-1:0]                    cfg_ctrl_reg_cha;
 reg [ 8-1:0]                    cfg_ctrl_reg_chb;
@@ -334,6 +338,7 @@ begin
       event_op_reg        <=  'h0;
       cfg_event_sel       <=  'h0;
       cfg_trig_mask       <=  'h0;
+      cfg_trigger_mode    <= 2'h0;
 
       cfg_cha_setdec      <= 16'h1;
       cfg_chb_setdec      <= 16'h1;
@@ -357,6 +362,7 @@ begin
 
       if ((reg_ofs_adc[12-1:0] == OUT_SHIFT_CH1     ) && reg_write_adc)       cfg_cha_outshift   <= reg_wdat_adc[4:0];
       if ((reg_ofs_adc[12-1:0] == OUT_SHIFT_CH2     ) && reg_write_adc)       cfg_chb_outshift   <= reg_wdat_adc[4:0];
+      if ((reg_ofs_adc[12-1:0] == TRIG_MODE_ADDR    ) && reg_write_adc)       cfg_trigger_mode   <= reg_wdat_adc[1:0];
 
       if ((reg_ofs_adc[12-1:0] == SETDEC_CHA        ) && reg_write_adc)       cfg_cha_setdec     <= reg_wdat_adc[15:0];
       if ((reg_ofs_adc[12-1:0] == SETDEC_CHB        ) && reg_write_adc)       cfg_chb_setdec     <= reg_wdat_adc[15:0];
@@ -389,6 +395,7 @@ begin
       ERRS_CNT_CHB:          begin reg_ack_adc = 1'b1;       reg_rdat_adc = errs_cnt_chb_i;                                end
       OUT_SHIFT_CH1:         begin reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-5{1'b0}}, cfg_cha_outshift};              end
       OUT_SHIFT_CH2:         begin reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-5{1'b0}}, cfg_chb_outshift};              end
+      TRIG_MODE_ADDR:        begin reg_ack_adc = 1'b1;       reg_rdat_adc = {{22{1'b0}}, sts_armed_i, {6{1'b0}}, cfg_trigger_mode}; end
 
       DAC_CHA_CNT_STEP:      begin reg_ack_adc = 1'b1;       reg_rdat_adc = cfg_cha_step;                                  end
       DAC_CHB_CNT_STEP:      begin reg_ack_adc = 1'b1;       reg_rdat_adc = cfg_chb_step;                                  end
@@ -463,6 +470,7 @@ assign cfg_event_op_start_o   = event_op_reg[1] | event_op_reg_r[1];
 assign cfg_event_op_reset_o   = event_op_reg[0] | event_op_reg_r[0];
 assign cfg_event_sel_o        = cfg_event_sel;
 assign cfg_trig_mask_o        = cfg_trig_mask;
+assign cfg_trigger_mode_o     = cfg_trigger_mode;
 assign dac_cha_conf_o         = dac_cha_conf;
 assign dac_chb_conf_o         = dac_chb_conf;
 
