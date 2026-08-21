@@ -16,6 +16,10 @@ module rp_dma_mm2s_downsize
   input      [ AXI_ADDR_BITS-1:0] dac_pntr_step,
   input                           set_8bit_i,
 
+  input                           trigger_mode_i,
+  input                           trigger_pulse_i,
+  output reg                      armed_o,
+
   output reg [AXIS_DATA_BITS-1:0] m_axis_tdata,
   output reg                      m_axis_tvalid
 );
@@ -40,19 +44,24 @@ wire bit16_rd = dac_rp_next_next[NUM_SAMPS_BITS+0+16] ^ dac_rp_next[NUM_SAMPS_BI
 wire rp_rd_en = set_8bit_i ? bit8_rd : bit16_rd;
 reg  rp_rd_en_r;
 
-assign fifo_rd_re = rp_rd_en && ~(state_cs == EMPTY_L || state_ns == EMPTY_L); // state_cs == REQ_READ || state_cs == INIT_RD;
-
+// State codes must stay ordered: playback states are detected by magnitude
+// comparisons (state_cs > INIT_RD, state_cs > EMPTY_W) further below.
 localparam RESET     = 0; // reset state
 localparam INIT_FULL = 1; // initial full state
-localparam INIT_RD   = 2; // initial full state
-localparam EMPTY_W   = 3; // waiting for fifo to empty
-localparam REQ_READ  = 4; // request FIFO read
-localparam REDUCE    = 5; // reduce 64 bit read to separate samples
-localparam EMPTY_L   = 6; // read out the last sample in the sample buffer
-localparam EMPTY_REC = 7; // recover from empty state
+localparam WAIT_TRIG = 2; // armed, waiting for the playback trigger
+localparam INIT_RD   = 3; // initial full state
+localparam EMPTY_W   = 4; // waiting for fifo to empty
+localparam REQ_READ  = 5; // request FIFO read
+localparam REDUCE    = 6; // reduce 64 bit read to separate samples
+localparam EMPTY_L   = 7; // read out the last sample in the sample buffer
+localparam EMPTY_REC = 8; // recover from empty state
 
 reg  [ 4-1:0]   state_cs; // Current state
 reg  [ 4-1:0]   state_ns; // Next state  
+
+// no reads before the playback starts: the wait state can last indefinitely
+assign fifo_rd_re = rp_rd_en && (!trigger_mode_i || state_cs >= INIT_RD) &&
+                    ~(state_cs == EMPTY_L || state_ns == EMPTY_L);
 
 `ifdef SIMULATION
 reg  [199:0] state_ascii; // ASCII state
@@ -61,6 +70,7 @@ begin
   case (state_cs)
     RESET:      state_ascii = "RESET";
     INIT_FULL:  state_ascii = "INIT_FULL";
+    WAIT_TRIG:  state_ascii = "WAIT_TRIG";
     INIT_RD:    state_ascii = "INIT_RD";
     EMPTY_W:    state_ascii = "EMPTY_W";            
     REQ_READ:   state_ascii = "REQ_READ";       
@@ -71,12 +81,23 @@ begin
 end
 `endif
 
+reg  trigger_pulse_r;
+// Only a rising edge seen while armed starts the playback: a trigger that
+// arrives before the module is armed is dropped, not latched, and further
+// pulses have no effect once the playback has started.
+wire trig_accept = trigger_mode_i && (state_cs == WAIT_TRIG) &&
+                   trigger_pulse_i && ~trigger_pulse_r;
+
 always @(posedge clk)
 begin
   if (rst == 0) begin
-    state_cs <= RESET;
+    state_cs        <= RESET;
+    trigger_pulse_r <= 1'b0;
+    armed_o         <= 1'b0;
   end else begin
-    state_cs <= state_ns;
+    state_cs        <= state_ns;
+    trigger_pulse_r <= trigger_pulse_i;
+    armed_o         <= trigger_mode_i && (state_ns == WAIT_TRIG);
   end
 end
 
@@ -94,6 +115,11 @@ begin
     
     INIT_FULL: begin
       if (fifo_full)
+        state_ns = trigger_mode_i ? WAIT_TRIG : INIT_RD;
+    end
+
+    WAIT_TRIG: begin
+      if (trig_accept || ~trigger_mode_i)
         state_ns = INIT_RD;
     end
 
@@ -149,7 +175,7 @@ always @(posedge clk)
 begin
   if (rst == 0) begin
     dac_rp_curr <= 'h0;
-  end else begin 
+  end else begin
     if (state_cs > EMPTY_W) // wait for the FIFO to be full before starting to read, stop if empty
       dac_rp_curr <= dac_rp_curr+step_sh_next;
   end
@@ -181,6 +207,7 @@ always @(posedge clk)
 begin
   if (rst == 0) begin
     m_axis_tvalid <= 'h0;
+    m_axis_tdata  <= 'h0;
   end else begin 
     m_axis_tvalid <= state_cs > INIT_RD ;
 
