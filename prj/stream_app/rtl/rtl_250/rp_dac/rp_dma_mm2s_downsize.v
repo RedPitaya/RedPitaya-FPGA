@@ -60,7 +60,8 @@ reg  [ 4-1:0]   state_cs; // Current state
 reg  [ 4-1:0]   state_ns; // Next state  
 
 // no reads before the playback starts: the wait state can last indefinitely
-assign fifo_rd_re = rp_rd_en && (!trigger_mode_i || state_cs >= INIT_RD) &&
+wire playback_enabled = !trigger_mode_i || (state_cs >= INIT_RD);
+assign fifo_rd_re = rp_rd_en && playback_enabled &&
                     ~(state_cs == EMPTY_L || state_ns == EMPTY_L);
 
 `ifdef SIMULATION
@@ -81,23 +82,23 @@ begin
 end
 `endif
 
-reg  trigger_pulse_r;
+reg  trigger_pulse_d1;
 // Only a rising edge seen while armed starts the playback: a trigger that
 // arrives before the module is armed is dropped, not latched, and further
 // pulses have no effect once the playback has started.
 wire trig_accept = trigger_mode_i && (state_cs == WAIT_TRIG) &&
-                   trigger_pulse_i && ~trigger_pulse_r;
+                   trigger_pulse_i && ~trigger_pulse_d1;
 
 always @(posedge clk)
 begin
   if (rst == 0) begin
-    state_cs        <= RESET;
-    trigger_pulse_r <= 1'b0;
-    armed_o         <= 1'b0;
+    state_cs         <= RESET;
+    trigger_pulse_d1 <= 1'b0;
+    armed_o          <= 1'b0;
   end else begin
-    state_cs        <= state_ns;
-    trigger_pulse_r <= trigger_pulse_i;
-    armed_o         <= trigger_mode_i && (state_ns == WAIT_TRIG);
+    state_cs         <= state_ns;
+    trigger_pulse_d1 <= trigger_pulse_i;
+    armed_o          <= trigger_mode_i && (state_ns == WAIT_TRIG);
   end
 end
 

@@ -112,7 +112,7 @@ wire [DAC_DATA_BITS-1:0]    dac_calibrated;
 wire set_zero = dac_conf[OUT_ZERO];
 wire set_8bit = dac_conf[BIT_MODE];
 reg  hw_trigger_adc;
-wire playback_trigger = event_num_trig | hw_trigger_adc;
+wire playback_trigger_adc = event_num_trig | hw_trigger_adc;
 
 assign dac_data_o      = loopback_en ? dac_data_raw : dac_calibrated;
 assign dac_data_shiftr = dac_data_raw >>> dac_outshift;
@@ -160,7 +160,7 @@ rp_dma_mm2s #(
   .diag_reg2        (diag_reg2),
   .set_8bit_i       (set_8bit),
   .trigger_mode_i   (trigger_mode_i),
-  .trigger_pulse_i  (playback_trigger),
+  .trigger_pulse_i  (playback_trigger_adc),
   .armed_o          (armed_o),
 
   .m_axi_arid_o     (m_axi_dac_arid_o), 
@@ -216,6 +216,7 @@ end
 reg event_trig_r, event_trig_r2;
 reg hw_trigger_axi_r, hw_trigger_axi_r2;
 reg trigger_mode_axi_r, trigger_mode_axi_r2;
+// Synchronize trigger state into clk_axi for legacy DMA buffer switching only.
 always @(posedge clk_axi)
 begin
   if (!axi_rstn) begin
