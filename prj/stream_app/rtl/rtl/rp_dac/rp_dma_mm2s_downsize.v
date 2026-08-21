@@ -28,9 +28,9 @@ localparam NUM_SAMPS      = AXI_DATA_BITS/8;   // how many samples in one read f
 localparam NUM_SAMPS_BITS = $clog2(NUM_SAMPS); // how many bits is the above number
 localparam ADDR_DECS      = AXI_ADDR_BITS+16;  // to be able to get a finer pointer step
 
-// Keep the FSM playback condition on the flip-flop CE input instead of
-// folding it into the 200 MHz pointer adder data path.
-(* EXTRACT_ENABLE = "yes" *) reg [ADDR_DECS-1:0] dac_rp_curr;
+// Map the 48-bit phase accumulation into DSP48E1 arithmetic to shorten the
+// 200 MHz fabric path between the playback FSM and the pointer register.
+(* use_dsp = "yes" *) reg [ADDR_DECS-1:0] dac_rp_curr;
 wire [ADDR_DECS-1:0]      step_sh_next;
 wire [ADDR_DECS-1:0]      step_sh_next_next;
 
