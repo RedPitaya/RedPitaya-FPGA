@@ -2137,6 +2137,10 @@
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
+        <spirit:name>../../../../../rtl/rtl/debounce.sv</spirit:name>
+        <spirit:fileType>systemVerilogSource</spirit:fileType>
+      </spirit:file>
+      <spirit:file>
         <spirit:name>../../../../../rtl/rtl/axi4_stream_reg.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
@@ -2274,6 +2278,10 @@
       </spirit:file>
       <spirit:file>
         <spirit:name>rp_gpio.sv</spirit:name>
+        <spirit:fileType>systemVerilogSource</spirit:fileType>
+      </spirit:file>
+      <spirit:file>
+        <spirit:name>../../../../../rtl/rtl/debounce.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>

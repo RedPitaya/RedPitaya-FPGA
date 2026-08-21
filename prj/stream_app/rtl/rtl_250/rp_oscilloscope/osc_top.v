@@ -36,6 +36,8 @@ module osc_top
   input  wire [S_AXIS_DATA_BITS-1:0]      cfg_trig_low_level_i    ,
   input  wire [S_AXIS_DATA_BITS-1:0]      cfg_trig_high_level_i   ,
   input  wire                             cfg_trig_edge_i         ,
+  input  wire                             cfg_trigger_mode_i      ,
+  output wire                             sts_armed_o             ,
 
   input  wire [    DEC_CNT_BITS-1:0]      cfg_dec_factor_i        ,
   input  wire [  DEC_SHIFT_BITS-1:0]      cfg_dec_rshift_i        ,
@@ -119,6 +121,7 @@ wire                        event_sts_stop;
 wire                        event_sts_start;
 wire                        event_sts_reset;
 wire                        ctl_trg;
+wire                        accepted_trigger;
 
 wire [31:0]                 cfg_dma_diags;
 
@@ -379,8 +382,9 @@ osc_acquire #(
   .m_axis_tlast           (acq_tlast),  
   .ctl_start              (event_num_start), 
   .ctl_rst                (event_num_reset),   
-  .ctl_stop               (event_num_stop),   
-  .ctl_trig               (ctl_trg),   
+  .ctl_stop               (event_num_stop),
+  .ctl_trig               (ctl_trg),
+  .cfg_trigger_mode       (cfg_trigger_mode_i),
   .cfg_mode               (dma_mode),
   .cfg_trig_pre_samp      (cfg_trig_pre_samp_i),  
   .cfg_trig_post_samp     (cfg_trig_post_samp_i),   
@@ -390,7 +394,9 @@ osc_acquire #(
   .sts_trig_pre_cnt       (sts_trig_pre_cnt_o),
   .sts_trig_pre_overflow  (sts_trig_pre_overflow_o),  
   .sts_trig_post_cnt      (sts_trig_post_cnt_o),
-  .sts_trig_post_overflow (sts_trig_post_overflow_o));    
+  .sts_trig_post_overflow (sts_trig_post_overflow_o),
+  .sts_armed              (sts_armed_o),
+  .accepted_trigger       (accepted_trigger));
   
 ////////////////////////////////////////////////////////////
 // Name : DMA S2MM
@@ -468,5 +474,5 @@ assign ctl_rst = event_num_reset;
 assign event_sts_reset = 0;
 
 assign ctl_trg = event_num_trig | |(trig_ip & trig_mask_i);
-assign trig_o  = ctl_start_o;
+assign trig_o  = cfg_trigger_mode_i ? accepted_trigger : ctl_start_o;
 endmodule

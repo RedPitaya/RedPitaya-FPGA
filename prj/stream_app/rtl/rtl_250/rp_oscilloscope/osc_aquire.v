@@ -17,8 +17,9 @@ module osc_acquire
   // Control
   input  wire                       ctl_start, 
   input  wire                       ctl_rst,
-  input  wire                       ctl_stop, 
+  input  wire                       ctl_stop,
   input  wire                       ctl_trig,
+  input  wire                       cfg_trigger_mode,
   // Config
   input  wire                       cfg_mode, 
   input  wire [CNT_BITS-1:0]        cfg_trig_pre_samp, 
@@ -30,7 +31,9 @@ module osc_acquire
   output reg  [CNT_BITS-1:0]        sts_trig_pre_cnt,
   output reg                        sts_trig_pre_overflow,  
   output reg  [CNT_BITS-1:0]        sts_trig_post_cnt,
-  output reg                        sts_trig_post_overflow         
+  output reg                        sts_trig_post_overflow,
+  output wire                       sts_armed,
+  output wire                       accepted_trigger
 );
 
 ////////////////////////////////////////////////////////////
@@ -59,6 +62,11 @@ reg           sts_last;
 
 assign s_axis_tready  = 1;
 assign sts_stop       = ~sts_start;
+assign sts_armed      = cfg_trigger_mode &&
+                        (cfg_mode == STREAM_MODE) &&
+                        (state_cs == PRE_SAMP_WAIT_TRIG) &&
+                        !ctl_stop;
+assign accepted_trigger = sts_armed && ctl_trig;
 
 ////////////////////////////////////////////////////////////
 // Name : State machine seq logic
@@ -109,8 +117,7 @@ begin
     IDLE: begin
       if (ctl_start == 1) begin
         if (cfg_mode == STREAM_MODE) begin
-          //state_ns = STRM_SAMP;  
-          state_ns = PRE_SAMP_WAIT_TRIG;  
+          state_ns = cfg_trigger_mode ? PRE_SAMP_WAIT_TRIG : STRM_SAMP;
         end else begin     
           // Check if the pre buffer is enabled
           if (cfg_trig_pre_samp != 0) begin
@@ -199,10 +206,12 @@ begin
       // Start acquire if the pre buffer is enabled,
       // there is no pre buffer and a trigger has been detected or
       // streaming mode
-      if (((ctl_start == 1) && (cfg_trig_pre_samp != 0)) ||
+      if (((ctl_start == 1) && (cfg_mode == NORM_MODE) &&
+           (cfg_trig_pre_samp != 0)) ||
           ((state_cs == POST_SAMP_WAIT_TRIG) && (ctl_trig == 1)) ||
-          ((ctl_start == 1) && (cfg_mode == STREAM_MODE))) begin
-        sts_acquire <= 1; 
+          ((ctl_start == 1) && (cfg_mode == STREAM_MODE) && !cfg_trigger_mode) ||
+          accepted_trigger) begin
+        sts_acquire <= 1;
       end    
     end
   end
