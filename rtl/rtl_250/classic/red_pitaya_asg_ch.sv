@@ -120,7 +120,6 @@ reg                    dac_scale_bypass;
 
 reg   [ RSZ-1: 0] dac_rp    ;
 reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
-reg   [PNT_SIZE-1: 0] dac_pntp  ; // previous read pointer
 wire  [PNT_SIZE-1: 0] axi_pnt   ; // read pointer AXI
 wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
@@ -214,6 +213,9 @@ wire             ext_trig_n   ;
 
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
+// Precompute the configuration-only decrement so it is not placed behind the
+// late wrap/trigger decision in the delay counter load path.
+reg  [  32-1: 0] set_rdly_m1  ;
 // Set after the first real output sample so AXI preload time is not counted
 // as part of the requested start-to-start burst period.
 reg              dly_started  ;
@@ -221,23 +223,51 @@ reg              init_run     ;
 
 reg  [  32-1: 0] set_step         ;
 reg  [  32-1: 0] set_step_lo      ;
+reg  [  32-1: 0] set_step_lo_m1   ;
+reg  [  32-1: 0] set_step_lo_neg  ;
+reg  [RSZ+16-1:0] set_size        ;
 wire [  32-1: 0] set_step_cfg     ;
 wire [  32-1: 0] set_step_lo_cfg  ;
 
 reg              dac_rep      ;
 wire             dac_trig     ;
 reg              dac_trigr    ;
+reg              buf_cycle_q  ;
 
 wire             do_read      ;
 wire             do_read_end  ;
 wire             buf_cycle    ;
 wire             dly_start    ;
+wire             pnt_wrap     ;
+wire             cycle_end_0  ;
+wire             cycle_end_1  ;
+wire             dac_trig_0   ;
+wire             dac_trig_1   ;
+wire             dly_start_0  ;
+wire             dly_start_1  ;
+(* keep = "true" *) wire [31:0] dly_cnt_nxt_0;
+(* keep = "true" *) wire [31:0] dly_cnt_nxt_1;
+(* keep = "true" *) wire        dly_started_nxt_0;
+(* keep = "true" *) wire        dly_started_nxt_1;
+(* keep = "true" *) wire [15:0] rep_cnt_nxt_0;
+(* keep = "true" *) wire [15:0] rep_cnt_nxt_1;
+(* keep = "true" *) wire [15:0] cyc_cnt_nxt_0;
+(* keep = "true" *) wire [15:0] cyc_cnt_nxt_1;
+(* keep = "true" *) wire        dac_do_nxt_0;
+(* keep = "true" *) wire        dac_do_nxt_1;
+(* keep = "true" *) wire        dac_rep_nxt_0;
+(* keep = "true" *) wire        dac_rep_nxt_1;
 
 assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
 
 assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
-assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+// Non-AXI cycle completion is consumed one clock after the pointer wraps. The
+// old implementation reconstructed that delayed event by comparing the full
+// previous and current 62-bit pointers. Capture the wrap decision directly;
+// this preserves the cycle-counter timing while removing a second wide
+// pointer feedback cone from its clock enable.
+assign buf_cycle     = set_axi_en_i ? axi_last : buf_cycle_q;
 // AXI starts producing samples only after FIFO preload; non-AXI starts on dac_trig.
 assign dly_start     = set_axi_en_i ? axi_first   : dac_trig;
 
@@ -310,44 +340,30 @@ always @(posedge dac_clk_i) begin
       dac_do       <=  1'b0 ;
       dac_rep      <=  1'b0 ;
       trig_in      <=  1'b0 ;
-      dac_pntp     <= {PNT_SIZE{1'b0}} ;
       dac_trigr    <=  1'b0 ;
+      buf_cycle_q  <=  1'b0 ;
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
+      set_step_lo_m1  <= 32'hffff_ffff;
+      set_step_lo_neg <= 32'h0;
+      set_size        <= {(RSZ+16){1'b0}};
    end
    else begin
-      // Count the requested start-to-start burst period from the first output sample.
+      // Compute both state variants before the late wrap decision and use the
+      // wrap bit only for the final selection.
       if (set_rst_i) begin
          dly_cnt <= 32'h0;
          dly_started <= 1'b0;
       end else begin
-         if (dly_start)
-            dly_cnt <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
-         else if (dac_rep && dly_started && |dly_cnt)
-            dly_cnt <= dly_cnt - 32'h1;
-
-         if (dly_start)
-            dly_started <= 1'b1;
-         else if (dac_trig)
-            dly_started <= 1'b0;
+         dly_cnt     <= pnt_wrap ? dly_cnt_nxt_1     : dly_cnt_nxt_0;
+         dly_started <= pnt_wrap ? dly_started_nxt_1 : dly_started_nxt_0;
       end
 
-      // repetitions counter
-      if (trig_in && !do_read)
-         rep_cnt <= set_rnum_i;
-      else if (!set_rgate_i && (|rep_cnt && dac_rep && (dac_trig && !dac_trigr)) && (set_rnum_i != 16'hffff)) // only substract at the end of a cycle; 16'hffff is infinite pulses
-         rep_cnt <= rep_cnt - 16'h1 ;
-      else if (set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2) || (trig_ext_i && trig_src_i==3'd3)))
-         rep_cnt <= 16'h0 ;
+      rep_cnt <= pnt_wrap ? rep_cnt_nxt_1 : rep_cnt_nxt_0;
 
-      // count number of table read cycles
-      dac_pntp  <= dac_pnt;
       dac_trigr <= dac_trig; // ignore trigger when count
-
-      if (dac_trig)
-         cyc_cnt <= set_ncyc_i ;
-      else if (!dac_trigr && |cyc_cnt && buf_cycle)
-         cyc_cnt <= cyc_cnt - 16'h1 ;
+      buf_cycle_q <= dac_do && ~dac_npnt_sub_neg;
+      cyc_cnt <= pnt_wrap ? cyc_cnt_nxt_1 : cyc_cnt_nxt_0;
 
       // trigger arrived
       case (trig_src_i & {3{!set_rst_i}})
@@ -360,21 +376,19 @@ always @(posedge dac_clk_i) begin
       if (trig_in) begin
         set_step    <= set_step_cfg;
         set_step_lo <= set_step_lo_cfg;
+        set_step_lo_m1  <= set_step_lo_cfg - 32'h1;
+        set_step_lo_neg <= -set_step_lo_cfg;
+        set_size        <= set_size_i;
       end
 
-      // in cycle mode
-      if (dac_trig && !set_rst_i && !set_axi_en_i)
-         dac_do <= 1'b1 ;
-      else if (set_rst_i || ((cyc_cnt==16'h1) && ~dac_npnt_sub_neg) )
-         dac_do <= 1'b0 ;
-
-      // in repetition mode
-      if (dac_trig && !set_rst_i)
-         dac_rep <= 1'b1 ;
-      else if (set_rst_i || (rep_cnt==16'h0))
-         dac_rep <= 1'b0 ;
+      dac_do  <= pnt_wrap ? dac_do_nxt_1  : dac_do_nxt_0;
+      dac_rep <= pnt_wrap ? dac_rep_nxt_1 : dac_rep_nxt_0;
    end
 end
+
+always @(posedge dac_clk_i)
+if (dac_rstn_i == 1'b0) set_rdly_m1 <= 32'h0;
+else                    set_rdly_m1 <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
 
 wire rep_arm   = dac_rep && |rep_cnt && dly_started && (dly_cnt == 32'h0);
 wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
@@ -382,11 +396,115 @@ wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
 wire cycle_end_pre = set_axi_en_i ? axi_last_pre : (~dac_npnt_sub_neg);
 wire rep_end_pre   = (cyc_cnt == 16'h1) && cycle_end_pre;
-wire dac_trig_axi  = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end_pre));
+wire trig_now     = (!dac_rep && trig_in) || (rep_arm && rep_idle);
+wire trig_on_wrap = rep_arm && (cyc_cnt == 16'h1);
+wire dac_trig_axi = trig_now || (trig_on_wrap && cycle_end_pre);
 
-assign dac_trig = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end)) ;
+assign dac_trig = trig_now || (trig_on_wrap && cycle_end);
 
-assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
+////////////////////////////////////////////////////////////////////////////////
+// State machine, carry select on the wrap decision.
+////////////////////////////////////////////////////////////////////////////////
+
+assign pnt_wrap    = ~dac_npnt_sub_neg;
+assign cycle_end_0 = set_axi_en_i ? axi_last : 1'b0;
+assign cycle_end_1 = set_axi_en_i ? axi_last : 1'b1;
+assign dac_trig_0  = trig_now || (trig_on_wrap && cycle_end_0);
+assign dac_trig_1  = trig_now || (trig_on_wrap && cycle_end_1);
+assign dly_start_0 = set_axi_en_i ? axi_first : dac_trig_0;
+assign dly_start_1 = set_axi_en_i ? axi_first : dac_trig_1;
+
+wire        dly_dec   = dac_rep && dly_started && |dly_cnt;
+wire [31:0] dly_hold  = dly_dec ? dly_cnt - 32'h1 : dly_cnt;
+wire        rep_ld    = trig_in && !do_read;
+wire        rep_dec   = !set_rgate_i && |rep_cnt && dac_rep && !dac_trigr
+                        && (set_rnum_i != 16'hffff);
+wire        rep_clr   = set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2)
+                                     || ( trig_ext_i && trig_src_i==3'd3));
+wire        cyc_dec   = !dac_trigr && |cyc_cnt && buf_cycle;
+wire        do_clr    = set_rst_i;
+wire        rep_end_c = set_rst_i || (rep_cnt==16'h0);
+
+assign dly_cnt_nxt_0 = dly_start_0 ? set_rdly_m1 : dly_hold;
+assign dly_cnt_nxt_1 = dly_start_1 ? set_rdly_m1 : dly_hold;
+assign dly_started_nxt_0 = dly_start_0 ? 1'b1 : (dac_trig_0 ? 1'b0 : dly_started);
+assign dly_started_nxt_1 = dly_start_1 ? 1'b1 : (dac_trig_1 ? 1'b0 : dly_started);
+
+assign rep_cnt_nxt_0 = rep_ld                 ? set_rnum_i      :
+                       (rep_dec && dac_trig_0) ? rep_cnt - 16'h1 :
+                       rep_clr                ? 16'h0           : rep_cnt;
+assign rep_cnt_nxt_1 = rep_ld                 ? set_rnum_i      :
+                       (rep_dec && dac_trig_1) ? rep_cnt - 16'h1 :
+                       rep_clr                ? 16'h0           : rep_cnt;
+
+assign cyc_cnt_nxt_0 = dac_trig_0 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
+assign cyc_cnt_nxt_1 = dac_trig_1 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
+
+assign dac_do_nxt_0 = (dac_trig_0 && !set_rst_i && !set_axi_en_i) ? 1'b1 :
+                      do_clr                                      ? 1'b0 : dac_do;
+assign dac_do_nxt_1 = (dac_trig_1 && !set_rst_i && !set_axi_en_i) ? 1'b1 :
+                      (do_clr || (cyc_cnt==16'h1))                ? 1'b0 : dac_do;
+
+assign dac_rep_nxt_0 = (dac_trig_0 && !set_rst_i) ? 1'b1 :
+                       rep_end_c                  ? 1'b0 : dac_rep;
+assign dac_rep_nxt_1 = (dac_trig_1 && !set_rst_i) ? 1'b1 :
+                       rep_end_c                  ? 1'b0 : dac_rep;
+
+////////////////////////////////////////////////////////////////////////////////
+// Read pointer arithmetic, carry select across the fixed point boundary.
+////////////////////////////////////////////////////////////////////////////////
+
+localparam PNT_LO = 32;
+localparam PNT_HI = PNT_SIZE - PNT_LO;
+
+wire [PNT_LO-1:0] pnt_lo = dac_pnt[PNT_LO-1:0];
+wire [PNT_HI-1:0] pnt_hi = dac_pnt[PNT_SIZE-1:PNT_LO];
+wire [PNT_LO-1:0] stp_lo = set_step_lo;
+wire [PNT_HI-1:0] stp_hi = set_step[PNT_HI-1:0];
+
+(* keep = "true" *) wire [PNT_LO  :0] frac_sum = {1'b0,pnt_lo} + {1'b0,stp_lo};
+wire [PNT_LO-1:0] frac_sub_lo = pnt_lo + set_step_lo_m1;
+wire              frac_carry = frac_sum[PNT_LO];
+wire              frac_zero  = (pnt_lo == set_step_lo_neg);
+wire [1:0] frac_k = frac_carry ? (frac_zero ? 2'b00 : 2'b01) :
+                                frac_zero  ? 2'b11 : 2'b00;
+
+(* keep = "true" *) wire [PNT_HI:0] int_sum_c0 = {1'b0,pnt_hi} + {1'b0,stp_hi};
+(* keep = "true" *) wire [PNT_HI:0] int_sum_c1 = {1'b0,pnt_hi} + {1'b0,stp_hi} + 1'b1;
+wire [PNT_HI:0] int_sum = frac_carry ? int_sum_c1 : int_sum_c0;
+
+localparam INT_LO = PNT_HI/2;
+localparam INT_HI = PNT_HI - INT_LO;
+
+wire [INT_LO-1:0] pnt_i_l = pnt_hi[INT_LO-1:0];
+wire [INT_HI-1:0] pnt_i_h = pnt_hi[PNT_HI-1:INT_LO];
+wire [INT_LO-1:0] stp_i_l = stp_hi[INT_LO-1:0];
+wire [INT_HI-1:0] stp_i_h = stp_hi[PNT_HI-1:INT_LO];
+wire [INT_LO-1:0] siz_i_l = set_size[INT_LO-1:0];
+wire [INT_HI-1:0] siz_i_h = set_size[PNT_HI-1:INT_LO];
+
+(* keep = "true" *) wire [INT_LO+1:0] isub_l_m1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
+                                                - {2'b0,siz_i_l} - 1'b1;
+(* keep = "true" *) wire [INT_LO+1:0] isub_l_z  = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
+                                                - {2'b0,siz_i_l};
+(* keep = "true" *) wire [INT_LO+1:0] isub_l_p1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
+                                                - {2'b0,siz_i_l} + 1'b1;
+wire [INT_LO+1:0] isub_l = frac_k[1] ? isub_l_m1 :
+                           frac_k[0] ? isub_l_p1 : isub_l_z;
+wire [1:0] int_j = isub_l[INT_LO+1:INT_LO];
+
+(* keep = "true" *) wire [INT_HI:0] isub_h_m1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
+                                              - {1'b0,siz_i_h} - 1'b1;
+(* keep = "true" *) wire [INT_HI:0] isub_h_z  = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
+                                              - {1'b0,siz_i_h};
+(* keep = "true" *) wire [INT_HI:0] isub_h_p1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
+                                              - {1'b0,siz_i_h} + 1'b1;
+wire [INT_HI:0] isub_h = int_j[1] ? isub_h_m1 :
+                         int_j[0] ? isub_h_p1 : isub_h_z;
+wire [PNT_HI:0] int_sub = {isub_h, isub_l[INT_LO-1:0]};
+
+assign dac_npnt         = {int_sum, frac_sum[PNT_LO-1:0]};
+assign dac_npnt_sub     = {int_sub, frac_sub_lo};
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
 
 // read pointer logic
@@ -394,7 +512,9 @@ always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) begin
    dac_pnt  <= {PNT_SIZE{1'b0}};
 end else begin
-   if (set_rst_i || (dac_trig && !dac_do)) // manual reset or start
+   // A trigger generated by the current wrap is only an FSM event. Only an
+   // idle trigger needs to load the configured start offset.
+   if (set_rst_i || (trig_now && !dac_do))
       dac_pnt <= {set_ofs_i[RSZ+15:0],32'h0};
    else if (dac_do) begin
       if (~dac_npnt_sub_neg)  dac_pnt <= set_wrap_i ? dac_npnt_sub : {set_ofs_i[RSZ+15:0],32'h0}; // wrap or go to start
@@ -402,7 +522,7 @@ end else begin
    end
 end
 
-assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
+// dac_npnt / dac_npnt_sub are built above, split at the fixed-point boundary.
 assign trig_done_o = !dac_rep && trig_in;
 assign get_step_o = set_step;
 assign get_step_lo_o = set_step_lo;
