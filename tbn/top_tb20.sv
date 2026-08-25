@@ -125,7 +125,8 @@ logic [ 2-1:0] [ 2-1:0] adcll_dat1;
 logic [ 2-1:0] [ 2-1:0] adcll_dat2;
 logic          [ 2-1:0] adcll_fclk;
 logic          [ 2-1:0] adcll_odclk;
-logic          [ 2-1:0] adcll_idclk;
+logic                   adcll_refclk;
+wire           [ 2-1:0] adcll_idclk = {adcll_refclk, ~adcll_refclk};
 
 // DAC
 logic [2-1:0][14-1:0] dac_dat;     // DAC combined data
@@ -218,6 +219,9 @@ always #(TP/2) clk0 = ~clk0;
 initial #3.6ns clk_65 = 1'b0;
 `ifdef Z20_LL
 always #(ADC_TP/2)   clk_65 = ~clk_65;
+
+initial adcll_refclk = 1'b0;
+always #1ns adcll_refclk = ~adcll_refclk;
 `endif
 
 initial            clk_250 = 1'b0;
@@ -620,7 +624,6 @@ red_pitaya_top
   .adc_fclk_i  (adcll_fclk  ),  // ADC frame clock {p,n}
   .adc_data_i  (adcll_dat1  ),  // ADC data {p,n}
   .adc_datb_i  (adcll_dat2  ),  // ADC data {p,n}
-  .adc_dclk_o  (adcll_idclk ),  // ADC data clock {p,n}
   .adc_rst_o   (),   // ADC reset
   .adc_pdn_o   (),   // ADC power down
   .adc_sen_o   (),   // ADC serial en

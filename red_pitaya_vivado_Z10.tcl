@@ -85,8 +85,8 @@ set ::clk3_freq 200000000
 set ::gp0_clk_freq 125000000
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
-set ::hp2_clk_freq 250000000
-set ::hp3_clk_freq 250000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
 
 if {$prj_name == "stream_app"} {
    set ::stream_app_rtl $path_rtl_prj/rtl
@@ -96,6 +96,9 @@ if {$prj_name == "stream_app"} {
 
 if {$prj_name == "logic"} {
    set ::logic_freq 125000000
+   # AXI/DMA subsystem clock. Neither the 250 MHz default nor the project's
+   # historical 142.857 MHz closes timing here.
+   set ::clk1_freq 125000000
 }
 
 set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
@@ -219,7 +222,7 @@ file copy -force $rptFiles ./$path_out/
 # write checkpoint design
 ################################################################################
 
-launch_runs impl_1
+launch_runs impl_1 -jobs $rp_jobs
 wait_on_run impl_1
 
 set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]

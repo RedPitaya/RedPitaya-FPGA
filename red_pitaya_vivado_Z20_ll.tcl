@@ -87,8 +87,16 @@ set ::clk3_freq 200000000
 set ::gp0_clk_freq 125000000
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
-set ::hp2_clk_freq 250000000
-set ::hp3_clk_freq 250000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
+
+if {$prj_name == "logic"} {
+   # Without this block the logic build fails on an unset ::logic_freq.
+   set ::logic_freq 125000000
+   # AXI/DMA subsystem clock. Neither the 250 MHz default nor the project's
+   # historical 142.857 MHz closes timing here.
+   set ::clk1_freq 125000000
+}
 
 set_property verilog_define [concat Z20_LL $prj_defs] [current_fileset]
 source $path_ip/system.tcl
@@ -112,6 +120,12 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 if {$prj_name != "pyrpl"} {
    add_files                         ../../$path_rtl
    add_files -fileset constrs_1      $path_sdc/red_pitaya_z20_ll.xdc
+   # Z20_ll defaults to STEMlab 125-14 TI (500 MHz ADC ADDCLK).  The 65-16 TI
+   # uses the same RTL and pins, but its ADDCLK is 250 MHz.
+   if {[lsearch -exact $prj_defs "LL_ADC_65"] >= 0} {
+      add_files -fileset constrs_1   $path_sdc/red_pitaya_z20_ll_65.xdc
+      set_property PROCESSING_ORDER LATE [get_files red_pitaya_z20_ll_65.xdc]
+   }
 }
 
 add_files                               $path_rtl_prj
@@ -250,7 +264,7 @@ rp_check_timing $path_out
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 write_bitstream -force            $path_out/red_pitaya
-write_cfgmem -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 $path_out/red_pitaya.bit" -file $path_out/red_pitaya.bin
+write_cfgmem -force -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 $path_out/red_pitaya.bit" -file $path_out/red_pitaya.bin
 
 
 ################################################################################

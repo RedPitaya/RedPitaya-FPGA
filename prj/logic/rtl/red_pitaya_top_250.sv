@@ -77,7 +77,7 @@ module red_pitaya_top_250 #(
 // GPIO parameter
 localparam int unsigned GDW = 8+8;
 
-logic [4-1:0] fclk ;  // {200MHz, 166MHz, 142MHz, 125MHz}
+logic [4-1:0] fclk ;  // {clk3, clk2, clk1, clk0} = {200MHz, 50MHz, 250MHz, 125MHz}
 logic [4-1:0] frstn;
 
 // PLL signals

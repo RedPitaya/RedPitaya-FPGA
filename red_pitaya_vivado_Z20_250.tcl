@@ -99,7 +99,9 @@ if {$prj_name == "stream_app"} {
 }
 
 if {$prj_name == "logic"} {
-   set ::logic_freq 125000000
+   # adc_clk is 250 MHz on this board, and clk1_freq keeps the 250 MHz default
+   # to match it: the only model where the two are equal.
+   set ::logic_freq 250000000
 }
 
 set_property verilog_define [concat Z20_250 $prj_defs] [current_fileset]

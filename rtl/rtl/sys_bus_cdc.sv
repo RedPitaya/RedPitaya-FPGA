@@ -3,9 +3,7 @@
 // assumes single reads and writes
 ////////////////////////////////////////////////////////////////////////////////
 
-module sys_bus_cdc #(
-
-)(
+module sys_bus_cdc (
   input        pll_locked_i,
   sys_bus_if.s bus_s,   // from master
   sys_bus_if.m bus_m    // to   slaves
@@ -16,11 +14,14 @@ module sys_bus_cdc #(
 */
 reg ctrl_do         ;
 reg ctrl_ack        ;
+reg [32-1:0] ctrl_rdata;
 
 (* ASYNC_REG = "TRUE" *)
 reg [2:0] ctrl_done_csff  ;
 reg ctrl_we         ;
 reg ctrl_re         ;
+reg [32-1:0] ctrl_addr;
+reg [32-1:0] ctrl_wdata;
 
 (* keep = "TRUE" *) wire ctrl_we_iw = bus_s.wen ;
 (* keep = "TRUE" *) wire ctrl_re_iw = bus_s.ren ;
@@ -49,6 +50,9 @@ wire    reg_read_synced ;
 reg     reg_write ;
 reg     reg_read  ;
 wire    reg_ack_sync = (reg_write || reg_read) && bus_m.ack ;
+reg [32-1:0] reg_rdata;
+
+wire ctrl_done_event = ctrl_done_csff[1] != ctrl_done_csff[2];
 
 /*
     Controler domain logic
@@ -58,20 +62,36 @@ begin
     if (bus_s.rstn == 1'b0)
     begin
         ctrl_do         <= 1'b0 ;
+        ctrl_ack        <= 1'b0 ;
+        ctrl_rdata      <= 32'h0;
         ctrl_done_csff  <= 3'h0 ;
+        ctrl_addr       <= 32'h0;
+        ctrl_wdata      <= 32'h0;
     end else
     begin
-      if ((ctrl_do == ctrl_done_csff[2]) && (ctrl_we_iw || ctrl_re_iw))
+      if ((ctrl_do == ctrl_done_csff[2]) && !ctrl_ack &&
+          (ctrl_we_iw || ctrl_re_iw)) begin
          ctrl_do <= !ctrl_do ;
+         ctrl_addr  <= bus_s.addr;
+         ctrl_wdata <= bus_s.wdata;
+      end
 
       ctrl_done_csff  <= {ctrl_done_csff[1:0], reg_done} ;
+      ctrl_ack <= ctrl_done_event;
+
+      // reg_rdata was captured with the slave ACK in bus_m.clk and remains
+      // unchanged until a later read completes.  The synchronized completion
+      // toggle therefore acts as the bundled-data qualifier: capture the bus
+      // first and expose ACK only after this controller-domain register is
+      // updated.
+      if (ctrl_done_event && ctrl_re)
+        ctrl_rdata <= reg_rdata;
     end
 end
-assign ctrl_ack    = ctrl_done_csff[1] != ctrl_done_csff[2] ;
 
 assign bus_s.ack   = pll_locked_i ? ctrl_ack                 : 1'b1;
 assign bus_s.err   = pll_locked_i ? 1'b0                     : 1'b1;
-assign bus_s.rdata = pll_locked_i ? bus_m.rdata              : 32'hDEADBEEF;
+assign bus_s.rdata = pll_locked_i ? ctrl_rdata               : 32'hDEADBEEF;
 
 // latch control
 always @ (posedge bus_s.clk)
@@ -103,11 +123,15 @@ begin
     reg_done    <= 1'b0 ;
     reg_we_csff <= 2'h0 ;
     reg_re_csff <= 2'h0 ;
+    reg_rdata   <= 32'h0;
   end else begin
     reg_do_csff <= {reg_do_csff[0], ctrl_do} ;
     reg_do      <=  reg_do_csff[1];
-    if (reg_ack_sync)
+    if (reg_ack_sync) begin
       reg_done <= reg_do ;
+      if (reg_read)
+        reg_rdata <= bus_m.rdata;
+    end
 
     reg_we_csff <= {reg_we_csff[0], ctrl_we} ;
     reg_re_csff <= {reg_re_csff[0], ctrl_re} ;
@@ -133,8 +157,8 @@ always @ (posedge bus_m.clk)
 begin
    if (reg_write_synced || reg_read_synced)
    begin
-      bus_m.addr  <= bus_s.addr;
-      bus_m.wdata <= bus_s.wdata;
+      bus_m.addr  <= ctrl_addr;
+      bus_m.wdata <= ctrl_wdata;
    end
 end
 

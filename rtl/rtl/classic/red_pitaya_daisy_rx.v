@@ -85,6 +85,7 @@ wire           ser_clk     ;
 wire           par_clk     ;
 reg  [16-1: 0] par_rstn_r  ;
 reg            par_rstn    ;
+(* ASYNC_REG = "TRUE" *) reg [1:0] cfg_en_sync_r;
 
 
 `ifdef SER_DLY
@@ -148,9 +149,23 @@ BUFR #(.SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("2")) i_BUFR_clk
   .I   (  ser_clk_dly  )
 );
 
-// Reset on receive clock domain
+// Synchronize the software enable before it participates in receive-domain
+// reset release.  Only the first synchronizer stage sees the asynchronous
+// assertion; the reset shift register itself is entirely synchronous.
 always @(posedge par_clk or negedge cfg_en_i) begin
-   if (cfg_en_i == 1'b0) begin
+   if (!cfg_en_i)
+      cfg_en_sync_r[0] <= 1'b0;
+   else
+      cfg_en_sync_r[0] <= 1'b1;
+end
+
+always @(posedge par_clk) begin
+   cfg_en_sync_r[1] <= cfg_en_sync_r[0];
+end
+
+// Reset on receive clock domain
+always @(posedge par_clk) begin
+   if (!cfg_en_sync_r[1]) begin
       par_rstn_r <= 16'h0 ;
       par_rstn   <=  1'b0 ;
    end
@@ -173,6 +188,7 @@ generate
 for(GV = 0 ; GV < N_DATS ; GV = GV + 1) begin
 
 reg  [ 4-1: 0] bitslip_r    ;
+(* ASYNC_REG = "TRUE" *) reg [1:0] sync_mode_r;
 reg            bitslip_l    ;
 reg            bitslip      ;
 reg  [ 5-1: 0] bitslip_cnt  ;
@@ -223,7 +239,7 @@ i_iserdese
   .CLKDIVP           (  1'b0          ),
   .D                 (  ser_dat_i[GV] ),  // 1-bit Input signal from IOB 
   .DDLY              (  1'b0          ),  // 1-bit Input from Input Delay component 
-  .RST               ( !cfg_en_i      ),  // 1-bit Asynchronous reset only.
+  .RST               ( !par_rstn      ),  // async assert, receive-clock release
   .SHIFTIN1          (  1'b0          ),
   .SHIFTIN2          (  1'b0          ),
 
@@ -280,8 +296,10 @@ always @(posedge par_clk_o) begin
       par_train_r <=  2'h0 ;
       par_train   <=  1'b0 ;
       par_dat_r   <= 16'h0 ;
+      sync_mode_r <= 2'b00;
    end
    else begin
+      sync_mode_r <= {sync_mode_r[0], sync_mode_i};
       par_train_r <= {par_train_r[0], cfg_train_i} ;
       par_train   <=  par_train_r[1];
 
@@ -338,8 +356,8 @@ always @(posedge par_clk_o) begin
    //par_rstn_o  <= par_rstn[GV] ;
 end
 
-assign par_dat_o[GV*16 +: 16] = sync_mode_i ? {8'h0,rxp_dat} : par_dat_or;
-assign par_dv_o[GV] = sync_mode_i ? 1'b1 : par_dv_or;
+assign par_dat_o[GV*16 +: 16] = sync_mode_r[1] ? {8'h0,rxp_dat} : par_dat_or;
+assign par_dv_o[GV] = sync_mode_r[1] ? 1'b1 : par_dv_or;
 
 end
 endgenerate
@@ -364,4 +382,3 @@ end
 
 
 endmodule
-

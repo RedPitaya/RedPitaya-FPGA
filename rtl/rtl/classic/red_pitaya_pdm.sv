@@ -28,6 +28,11 @@ generate
 for (genvar i=0; i<CHN; i++) begin: for_chn
 
 logic [DWC-1:0] dat;
+`ifdef Z20_LL
+logic [DWC-1:0] dat_q;
+logic [DWC  :0] dat_minus_rng;
+logic             pdm_d;
+`endif
 
 // input data copy
 always_ff @(posedge clk)
@@ -40,6 +45,20 @@ logic [DWC-1:0] acu;  // accumulator
 logic [DWC  :0] sum;  // summation
 logic [DWC  :0] sub;  // subtraction
 
+`ifdef Z20_LL
+// Pipeline the configured value and pre-compute dat-rng.  The accumulator can
+// then choose between two parallel carry chains instead of traversing
+// acu+dat-rng serially in one cycle.
+always_ff @(posedge clk)
+if (~rstn) begin
+  dat_q         <= '0;
+  dat_minus_rng <= '0;
+end else begin
+  dat_q         <= dat;
+  dat_minus_rng <= {1'b0, dat} - {1'b0, rng};
+end
+`endif
+
 // accumulator
 always_ff @(posedge clk)
 if (~rstn)  acu <= '0;
@@ -49,15 +68,33 @@ else begin
 end
 
 // summation
+`ifdef Z20_LL
+assign sum = {1'b0, acu} + {1'b0, dat_q};
+`else
 assign sum = acu + dat;
+`endif
 
 // subtraction
+`ifdef Z20_LL
+assign sub = {1'b0, acu} + dat_minus_rng;
+`else
 assign sub = sum - rng;
+`endif
 
 // PDM output
+`ifdef Z20_LL
+always_ff @(posedge clk)
+if (~rstn)  pdm_d <= 1'b0;
+else        pdm_d <= ena & (~sub[DWC] | ~|sub[DWC-1:0]);
+
+always_ff @(posedge clk)
+if (~rstn)  pdm[i] <= 1'b0;
+else        pdm[i] <= pdm_d;
+`else
 always_ff @(posedge clk)
 if (~rstn)  pdm[i] <= 1'b0;
 else        pdm[i] <= ena & (~sub[DWC] | ~|sub[DWC-1:0]);
+`endif
 
 end: for_chn
 endgenerate

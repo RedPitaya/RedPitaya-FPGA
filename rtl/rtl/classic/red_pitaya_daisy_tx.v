@@ -151,10 +151,18 @@ i_oserdese
 reg  [ 2-1: 0] par_sel       ;
 reg  [ 3-1: 0] par_dv        ;
 reg  [12-1: 0] par_dat_r     ;
+(* ASYNC_REG = "TRUE" *) reg [1:0] sync_mode_r;
+
+always @(posedge par_clk_i) begin
+   if (!par_rstn_i)
+      sync_mode_r <= 2'b00;
+   else
+      sync_mode_r <= {sync_mode_r[0], sync_mode_i};
+end
 
 
 assign par_rdy_o[GV] = (par_sel==2'h0) ;
-assign par_dat_s = sync_mode_i ? par_dat_in[3:0] : par_dat;
+assign par_dat_s = sync_mode_r[1] ? par_dat_in[3:0] : par_dat;
 
 // First level of serializing. Break input 16-bits into nibbles.
 // If value is not valid sent 0.
@@ -211,4 +219,3 @@ endgenerate
 
 
 endmodule
-

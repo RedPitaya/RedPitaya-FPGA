@@ -86,8 +86,8 @@ set ::clk3_freq 200000000
 set ::gp0_clk_freq 125000000
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
-set ::hp2_clk_freq 250000000
-set ::hp3_clk_freq 250000000
+set ::hp2_clk_freq 125000000
+set ::hp3_clk_freq 125000000
 
 if {$prj_name == "stream_app"} {
    set ::stream_app_rtl $path_rtl_prj/rtl
@@ -99,6 +99,9 @@ if {$prj_name == "stream_app"} {
 
 if {$prj_name == "logic"} {
    set ::logic_freq 122880000
+   # AXI/DMA subsystem clock. Neither the 250 MHz default nor the project's
+   # historical 142.857 MHz closes timing here.
+   set ::clk1_freq 125000000
 }
 
 set_property verilog_define [concat Z20_122 Z20_xx $prj_defs] [current_fileset]
@@ -237,6 +240,15 @@ foreach file $rptFiles {
 #wait_on_run impl_1
 
 open_run impl_1
+
+# The normal implementation run leaves the ASG wrap/control cone within a few
+# picoseconds of closure on this device.  A post-route physical optimization
+# can shorten those routed nets without changing the RTL or relaxing any path.
+# Re-route and regenerate the sign-off report before applying the timing gate.
+phys_opt_design -directive Explore
+route_design
+report_timing_summary -delay_type min_max -max_paths 20 \
+   -report_unconstrained -file $path_out/red_pitaya_top_Z20_timing_summary_routed.rpt
 
 # Refuse to emit a bitstream that does not meet timing.
 # Override for a deliberate experimental build: make ... DEFINES=ALLOW_TIMING_FAIL
