@@ -261,6 +261,16 @@ endgenerate
 sys_bus_if   ps_sys      (.clk (clk_125), .rstn (rstn_hk));
 axi4_if #(.DW (32), .AW (32), .IW (12), .LW (4)) axi_gp (.ACLK (ps_sys.clk), .ARESETn (ps_sys.rstn));
 
+logic [1:0] trig_rstn_sync;
+always_ff @(posedge clk_250 or negedge rstn_hk) begin
+  if (!rstn_hk) trig_rstn_sync <= 2'b00;
+  else          trig_rstn_sync <= {trig_rstn_sync[0], 1'b1};
+end
+
+sys_bus_if trig_ps_sys  (.clk (clk_125), .rstn (rstn_hk));
+sys_bus_if trig_sys     (.clk (clk_250), .rstn (trig_rstn_sync[1]));
+axi4_if #(.DW (32), .AW (32), .IW (12), .LW (4)) axi_trig (.ACLK (trig_ps_sys.clk), .ARESETn (trig_ps_sys.rstn));
+
 axi4_slave #(
   .DW (32),
   .AW (32),
@@ -270,6 +280,36 @@ axi4_slave #(
   .axi       (axi_gp),
   // system read/write channel
   .bus       (ps_sys)
+);
+
+axi4_slave #(
+  .DW (32),
+  .AW (32),
+  .IW (12)
+) axi_slave_trig (
+  .axi (axi_trig),
+  .bus (trig_ps_sys)
+);
+
+sys_bus_cdc i_trig_bus_cdc (
+  .pll_locked_i (trig_rstn_sync[1]),
+  .bus_s        (trig_ps_sys),
+  .bus_m        (trig_sys)
+);
+
+logic trig_conditioned;
+ext_trig_cond_250 i_ext_trig_cond (
+  .clk    (clk_250),
+  .rstn   (trig_rstn_sync[1]),
+  .trig_i (trig_i),
+  .trig_o (trig_conditioned),
+  .sys_addr  (trig_sys.addr),
+  .sys_wdata (trig_sys.wdata),
+  .sys_wen   (trig_sys.wen),
+  .sys_ren   (trig_sys.ren),
+  .sys_rdata (trig_sys.rdata),
+  .sys_err   (trig_sys.err),
+  .sys_ack   (trig_sys.ack)
 );
 
 // data loopback
@@ -391,6 +431,46 @@ end
         .FIXED_IO_ps_clk(FIXED_IO_ps_clk),
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
+        //.m_axi_trig_ACLK    (axi_trig.ACLK   ),
+        //.m_axi_trig_ARESETn (axi_trig.ARESETn),
+        .m_axi_trig_arvalid (axi_trig.ARVALID),
+        .m_axi_trig_awvalid (axi_trig.AWVALID),
+        .m_axi_trig_bready  (axi_trig.BREADY ),
+        .m_axi_trig_rready  (axi_trig.RREADY ),
+        .m_axi_trig_wlast   (axi_trig.WLAST  ),
+        .m_axi_trig_wvalid  (axi_trig.WVALID ),
+        .m_axi_trig_arid    (axi_trig.ARID   ),
+        .m_axi_trig_awid    (axi_trig.AWID   ),
+        .m_axi_trig_wid     (axi_trig.WID    ),
+        .m_axi_trig_arburst (axi_trig.ARBURST),
+        .m_axi_trig_arlock  (axi_trig.ARLOCK ),
+        .m_axi_trig_arsize  (axi_trig.ARSIZE ),
+        .m_axi_trig_awburst (axi_trig.AWBURST),
+        .m_axi_trig_awlock  (axi_trig.AWLOCK ),
+        .m_axi_trig_awsize  (axi_trig.AWSIZE ),
+        .m_axi_trig_arprot  (axi_trig.ARPROT ),
+        .m_axi_trig_awprot  (axi_trig.AWPROT ),
+        .m_axi_trig_araddr  (axi_trig.ARADDR ),
+        .m_axi_trig_awaddr  (axi_trig.AWADDR ),
+        .m_axi_trig_wdata   (axi_trig.WDATA  ),
+        .m_axi_trig_arcache (axi_trig.ARCACHE),
+        .m_axi_trig_arlen   (axi_trig.ARLEN  ),
+        .m_axi_trig_arqos   (axi_trig.ARQOS  ),
+        .m_axi_trig_awcache (axi_trig.AWCACHE),
+        .m_axi_trig_awlen   (axi_trig.AWLEN  ),
+        .m_axi_trig_awqos   (axi_trig.AWQOS  ),
+        .m_axi_trig_wstrb   (axi_trig.WSTRB  ),
+        .m_axi_trig_arready (axi_trig.ARREADY),
+        .m_axi_trig_awready (axi_trig.AWREADY),
+        .m_axi_trig_bvalid  (axi_trig.BVALID ),
+        .m_axi_trig_rlast   (axi_trig.RLAST  ),
+        .m_axi_trig_rvalid  (axi_trig.RVALID ),
+        .m_axi_trig_wready  (axi_trig.WREADY ),
+        .m_axi_trig_bid     (axi_trig.BID    ),
+        .m_axi_trig_rid     (axi_trig.RID    ),
+        .m_axi_trig_bresp   (axi_trig.BRESP  ),
+        .m_axi_trig_rresp   (axi_trig.RRESP  ),
+        .m_axi_trig_rdata   (axi_trig.RDATA  ),
         //.m_axi_hk_ACLK    (axi_gp.ACLK   ),
         //.m_axi_hk_ARESETn (axi_gp.ARESETn),
         .m_axi_hk_arvalid (axi_gp.ARVALID),
@@ -444,7 +524,7 @@ end
         .frstn_1(frstn[1]),
         .frstn_2(frstn[2]),
         .frstn_3(frstn[3]),
-        .trig_in(trig_i),
+        .trig_in(trig_conditioned),
         .adc_clk(adc_clk_in),
         .adc_data_ch1(adc_dat_sw[0]),
         .adc_data_ch2(adc_dat_sw[1]),
@@ -453,6 +533,8 @@ end
 
 assign axi_gp.AWREGION = '0;
 assign axi_gp.ARREGION = '0;
+assign axi_trig.AWREGION = '0;
+assign axi_trig.ARREGION = '0;
 
 
 endmodule: red_pitaya_top_250

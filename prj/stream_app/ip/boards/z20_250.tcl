@@ -11,6 +11,15 @@ set_property -dict [ list \
     CONFIG.PROTOCOL {AXI3} \
 ] $m_axi_hk
 
+set m_axi_trig [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 m_axi_trig ]
+set_property -dict [ list \
+    CONFIG.ADDR_WIDTH {32} \
+    CONFIG.DATA_WIDTH {32} \
+    CONFIG.FREQ_HZ {125000000} \
+    CONFIG.HAS_REGION {0} \
+    CONFIG.PROTOCOL {AXI3} \
+] $m_axi_trig
+
 set adc_clk [ create_bd_port -dir I -type clk -freq_hz 250000000 adc_clk ]
 set clk_out [ create_bd_port -dir O -type clk -freq_hz 125000000 clk_out ]
 set clk_250 [ create_bd_port -dir O -type clk -freq_hz 250000000 clk_250 ]
@@ -32,11 +41,12 @@ set frstn_3 [ create_bd_port -dir O -type rst frstn_3 ]
 set axi_reg [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_reg ]
 set_property -dict [ list \
     CONFIG.ENABLE_ADVANCED_OPTIONS {1} \
-    CONFIG.NUM_MI {3} \
+    CONFIG.NUM_MI {4} \
     CONFIG.S00_HAS_REGSLICE {3} \
     CONFIG.M00_HAS_REGSLICE {3} \
     CONFIG.M01_HAS_REGSLICE {3} \
     CONFIG.M02_HAS_REGSLICE {3} \
+    CONFIG.M03_HAS_REGSLICE {3} \
 ] $axi_reg
 
 # Create instance: clk_gen, and set properties
@@ -128,7 +138,8 @@ set proc_sys_reset_3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_rese
 connect_bd_intf_net -intf_net axi_interconnect_0_M00_AXI [get_bd_intf_pins axi_interconnect_0/M00_AXI] [get_bd_intf_pins processing_system7/S_AXI_HP0]
 connect_bd_intf_net -intf_net axi_reg_M00_AXI [get_bd_intf_pins axi_reg/M00_AXI] [get_bd_intf_pins rp_oscilloscope/s_axi_reg]
 connect_bd_intf_net -intf_net axi_reg_M01_AXI [get_bd_intf_pins axi_reg/M01_AXI] [get_bd_intf_pins rp_dac/s_axi_reg]
-connect_bd_intf_net -intf_net axi_reg_M02_AXI [get_bd_intf_ports m_axi_hk] [get_bd_intf_pins axi_reg/M02_AXI]
+connect_bd_intf_net -intf_net axi_reg_M02_AXI [get_bd_intf_ports m_axi_trig] [get_bd_intf_pins axi_reg/M02_AXI]
+connect_bd_intf_net -intf_net axi_reg_M03_AXI [get_bd_intf_ports m_axi_hk] [get_bd_intf_pins axi_reg/M03_AXI]
 connect_bd_intf_net -intf_net processing_system7_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7/DDR]
 connect_bd_intf_net -intf_net processing_system7_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7/FIXED_IO]
 connect_bd_intf_net -intf_net processing_system7_M_AXI_GP0 [get_bd_intf_pins axi_reg/S00_AXI] [get_bd_intf_pins processing_system7/M_AXI_GP0]
@@ -146,6 +157,7 @@ connect_bd_net -net clkin_125_1  [get_bd_ports clk_out] [get_bd_pins clk_gen/clk
 [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] \
 [get_bd_pins axi_reg/ACLK] [get_bd_pins axi_reg/M00_ACLK] [get_bd_pins axi_reg/M01_ACLK] [get_bd_pins axi_reg/S00_ACLK] \
 [get_bd_pins processing_system7/M_AXI_GP0_ACLK] [get_bd_pins processing_system7/S_AXI_HP0_ACLK] [get_bd_pins axi_reg/M02_ACLK] \
+[get_bd_pins axi_reg/M03_ACLK] \
 [get_bd_pins processing_system7/S_AXI_HP1_ACLK] [get_bd_pins rp_oscilloscope/m_axi_osc1_aclk] \
 [get_bd_pins rp_oscilloscope/m_axi_osc2_aclk] [get_bd_pins rp_oscilloscope/m_axi_osc3_aclk] [get_bd_pins rp_oscilloscope/m_axi_osc4_aclk] \
 [get_bd_pins rp_dac/s_axi_reg_aclk] [get_bd_pins rp_oscilloscope/s_axi_reg_aclk] [get_bd_pins rst_gen/slowest_sync_clk] [get_bd_pins xadc/s_axi_aclk]
@@ -191,7 +203,7 @@ connect_bd_net -net rp_oscilloscope_0_osc2_trig_op [get_bd_pins rp_concat/osc2_t
 connect_bd_net -net dac_data_ch1_0_1 [get_bd_ports dac_dat_a] [get_bd_pins rp_dac/dac_data_cha_o]
 connect_bd_net -net dac_data_ch2_0_1 [get_bd_ports dac_dat_b] [get_bd_pins rp_dac/dac_data_chb_o]
 
-connect_bd_net -net rst_gen_peripheral_aresetn [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_reg/M02_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] \
+connect_bd_net -net rst_gen_peripheral_aresetn [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_reg/M02_ARESETN] [get_bd_pins axi_reg/M03_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] \
 [get_bd_pins axi_interconnect_0/S01_ARESETN] [get_bd_pins axi_reg/M00_ARESETN] [get_bd_pins axi_reg/M01_ARESETN] [get_bd_pins axi_reg/S00_ARESETN] \
 [get_bd_pins rp_oscilloscope/m_axi_osc1_aresetn] [get_bd_pins rp_oscilloscope/m_axi_osc2_aresetn] [get_bd_pins rp_oscilloscope/m_axi_osc3_aresetn] \
 [get_bd_pins rp_oscilloscope/m_axi_osc4_aresetn] [get_bd_pins rp_dac/s_axi_reg_aresetn] \
@@ -223,6 +235,7 @@ connect_bd_net -net rp_dac_dac2_trig_op [get_bd_pins rp_concat/gen2_trig_ip] [ge
 connect_bd_net -net rp_dac_intr [get_bd_pins intr_concat/In14] [get_bd_pins rp_dac/intr]
 
 # Create address segments
+assign_bd_address -offset 0x40200000 -range 0x00100000 -target_address_space [get_bd_addr_spaces processing_system7/Data] [get_bd_addr_segs m_axi_trig/Reg] -force
 assign_bd_address -offset 0x40300000 -range 0x00100000 -target_address_space [get_bd_addr_spaces processing_system7/Data] [get_bd_addr_segs m_axi_hk/Reg] -force
 assign_bd_address -offset 0x40100000 -range 0x00100000 -target_address_space [get_bd_addr_spaces processing_system7/Data] [get_bd_addr_segs rp_dac/s_axi_reg/reg0] -force
 assign_bd_address -offset 0x40000000 -range 0x00100000 -target_address_space [get_bd_addr_spaces processing_system7/Data] [get_bd_addr_segs rp_oscilloscope/s_axi_reg/reg0] -force
