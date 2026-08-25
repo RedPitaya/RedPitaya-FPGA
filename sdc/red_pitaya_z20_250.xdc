@@ -160,6 +160,7 @@ set_property PACKAGE_PIN K9 [get_ports {vinp_i[4]}]
 ### Trigger
 set_property IOSTANDARD LVCMOS18 [get_ports trig_i]
 set_property PACKAGE_PIN N20 [get_ports trig_i]
+set_false_path -from [get_ports trig_i]
 
 ### PLL
 set_property IOSTANDARD LVCMOS33 [get_ports pll_*]
@@ -285,4 +286,3 @@ set_input_delay -clock [get_clocks adc_clk] -clock_fall -min -add_delay -1.000 [
 set_input_delay -clock [get_clocks adc_clk] -clock_fall -max -add_delay -0.400 [get_ports {adc_dat_p_i[1][*]}]
 set_input_delay -clock [get_clocks adc_clk] -min -add_delay -1.000 [get_ports {adc_dat_p_i[1][*]}]
 set_input_delay -clock [get_clocks adc_clk] -max -add_delay -0.400 [get_ports {adc_dat_p_i[1][*]}]
-

@@ -498,8 +498,6 @@ logic                 rstn_125_0, rstn_125_1;
 logic [  2-1: 0]      pll_locked;
 logic                 adc_10mhz;
 logic                 spi_done; // ADC setup finished
-wire external_trig;
-wire trig_ext;
 
 // fast serial signals
 logic                 ser_clk ;
@@ -995,7 +993,7 @@ red_pitaya_hk_4adc #(.DWE(DWE)) i_hk (
         .HK_AXI_rresp   (axi_gp.RRESP  ),
         .HK_AXI_rdata   (axi_gp.RDATA  ),
 
-        .trig_in        (external_trig),
+        .trig_in        (1'b0),
         .trig_out       (trig_out),
         .gpio_trig      (gpio_trig),
         .adc_clk0       (adc_clk_in[0]),
@@ -1058,6 +1056,5 @@ OBUFDS #(.IOSTANDARD ("DIFF_HSTL_I_18"), .SLEW ("FAST")) i_OBUF_clk
   .I  ( 1'b0          )
 );
 
-assign external_trig = trig_ext | gpio_trig;
 
 endmodule

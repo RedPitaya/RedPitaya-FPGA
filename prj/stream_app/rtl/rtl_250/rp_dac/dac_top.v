@@ -23,11 +23,14 @@ module dac_top
   input  wire [EVENT_SRC_NUM-1:0]         event_ip_reset,
   //
 
-  input  wire [TRIG_SRC_NUM-1:0]          event_sel,
+  input  wire [3-1:0]                     event_sel,
   input  wire                             event_val, 
 
   input  wire [TRIG_SRC_NUM-1:0]          trig_ip,
   output wire                             trig_op,
+
+  input  wire                             trigger_mode_i,
+  output wire                             armed_o,
 
   input  wire                             ctrl_val, 
   output      [31:0]                      reg_sts,
@@ -44,7 +47,7 @@ module dac_top
   input [M_AXI_DAC_ADDR_BITS-1:0]         dac_buf2_adr,
   output [M_AXI_DAC_ADDR_BITS-1:0]        dac_rp,
 
-  input  [ 5-1:0]                         dac_trig,
+  input  [TRIG_SRC_NUM-1:0]               dac_trig,
   input  [ 8-1:0]                         dac_ctrl_reg,
 
   output [DAC_DATA_BITS-1:0]              dac_data_o,
@@ -108,6 +111,8 @@ wire [DAC_DATA_BITS-1:0]    dac_calibrated;
 
 wire set_zero = dac_conf[OUT_ZERO];
 wire set_8bit = dac_conf[BIT_MODE];
+reg  hw_trigger_adc;
+wire playback_trigger_adc = event_num_trig | hw_trigger_adc;
 
 assign dac_data_o      = loopback_en ? dac_data_raw : dac_calibrated;
 assign dac_data_shiftr = dac_data_raw >>> dac_outshift;
@@ -154,6 +159,9 @@ rp_dma_mm2s #(
   .diag_reg         (diag_reg),
   .diag_reg2        (diag_reg2),
   .set_8bit_i       (set_8bit),
+  .trigger_mode_i   (trigger_mode_i),
+  .trigger_pulse_i  (playback_trigger_adc),
+  .armed_o          (armed_o),
 
   .m_axi_arid_o     (m_axi_dac_arid_o), 
   .m_axi_araddr_o   (m_axi_dac_araddr_o),  
@@ -194,26 +202,46 @@ begin
     event_num_trig  <= 0;    
     event_num_start <= 0;   
     event_num_stop  <= 0;    
-    event_num_reset <= 0;   
+    event_num_reset <= 0;
+    hw_trigger_adc  <= 0;
   end else begin
     event_num_trig  <= event_ip_trig[event_sel];    
     event_num_start <= event_ip_start[event_sel];   
     event_num_stop  <= event_ip_stop[event_sel];     
-    event_num_reset <= event_ip_reset[event_sel];        
-  end  
+    event_num_reset <= event_ip_reset[event_sel];
+    hw_trigger_adc  <= |(trig_ip & dac_trig);
+  end
 end
 
 reg event_trig_r, event_trig_r2;
+reg hw_trigger_axi_r, hw_trigger_axi_r2;
+reg trigger_mode_axi_r, trigger_mode_axi_r2;
+// Synchronize trigger state into clk_axi for legacy DMA buffer switching only.
 always @(posedge clk_axi)
 begin
-  event_trig_r  <= event_num_trig;
-  event_trig_r2 <= event_trig_r;
+  if (!axi_rstn) begin
+    event_trig_r        <= 1'b0;
+    event_trig_r2       <= 1'b0;
+    hw_trigger_axi_r    <= 1'b0;
+    hw_trigger_axi_r2   <= 1'b0;
+    trigger_mode_axi_r  <= 1'b0;
+    trigger_mode_axi_r2 <= 1'b0;
+  end else begin
+    event_trig_r        <= event_num_trig;
+    event_trig_r2       <= event_trig_r;
+    hw_trigger_axi_r    <= hw_trigger_adc;
+    hw_trigger_axi_r2   <= hw_trigger_axi_r;
+    trigger_mode_axi_r  <= trigger_mode_i;
+    trigger_mode_axi_r2 <= trigger_mode_axi_r;
+  end
 end
 
 //assign ctl_rst = event_num_reset;
 assign event_sts_reset = 0;
 
-assign ctl_trg = event_trig_r2 | |(trig_ip & dac_trig);
+// This trigger belongs to the legacy DMA buffer-switch mechanism.  In the
+// trigger mode the same event starts playback in the clk_adc domain instead.
+assign ctl_trg = ~trigger_mode_axi_r2 & (event_trig_r2 | hw_trigger_axi_r2);
 
 ////////////////////////////////////////////////////////////
 // Name : 

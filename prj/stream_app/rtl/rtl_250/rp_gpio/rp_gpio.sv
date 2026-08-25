@@ -40,6 +40,7 @@ module rp_gpio #(
   input  wire [EVENT_SRC_NUM-1:0]               event_ip_start,
   input  wire [EVENT_SRC_NUM-1:0]               event_ip_reset,
   input  wire [TRIG_SRC_NUM-1:0]                trig_ip,
+  input  wire                                   ext_trig_i,
   //
   output reg [3:0]                              la_event_op,    
   output wire                                   la_trig_op,    
@@ -207,6 +208,12 @@ reg  [CW-1:0] sts_lst;  // last packet counter status
 // bitwise input polarity
 DT              cfg_pol;
 
+// external trigger conditioner configuration
+reg           cfg_ext_trig_condition_en;
+reg           cfg_ext_trig_edge_sel;      // 0 - rising edge, 1 - falling edge
+reg           cfg_ext_trig_debounce_en;
+reg  [8-1:0]  cfg_ext_trig_debounce_len;
+
 //event selector
 reg [EVENT_SRC_NUM-1: 0] event_sel;
 reg [TRIG_SRC_NUM -1: 0] trig_sel;
@@ -254,7 +261,7 @@ assign gpion_o = gpio_outdat[ 7:0] ;
 
 assign dirp = dir_p;
 assign dirn = dir_n;
-assign gpio_trig_o = gpiop_i[0];
+wire ext_trig_raw = ext_trig_i | gpiop_i[0];
 
 `else
 IOBUF iobuf_gpio_p [8-1:0] (.O (gpio_p_i), .IO(exp_p_io), .I(gpio_p_o), .T(dir_p));
@@ -265,9 +272,33 @@ assign sti.TDATA[1] = gpio_n_i ;
 
 assign gpio_p_o = sto.TDATA[0][15:8] ;
 assign gpio_n_o = sto.TDATA[0][ 7:0] ;
-assign gpio_trig_o = gpio_p_i[0];
+wire ext_trig_raw = ext_trig_i | gpio_p_i[0];
 
 `endif
+
+////////////////////////////////////////////////////////////////////////////////
+// External trigger conditioner: legacy raw level path when disabled (reset
+// default), synchronized/debounced/edge-selected one-clk pulse when enabled.
+////////////////////////////////////////////////////////////////////////////////
+wire ext_trig_deb_o, ext_trig_deb_p, ext_trig_deb_n;
+
+debounce #(
+  .CW (8),
+  .DI (1'b0)
+) i_ext_trig_debounce (
+  .clk  (clk),
+  .rstn (rstn_r),
+  .ena  (cfg_ext_trig_debounce_en),
+  .len  (cfg_ext_trig_debounce_len),
+  .d_i  (ext_trig_raw),
+  .d_o  (ext_trig_deb_o),
+  .d_p  (ext_trig_deb_p),
+  .d_n  (ext_trig_deb_n)
+);
+
+wire ext_trig_edge_pulse = cfg_ext_trig_edge_sel ? ext_trig_deb_n : ext_trig_deb_p;
+
+assign gpio_trig_o = cfg_ext_trig_condition_en ? ext_trig_edge_pulse : ext_trig_raw;
 
 
 assign sto.TREADY = 1'b1;
@@ -359,6 +390,11 @@ if (~rstn_r) begin
   // bitwise input polarity
   cfg_pol <= 'h0;
 
+  cfg_ext_trig_condition_en <= 1'b0;
+  cfg_ext_trig_edge_sel     <= 1'b0;
+  cfg_ext_trig_debounce_en  <= 1'b0;
+  cfg_ext_trig_debounce_len <= 8'h0;
+
   dir_p   <= 'h0;
   dir_n   <= 'h0;
 
@@ -398,6 +434,14 @@ end else begin
 
     // bitwise input polarity
     if (reg_addr[8-1:0]=='h60)   cfg_pol <= reg_wr_data;
+
+    // external trigger control
+    if (reg_addr[8-1:0]=='h68) begin
+      cfg_ext_trig_condition_en <= reg_wr_data[0];
+      cfg_ext_trig_edge_sel     <= reg_wr_data[1];
+      cfg_ext_trig_debounce_en  <= reg_wr_data[2];
+      cfg_ext_trig_debounce_len <= reg_wr_data[15:8];
+    end
 
     // GPIO direction
     if (reg_addr[8-1:0]=='h70)   dir_p   <= reg_wr_data;
@@ -459,6 +503,9 @@ begin
 
     // bitwise input polarity
     'h60 : reg_rd_data <=                cfg_pol;
+
+    // external trigger control
+    'h68 : reg_rd_data <= {{32-16{1'b0}}, cfg_ext_trig_debounce_len, {5{1'b0}}, cfg_ext_trig_debounce_en, cfg_ext_trig_edge_sel, cfg_ext_trig_condition_en};
 
     // GPIO direction
     'h70 : reg_rd_data <=                  dir_p;

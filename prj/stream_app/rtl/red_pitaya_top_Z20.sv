@@ -238,7 +238,7 @@ assign adc_cdcs_o = 1'b1 ;
         .FCLK_RESET1_N     (frstn[1]     ),
         .FCLK_RESET2_N     (frstn[2]     ),
         .FCLK_RESET3_N     (frstn[3]     ),
-        .trig_in(external_trig),
+        .trig_in(trig_ext),
         .gpio_trig(gpio_trig),
         .trig_out(trig_out),
         .clksel(clksel),
@@ -297,6 +297,5 @@ IBUFDS i_IBUF_ext_e3 [4-1:0] (.I(exp_e3p_i), .IB(exp_e3n_i), .O(ext_e3i));
 OBUFDS o_OBUF_ext_e3 [4-1:0] (.O(exp_e3p_o), .OB(exp_e3n_o), .I(ext_e3o));
 `endif
 
-assign external_trig = trig_ext | gpio_trig;
 
 endmodule

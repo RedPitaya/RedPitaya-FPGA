@@ -218,6 +218,9 @@ assign intr = |dma_intr;
 wire                        trig_out1;
 wire                        trig_out2;
 assign trig_out = trig_out1 | trig_out2;
+wire                        adc_armed_ch1;
+wire                        adc_armed_ch2;
+wire                        sts_armed = adc_armed_ch1 & adc_armed_ch2;
 //assign trig_out = |ser_trig;
 
 wire                        dma_mode;
@@ -239,7 +242,8 @@ wire                        sts_trig_post_overflow;
 
 wire [S_AXIS_DATA_BITS-1:0] cfg_trig_low_level;
 wire [S_AXIS_DATA_BITS-1:0] cfg_trig_high_level;
-wire                        cfg_trig_edge;  
+wire                        cfg_trig_edge;
+wire                        cfg_trigger_mode;
 wire                        trig_mod_op;
 
 wire                        cfg_avg_en; 
@@ -487,6 +491,8 @@ scope_cfg #(
   .cfg_trig_low_level_o     (cfg_trig_low_level),
   .cfg_trig_high_level_o    (cfg_trig_high_level),
   .cfg_trig_edge_o          (cfg_trig_edge),
+  .cfg_trigger_mode_o       (cfg_trigger_mode),
+  .sts_armed_i              (sts_armed),
 
   .cfg_dec_factor_o         (cfg_dec_factor),
   .cfg_dec_rshift_o         (cfg_dec_rshift),
@@ -606,6 +612,8 @@ scope_cfg #(
   .cfg_trig_low_level_i     (cfg_trig_low_level),
   .cfg_trig_high_level_i    (cfg_trig_high_level),
   .cfg_trig_edge_i          (cfg_trig_edge),
+  .cfg_trigger_mode_i       (cfg_trigger_mode),
+  .sts_armed_o              (adc_armed_ch1),
 
   .cfg_dec_factor_i         (cfg_dec_factor),
   .cfg_dec_rshift_i         (cfg_dec_rshift),
@@ -706,6 +714,8 @@ osc_top #(
   .cfg_trig_low_level_i     (cfg_trig_low_level),
   .cfg_trig_high_level_i    (cfg_trig_high_level),
   .cfg_trig_edge_i          (cfg_trig_edge),
+  .cfg_trigger_mode_i       (cfg_trigger_mode),
+  .sts_armed_o              (adc_armed_ch2),
 
   .cfg_dec_factor_i         (cfg_dec_factor),
   .cfg_dec_rshift_i         (cfg_dec_rshift),
