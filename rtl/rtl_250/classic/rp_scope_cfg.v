@@ -536,14 +536,38 @@ assign indep_mode_o          = indep_mode      ;
 assign axi_en_pulse_o        = axi_en_pulse    ;
 assign new_trg_src_o         = new_trg_src_x   ;
 assign trg_src_o             = trg_src_x       ;
-assign set_dec1_o            = set_dec1_x      ;
+
+// Pipeline the decimator configuration outputs. set_dec_x, set_avg_en_x and
+// set_hres_en_x are combinational muxes on indep_mode, and set_dec_i drives a
+// wide case statement in rp_decim. Registering these configuration values
+// keeps that muxing out of the ADC sample data path. The associated control
+// pulses and trg_src_x remain combinational so their alignment is unchanged.
+reg [   4*17 -1: 0] set_dec_r    ;
+reg [       4-1: 0] set_dec1_r   ;
+reg [       4-1: 0] set_avg_en_r ;
+reg [       4-1: 0] set_hres_en_r;
+
+always @(posedge adc_clk_i)
+if (adc_rstn_i == 1'b0) begin
+  set_dec_r     <= {4{17'd1}};
+  set_dec1_r    <= {4{1'b1}};
+  set_avg_en_r  <= {4{1'b0}};
+  set_hres_en_r <= {4{1'b0}};
+end else begin
+  set_dec_r     <= set_dec_x    ;
+  set_dec1_r    <= set_dec1_x   ;
+  set_avg_en_r  <= set_avg_en_x ;
+  set_hres_en_r <= set_hres_en_x;
+end
+
+assign set_dec1_o            = set_dec1_r      ;
 assign filt_rstn_o           = filt_rstn       ;
 assign set_tresh_o           = set_tresh       ;
 assign set_dly_o             = set_dly_x       ;
-assign set_dec_o             = set_dec_x       ;
+assign set_dec_o             = set_dec_r       ;
 assign set_hyst_o            = set_hyst        ;
-assign set_avg_en_o          = set_avg_en_x    ;
-assign set_hres_en_o           = set_hres_en_x     ;
+assign set_avg_en_o          = set_avg_en_r    ;
+assign set_hres_en_o           = set_hres_en_r     ;
 assign set_filt_aa_o         = set_filt_aa     ;
 assign set_filt_bb_o         = set_filt_bb     ;
 assign set_filt_kk_o         = set_filt_kk     ;
