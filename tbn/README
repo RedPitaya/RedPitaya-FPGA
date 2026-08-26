@@ -39,5 +39,9 @@ line.
   xelab -debug typical --timescale 1ns/1ps rp_decim_tb -s sim
   xsim sim -runall
 
+  xvlog -sv -d RP_DECIM_PREDECODED_MODE rtl/rtl/divide.v rtl/rtl_250/classic/rp_decim.v tbn/rp_decim_tb.sv
+  xelab -debug typical --timescale 1ns/1ps rp_decim_tb -s sim
+  xsim sim -runall
+
 xsim writes its work directory into the current directory, so run these from a
 scratch directory if you do not want xsim.dir next to the sources.

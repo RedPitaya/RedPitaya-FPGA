@@ -20,6 +20,9 @@ logic                set_hres_en_i;
 logic                adc_arm_do_i;
 logic                dec_val_o;
 logic [DW-1:0]       dec_dat_o;
+`ifdef RP_DECIM_PREDECODED_MODE
+logic [2:0]          dec_mode_i;
+`endif
 logic signed [DW-1:0] dec_dat_o_valid_hold;
 int unsigned          dec_valid_count;
 
@@ -102,7 +105,11 @@ function automatic int signed apply_hres_scale(
   input bit hres_en
 );
 begin
+`ifdef RP_DECIM_PREDECODED_MODE
+  if (hres_en)  apply_hres_scale = trunc_dw(dat <<< 4);
+`else
   if (hres_en)  apply_hres_scale = trunc_dw(dat <<< 2);
+`endif
   else          apply_hres_scale = trunc_dw(dat);
 end
 endfunction
@@ -126,6 +133,22 @@ begin
   endcase
 end
 endfunction
+
+`ifdef RP_DECIM_PREDECODED_MODE
+always_comb begin
+  if (!set_avg_en_i)
+    dec_mode_i = 3'd0;
+  else begin
+    case (set_dec_i)
+      17'd1:  dec_mode_i = 3'd1;
+      17'd2:  dec_mode_i = 3'd2;
+      17'd4:  dec_mode_i = 3'd3;
+      17'd8:  dec_mode_i = 3'd4;
+      default: dec_mode_i = (set_dec_i >= 17'd16) ? 3'd5 : 3'd0;
+    endcase
+  end
+end
+`endif
 
 task automatic build_expected(
   input int unsigned dec,
@@ -358,6 +381,17 @@ initial begin
   run_case("avg_on_dec4",             4, 1'b1, 1'b0, 128);
   run_case("avg_on_dec8",             8, 1'b1, 1'b0, 128);
   run_case("avg_on_dec3_fallback",    3, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec5_fallback",    5, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec6_fallback",    6, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec7_fallback",    7, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec9_fallback",    9, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec10_fallback",  10, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec11_fallback",  11, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec12_fallback",  12, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec13_fallback",  13, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec14_fallback",  14, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec15_fallback",  15, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec16_divider",   16, 1'b1, 1'b0, 256);
   run_case("avg_on_dec17_divider",   17, 1'b1, 1'b0, 256);
   run_case("avg_on_dec64_divider",   64, 1'b1, 1'b0, 512);
 
@@ -389,8 +423,13 @@ rp_decim #(
   .adc_rstn_i   (adc_rstn_i  ),
   .dec_dat_i    (dec_dat_i   ),
   .set_dec_i    (set_dec_i   ),
+`ifndef RP_DECIM_PREDECODED_MODE
   .set_avg_en_i (set_avg_en_i),
+`endif
   .set_hres_en_i  (set_hres_en_i ),
+`ifdef RP_DECIM_PREDECODED_MODE
+  .dec_mode_i   (dec_mode_i),
+`endif
   .adc_arm_do_i (adc_arm_do_i),
   .dec_val_o    (dec_val_o   ),
   .dec_dat_o    (dec_dat_o   )
