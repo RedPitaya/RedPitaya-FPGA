@@ -107,7 +107,7 @@ wire [14-1:0] lfsr_noise;
   );
 
 localparam PNT_SIZE = RSZ+16+32;
-typedef enum logic [0:0] {
+typedef enum logic [1:0] {
     RDLY_MODE_CONST  = 2'b00,
     RDLY_MODE_COPY  = 2'b01
 } rdly_mode_t;
@@ -120,6 +120,10 @@ reg                    dac_scale_bypass;
 
 reg   [ RSZ-1: 0] dac_rp    ;
 reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
+reg   [PNT_SIZE-1: 0] dac_pnt_next; // second pointer in the active look-ahead pair
+reg                    pnt_pair_phase;
+reg                    pnt_pair_wrap;
+reg   [          1: 0] pnt_pair_warm;
 wire  [PNT_SIZE-1: 0] axi_pnt   ; // read pointer AXI
 wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
@@ -131,6 +135,9 @@ wire                  axi_last_pre;
 wire                  axi_first;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
+reg              init_run     ;
+wire             do_read      ;
+wire             do_read_end  ;
 
 assign axi_dac_do = axi_state_o[1];
 
@@ -219,13 +226,12 @@ reg  [  32-1: 0] set_rdly_m1  ;
 // Set after the first real output sample so AXI preload time is not counted
 // as part of the requested start-to-start burst period.
 reg              dly_started  ;
-reg              init_run     ;
 
 reg  [  32-1: 0] set_step         ;
 reg  [  32-1: 0] set_step_lo      ;
-reg  [  32-1: 0] set_step_lo_m1   ;
-reg  [  32-1: 0] set_step_lo_neg  ;
 reg  [RSZ+16-1:0] set_size        ;
+reg  [PNT_SIZE-1:0] set_offset    ;
+reg                  set_wrap     ;
 wire [  32-1: 0] set_step_cfg     ;
 wire [  32-1: 0] set_step_lo_cfg  ;
 
@@ -234,8 +240,6 @@ wire             dac_trig     ;
 reg              dac_trigr    ;
 reg              buf_cycle_q  ;
 
-wire             do_read      ;
-wire             do_read_end  ;
 wire             buf_cycle    ;
 wire             dly_start    ;
 wire             pnt_wrap     ;
@@ -344,11 +348,22 @@ always @(posedge dac_clk_i) begin
       buf_cycle_q  <=  1'b0 ;
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
-      set_step_lo_m1  <= 32'hffff_ffff;
-      set_step_lo_neg <= 32'h0;
       set_size        <= {(RSZ+16){1'b0}};
+      set_offset      <= {PNT_SIZE{1'b0}};
+      set_wrap        <= 1'b0;
+      pnt_pair_warm   <= 2'b00;
    end
    else begin
+      // A non-AXI start is delayed by two clocks.  This both flushes an old
+      // look-ahead pair and gives the newly captured configuration an honest
+      // 8 ns path to the seed pair.
+      if (set_rst_i)
+         pnt_pair_warm <= 2'b00;
+      else if (trig_in && !do_read && !dac_rep && !set_axi_en_i)
+         pnt_pair_warm <= 2'b01;
+      else
+         pnt_pair_warm <= {pnt_pair_warm[0],1'b0};
+
       // Compute both state variants before the late wrap decision and use the
       // wrap bit only for the final selection.
       if (set_rst_i) begin
@@ -373,12 +388,12 @@ always @(posedge dac_clk_i) begin
        default : trig_in <= 1'b0        ;
       endcase
 
-      if (trig_in) begin
+      if (trig_in && !do_read && !dac_rep) begin
         set_step    <= set_step_cfg;
         set_step_lo <= set_step_lo_cfg;
-        set_step_lo_m1  <= set_step_lo_cfg - 32'h1;
-        set_step_lo_neg <= -set_step_lo_cfg;
         set_size        <= set_size_i;
+        set_offset      <= {set_ofs_i[RSZ+15:0],32'b0};
+        set_wrap        <= set_wrap_i;
       end
 
       dac_do  <= pnt_wrap ? dac_do_nxt_1  : dac_do_nxt_0;
@@ -396,7 +411,9 @@ wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
 wire cycle_end_pre = set_axi_en_i ? axi_last_pre : (~dac_npnt_sub_neg);
 wire rep_end_pre   = (cyc_cnt == 16'h1) && cycle_end_pre;
-wire trig_now     = (!dac_rep && trig_in) || (rep_arm && rep_idle);
+wire pnt_pair_start = pnt_pair_warm[1];
+wire trig_now     = (!dac_rep && (set_axi_en_i ? trig_in : pnt_pair_start))
+                    || (rep_arm && rep_idle);
 wire trig_on_wrap = rep_arm && (cyc_cnt == 16'h1);
 wire dac_trig_axi = trig_now || (trig_on_wrap && cycle_end_pre);
 
@@ -451,78 +468,112 @@ assign dac_rep_nxt_1 = (dac_trig_1 && !set_rst_i) ? 1'b1 :
                        rep_end_c                  ? 1'b0 : dac_rep;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Read pointer arithmetic, carry select across the fixed point boundary.
+// Two-sample pointer look-ahead.  dac_pnt and dac_pnt_next hold consecutive
+// samples.  The second register is stable for two DAC clocks, so two further
+// applications of F() have a real 8 ns budget.  One pointer is still consumed
+// on every 250 MHz clock.
 ////////////////////////////////////////////////////////////////////////////////
 
-localparam PNT_LO = 32;
-localparam PNT_HI = PNT_SIZE - PNT_LO;
+wire [PNT_SIZE-1:0] pnt_step = {set_step[RSZ+15:0],set_step_lo};
+wire [PNT_SIZE-1:0] pnt_reset_offset = {set_ofs_i[RSZ+15:0],32'b0};
+wire [PNT_SIZE-1:0] pnt_pair_base = |pnt_pair_warm ? set_offset : dac_pnt_next;
 
-wire [PNT_LO-1:0] pnt_lo = dac_pnt[PNT_LO-1:0];
-wire [PNT_HI-1:0] pnt_hi = dac_pnt[PNT_SIZE-1:PNT_LO];
-wire [PNT_LO-1:0] stp_lo = set_step_lo;
-wire [PNT_HI-1:0] stp_hi = set_step[PNT_HI-1:0];
+// First transition.
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sum_1 =
+   {1'b0,pnt_pair_base} + {1'b0,pnt_step};
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sub_1 =
+   pair_sum_1 - {1'b0,set_size,32'b0} - 1'b1;
+wire pair_wrap_1 = ~pair_sub_1[PNT_SIZE];
+wire [PNT_SIZE-1:0] pair_pnt_1 = pair_wrap_1
+   ? (set_wrap ? pair_sub_1[PNT_SIZE-1:0] : set_offset)
+   : pair_sum_1[PNT_SIZE-1:0];
 
-(* keep = "true" *) wire [PNT_LO  :0] frac_sum = {1'b0,pnt_lo} + {1'b0,stp_lo};
-wire [PNT_LO-1:0] frac_sub_lo = pnt_lo + set_step_lo_m1;
-wire              frac_carry = frac_sum[PNT_LO];
-wire              frac_zero  = (pnt_lo == set_step_lo_neg);
-wire [1:0] frac_k = frac_carry ? (frac_zero ? 2'b00 : 2'b01) :
-                                frac_zero  ? 2'b11 : 2'b00;
+// Second transition candidates, derived directly from the original base.
+// pair_sum_2 is B+2*S.  The no-first-wrap candidate subtracts 2^PNT_SIZE
+// when the first raw sum overflowed the stored pointer width.
+(* keep = "true" *) wire [PNT_SIZE+1:0] pair_sum_2 =
+   {2'b0,pnt_pair_base} + ({2'b0,pnt_step} << 1);
+wire [PNT_SIZE+1:0] pair_modulus = {1'b0,1'b0,set_size,32'b0} + 1'b1;
+wire [PNT_SIZE+1:0] pair_pointer_span =
+   {{(PNT_SIZE+1){1'b0}},1'b1} << PNT_SIZE;
 
-(* keep = "true" *) wire [PNT_HI:0] int_sum_c0 = {1'b0,pnt_hi} + {1'b0,stp_hi};
-(* keep = "true" *) wire [PNT_HI:0] int_sum_c1 = {1'b0,pnt_hi} + {1'b0,stp_hi} + 1'b1;
-wire [PNT_HI:0] int_sum = frac_carry ? int_sum_c1 : int_sum_c0;
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sum_2_nowrap =
+   pair_sum_2 - (pair_sum_1[PNT_SIZE] ? pair_pointer_span : {PNT_SIZE+2{1'b0}});
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sub_2_nowrap =
+   (pair_sum_2 - (pair_sum_1[PNT_SIZE] ? pair_pointer_span : {PNT_SIZE+2{1'b0}})
+    - pair_modulus);
+wire pair_wrap_2_nowrap = ~pair_sub_2_nowrap[PNT_SIZE];
+wire [PNT_SIZE-1:0] pair_pnt_2_nowrap = pair_wrap_2_nowrap
+   ? (set_wrap ? pair_sub_2_nowrap[PNT_SIZE-1:0] : set_offset)
+   : pair_sum_2_nowrap[PNT_SIZE-1:0];
 
-localparam INT_LO = PNT_HI/2;
-localparam INT_HI = PNT_HI - INT_LO;
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sum_2_wrapped =
+   pair_sum_2 - pair_modulus;
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sub_2_wrapped =
+   pair_sum_2 - (pair_modulus << 1);
+wire pair_wrap_2_wrapped = ~pair_sub_2_wrapped[PNT_SIZE];
+wire [PNT_SIZE-1:0] pair_pnt_2_wrapped = pair_wrap_2_wrapped
+   ? pair_sub_2_wrapped[PNT_SIZE-1:0] : pair_sum_2_wrapped[PNT_SIZE-1:0];
 
-wire [INT_LO-1:0] pnt_i_l = pnt_hi[INT_LO-1:0];
-wire [INT_HI-1:0] pnt_i_h = pnt_hi[PNT_HI-1:INT_LO];
-wire [INT_LO-1:0] stp_i_l = stp_hi[INT_LO-1:0];
-wire [INT_HI-1:0] stp_i_h = stp_hi[PNT_HI-1:INT_LO];
-wire [INT_LO-1:0] siz_i_l = set_size[INT_LO-1:0];
-wire [INT_HI-1:0] siz_i_h = set_size[PNT_HI-1:INT_LO];
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sum_2_offset =
+   {1'b0,set_offset} + {1'b0,pnt_step};
+(* keep = "true" *) wire [PNT_SIZE:0] pair_sub_2_offset =
+   pair_sum_2_offset - {1'b0,set_size,32'b0} - 1'b1;
+wire pair_wrap_2_offset = ~pair_sub_2_offset[PNT_SIZE];
+wire [PNT_SIZE-1:0] pair_pnt_2_offset = pair_wrap_2_offset
+   ? set_offset : pair_sum_2_offset[PNT_SIZE-1:0];
 
-(* keep = "true" *) wire [INT_LO+1:0] isub_l_m1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
-                                                - {2'b0,siz_i_l} - 1'b1;
-(* keep = "true" *) wire [INT_LO+1:0] isub_l_z  = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
-                                                - {2'b0,siz_i_l};
-(* keep = "true" *) wire [INT_LO+1:0] isub_l_p1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l}
-                                                - {2'b0,siz_i_l} + 1'b1;
-wire [INT_LO+1:0] isub_l = frac_k[1] ? isub_l_m1 :
-                           frac_k[0] ? isub_l_p1 : isub_l_z;
-wire [1:0] int_j = isub_l[INT_LO+1:INT_LO];
+wire pair_wrap_2 = pair_wrap_1
+   ? (set_wrap ? pair_wrap_2_wrapped : pair_wrap_2_offset)
+   : pair_wrap_2_nowrap;
+wire [PNT_SIZE-1:0] pair_pnt_2 = pair_wrap_1
+   ? (set_wrap ? pair_pnt_2_wrapped : pair_pnt_2_offset)
+   : pair_pnt_2_nowrap;
+(* keep = "true" *) wire [PNT_SIZE:0] pnt_pair_1 = {pair_wrap_1,pair_pnt_1};
+(* keep = "true" *) wire [PNT_SIZE:0] pnt_pair_2 = {pair_wrap_2,pair_pnt_2};
+wire pnt_wrap_now = pnt_pair_phase ? pnt_pair_1[PNT_SIZE] : pnt_pair_wrap;
 
-(* keep = "true" *) wire [INT_HI:0] isub_h_m1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
-                                              - {1'b0,siz_i_h} - 1'b1;
-(* keep = "true" *) wire [INT_HI:0] isub_h_z  = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
-                                              - {1'b0,siz_i_h};
-(* keep = "true" *) wire [INT_HI:0] isub_h_p1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h}
-                                              - {1'b0,siz_i_h} + 1'b1;
-wire [INT_HI:0] isub_h = int_j[1] ? isub_h_m1 :
-                         int_j[0] ? isub_h_p1 : isub_h_z;
-wire [PNT_HI:0] int_sub = {isub_h, isub_l[INT_LO-1:0]};
-
-assign dac_npnt         = {int_sum, frac_sum[PNT_LO-1:0]};
-assign dac_npnt_sub     = {int_sub, frac_sub_lo};
-assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
+// Keep the legacy signal names for the state machine.  The pair engine has
+// already selected the wrapped/non-wrapped pointer; only the per-sample wrap
+// decision is consumed here.
+assign dac_npnt = {1'b0,pnt_pair_1[PNT_SIZE-1:0]};
+assign dac_npnt_sub = {~pnt_wrap_now,pnt_pair_1[PNT_SIZE-1:0]};
+assign dac_npnt_sub_neg = ~(dac_do && pnt_wrap_now);
 
 // read pointer logic
 always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) begin
-   dac_pnt  <= {PNT_SIZE{1'b0}};
+   dac_pnt       <= {PNT_SIZE{1'b0}};
+   dac_pnt_next  <= {PNT_SIZE{1'b0}};
+   pnt_pair_phase <= 1'b0;
+   pnt_pair_wrap  <= 1'b0;
 end else begin
-   // A trigger generated by the current wrap is only an FSM event. Only an
-   // idle trigger needs to load the configured start offset.
-   if (set_rst_i || (trig_now && !dac_do))
-      dac_pnt <= {set_ofs_i[RSZ+15:0],32'h0};
+   if (set_rst_i) begin
+      dac_pnt        <= pnt_reset_offset;
+      dac_pnt_next   <= pnt_reset_offset;
+      pnt_pair_phase <= 1'b0;
+      pnt_pair_wrap  <= 1'b0;
+   end else if (pnt_pair_start && !dac_do) begin
+      // Configuration has been stable for two clocks while pnt_pair_warm was
+      // shifting, so the first pair does not create a 4 ns seed path.
+      dac_pnt        <= set_offset;
+      dac_pnt_next   <= pnt_pair_1[PNT_SIZE-1:0];
+      pnt_pair_phase <= 1'b0;
+      pnt_pair_wrap  <= pnt_pair_1[PNT_SIZE];
+   end
    else if (dac_do) begin
-      if (~dac_npnt_sub_neg)  dac_pnt <= set_wrap_i ? dac_npnt_sub : {set_ofs_i[RSZ+15:0],32'h0}; // wrap or go to start
-      else                    dac_pnt <= dac_npnt[PNT_SIZE-1:0]; // normal increase
+      if (pnt_pair_phase) begin
+         dac_pnt        <= pnt_pair_1[PNT_SIZE-1:0];
+         dac_pnt_next   <= pnt_pair_2[PNT_SIZE-1:0];
+         pnt_pair_wrap  <= pnt_pair_2[PNT_SIZE];
+         pnt_pair_phase <= 1'b0;
+      end else begin
+         dac_pnt        <= dac_pnt_next;
+         pnt_pair_phase <= 1'b1;
+      end
    end
 end
 
-// dac_npnt / dac_npnt_sub are built above, split at the fixed-point boundary.
 assign trig_done_o = !dac_rep && trig_in;
 assign get_step_o = set_step;
 assign get_step_lo_o = set_step_lo;

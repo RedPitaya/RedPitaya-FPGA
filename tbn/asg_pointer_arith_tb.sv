@@ -9,8 +9,6 @@ module asg_pointer_arith_tb;
   localparam int PNT_LO = 32;
   localparam int PNT_HI = RSZ + 16;
   localparam int PNT_SIZE = PNT_HI + PNT_LO;
-  localparam int INT_LO = PNT_HI / 2;
-  localparam int INT_HI = PNT_HI - INT_LO;
 
   logic [PNT_SIZE-1:0] pnt;
   logic [PNT_HI-1:0] step_hi, size_i, ofs_i;
@@ -18,66 +16,93 @@ module asg_pointer_arith_tb;
   logic wrap;
   int checks;
 
+  function automatic [PNT_SIZE:0] pair_advance;
+    input logic [PNT_SIZE-1:0] base;
+    logic [PNT_SIZE:0] sum, sub;
+    begin
+      sum = {1'b0,base} + {1'b0,step_hi,step_lo};
+      sub = sum - {1'b0,size_i,{PNT_LO{1'b0}}} - 1'b1;
+      pair_advance[PNT_SIZE] = ~sub[PNT_SIZE];
+      pair_advance[PNT_SIZE-1:0] = ~sub[PNT_SIZE]
+                                           ? (wrap ? sub[PNT_SIZE-1:0]
+                                                   : {ofs_i,{PNT_LO{1'b0}}})
+                                           : sum[PNT_SIZE-1:0];
+    end
+  endfunction
+
+  function automatic [2*(PNT_SIZE+1)-1:0] pair_direct;
+    input logic [PNT_SIZE-1:0] base;
+    logic [PNT_SIZE:0] sum1, sub1;
+    logic [PNT_SIZE+1:0] sum2, modulus, span, tmp;
+    logic [PNT_SIZE:0] sum2n, sub2n, sum2w, sub2w, sum2o, sub2o;
+    logic wrap1, wrap2n, wrap2w, wrap2o, wrap2;
+    logic [PNT_SIZE-1:0] pnt1, pnt2n, pnt2w, pnt2o, pnt2;
+    begin
+      sum1 = {1'b0,base} + {1'b0,step_hi,step_lo};
+      sub1 = sum1 - {1'b0,size_i,{PNT_LO{1'b0}}} - 1'b1;
+      wrap1 = ~sub1[PNT_SIZE];
+      pnt1 = wrap1 ? (wrap ? sub1[PNT_SIZE-1:0] : {ofs_i,{PNT_LO{1'b0}}})
+                   : sum1[PNT_SIZE-1:0];
+
+      sum2 = {2'b0,base} + ({2'b0,step_hi,step_lo} << 1);
+      modulus = {2'b0,size_i,{PNT_LO{1'b0}}} + 1'b1;
+      span = 'd1 << PNT_SIZE;
+      tmp = sum2 - (sum1[PNT_SIZE] ? span : '0);
+      sum2n = tmp[PNT_SIZE:0];
+      tmp = sum2 - (sum1[PNT_SIZE] ? span : '0) - modulus;
+      sub2n = tmp[PNT_SIZE:0];
+      wrap2n = ~sub2n[PNT_SIZE];
+      pnt2n = wrap2n ? (wrap ? sub2n[PNT_SIZE-1:0] : {ofs_i,{PNT_LO{1'b0}}})
+                     : sum2n[PNT_SIZE-1:0];
+
+      tmp = sum2 - modulus;
+      sum2w = tmp[PNT_SIZE:0];
+      tmp = sum2 - (modulus << 1);
+      sub2w = tmp[PNT_SIZE:0];
+      wrap2w = ~sub2w[PNT_SIZE];
+      pnt2w = wrap2w ? sub2w[PNT_SIZE-1:0] : sum2w[PNT_SIZE-1:0];
+
+      sum2o = {1'b0,ofs_i,{PNT_LO{1'b0}}} + {1'b0,step_hi,step_lo};
+      sub2o = sum2o - {1'b0,size_i,{PNT_LO{1'b0}}} - 1'b1;
+      wrap2o = ~sub2o[PNT_SIZE];
+      pnt2o = wrap2o ? {ofs_i,{PNT_LO{1'b0}}} : sum2o[PNT_SIZE-1:0];
+
+      wrap2 = wrap1 ? (wrap ? wrap2w : wrap2o) : wrap2n;
+      pnt2 = wrap1 ? (wrap ? pnt2w : pnt2o) : pnt2n;
+      pair_direct = {{wrap2,pnt2},{wrap1,pnt1}};
+    end
+  endfunction
+
   task automatic check_one;
-    logic [PNT_SIZE:0] ref_next, ref_sub;
-    logic [PNT_LO:0] frac_sum;
-    logic [PNT_LO-1:0] frac_sub_lo;
-    logic frac_carry, frac_zero;
-    logic [1:0] frac_k;
-    logic [INT_LO-1:0] pnt_i_l, stp_i_l, siz_i_l;
-    logic [INT_HI-1:0] pnt_i_h, stp_i_h, siz_i_h;
-    logic [INT_LO+1:0] isub_l_m1, isub_l_z, isub_l_p1, isub_l;
-    logic [1:0] int_j;
-    logic [INT_HI:0] isub_h_m1, isub_h_z, isub_h_p1, isub_h;
-    logic [PNT_HI:0] int_sum_c0, int_sum_c1, int_sum, int_sub;
-    logic [PNT_SIZE:0] new_next, new_sub;
-    logic [PNT_SIZE-1:0] ref_pnt_after, new_pnt_after;
+    logic [PNT_SIZE:0] ref_next, ref_sub, dut_1, dut_2;
+    logic [2*(PNT_SIZE+1)-1:0] direct_pair;
+    logic [PNT_SIZE-1:0] ref_1, ref_2;
+    logic ref_wrap_1, ref_wrap_2;
     begin
       ref_next = {1'b0,pnt} + {1'b0,step_hi,step_lo};
       ref_sub  = ref_next - {1'b0,size_i,{PNT_LO{1'b0}}} - 1'b1;
+      ref_wrap_1 = ~ref_sub[PNT_SIZE];
+      ref_1 = ref_wrap_1 ? (wrap ? ref_sub[PNT_SIZE-1:0]
+                                  : {ofs_i,{PNT_LO{1'b0}}})
+                         : ref_next[PNT_SIZE-1:0];
+      ref_next = {1'b0,ref_1} + {1'b0,step_hi,step_lo};
+      ref_sub  = ref_next - {1'b0,size_i,{PNT_LO{1'b0}}} - 1'b1;
+      ref_wrap_2 = ~ref_sub[PNT_SIZE];
+      ref_2 = ref_wrap_2 ? (wrap ? ref_sub[PNT_SIZE-1:0]
+                                  : {ofs_i,{PNT_LO{1'b0}}})
+                         : ref_next[PNT_SIZE-1:0];
 
-      frac_sum = {1'b0,pnt[PNT_LO-1:0]} + {1'b0,step_lo};
-      frac_sub_lo = pnt[PNT_LO-1:0] + (step_lo - 1'b1);
-      frac_carry = frac_sum[PNT_LO];
-      frac_zero = (pnt[PNT_LO-1:0] == -step_lo);
-      frac_k = frac_carry ? (frac_zero ? 2'b00 : 2'b01) :
-                            frac_zero ? 2'b11 : 2'b00;
-
-      int_sum_c0 = {1'b0,pnt[PNT_SIZE-1:PNT_LO]} + {1'b0,step_hi};
-      int_sum_c1 = int_sum_c0 + 1'b1;
-      int_sum = frac_carry ? int_sum_c1 : int_sum_c0;
-
-      pnt_i_l = pnt[PNT_LO +: INT_LO];
-      pnt_i_h = pnt[PNT_LO+INT_LO +: INT_HI];
-      stp_i_l = step_hi[0 +: INT_LO];
-      stp_i_h = step_hi[INT_LO +: INT_HI];
-      siz_i_l = size_i[0 +: INT_LO];
-      siz_i_h = size_i[INT_LO +: INT_HI];
-      isub_l_m1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l} - {2'b0,siz_i_l} - 1'b1;
-      isub_l_z  = {2'b0,pnt_i_l} + {2'b0,stp_i_l} - {2'b0,siz_i_l};
-      isub_l_p1 = {2'b0,pnt_i_l} + {2'b0,stp_i_l} - {2'b0,siz_i_l} + 1'b1;
-      isub_l = frac_k[1] ? isub_l_m1 : frac_k[0] ? isub_l_p1 : isub_l_z;
-      int_j = isub_l[INT_LO+1:INT_LO];
-      isub_h_m1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h} - {1'b0,siz_i_h} - 1'b1;
-      isub_h_z  = {1'b0,pnt_i_h} + {1'b0,stp_i_h} - {1'b0,siz_i_h};
-      isub_h_p1 = {1'b0,pnt_i_h} + {1'b0,stp_i_h} - {1'b0,siz_i_h} + 1'b1;
-      isub_h = int_j[1] ? isub_h_m1 : int_j[0] ? isub_h_p1 : isub_h_z;
-      int_sub = {isub_h,isub_l[INT_LO-1:0]};
-      new_next = {int_sum,frac_sum[PNT_LO-1:0]};
-      new_sub = {int_sub,frac_sub_lo};
-
-      ref_pnt_after = ref_sub[PNT_SIZE] ? ref_next[PNT_SIZE-1:0] :
-                      wrap ? ref_sub[PNT_SIZE-1:0] : {ofs_i,{PNT_LO{1'b0}}};
-      new_pnt_after = new_sub[PNT_SIZE] ? new_next[PNT_SIZE-1:0] :
-                      wrap ? new_sub[PNT_SIZE-1:0] : {ofs_i,{PNT_LO{1'b0}}};
-      if (new_next !== ref_next || new_sub !== ref_sub || new_pnt_after !== ref_pnt_after) begin
-        $error("mismatch pnt=%h step=%h_%h size=%h ref=%h/%h/%h new=%h/%h/%h",
-               pnt, step_hi, step_lo, size_i, ref_next, ref_sub, ref_pnt_after,
-               new_next, new_sub, new_pnt_after);
+      direct_pair = pair_direct(pnt);
+      dut_1 = direct_pair[0 +: PNT_SIZE+1];
+      dut_2 = direct_pair[PNT_SIZE+1 +: PNT_SIZE+1];
+      if (dut_1 !== {ref_wrap_1,ref_1} || dut_2 !== {ref_wrap_2,ref_2}) begin
+        $error("pair mismatch pnt=%h step=%h_%h size=%h ref=%b/%h %b/%h dut=%h/%h",
+               pnt, step_hi, step_lo, size_i, ref_wrap_1, ref_1,
+               ref_wrap_2, ref_2, dut_1, dut_2);
         $fatal(1);
       end
-      pnt = ref_pnt_after;
-      checks++;
+      pnt = ref_2;
+      checks += 2;
     end
   endtask
 
