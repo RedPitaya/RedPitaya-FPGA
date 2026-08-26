@@ -62,11 +62,10 @@ logic [AW-1:0] period_words;
 logic [AW-1:0] words_left_q;
 logic          last_pulse;
 logic          last_pre_pulse;
-logic [31:0]   dec_cnt_q;
+logic [31:0]   dec_countdown_q;
 logic [31:0]   dec_safe;
+logic [31:0]   dec_reload;
 logic          dec_step;
-logic          dec_last_q;
-logic          dec_lt_q;
 logic          words_last_q;
 logic [15:0]   cycle_cnt_q;
 
@@ -362,14 +361,13 @@ assign axi_last_pre_o = last_pre_pulse;
 //  decimation and sample index
 
 assign dec_safe = (axi_dec_use == 0) ? 32'd1 : axi_dec_use;
+assign dec_reload = dec_safe - 32'd1;
 
-// dec_step and the "last word of the period" test used to be 32 bit compares
-// sitting in front of cycle_done, which then drove the enables and resets of
-// every counter in this module. Both are held in a flop instead, computed from
-// the value their counter takes in the same cycle it is loaded, so they carry
-// no extra delay: dec_last_q is dec_step for the cycle after this one, and
-// words_last_q says words_left_q has reached its final word.
-assign dec_step = dec_last_q;
+// Count remaining clocks instead of comparing an increasing counter with the
+// runtime decimation value. A zero detect now drives the sample advance path;
+// the runtime value is used only when the counter reloads. Loading dec_safe-1
+// preserves the original phase, including the zero-as-one setting.
+assign dec_step = ~|dec_countdown_q;
 assign fifo_active = rd_state_q != RD_IDLE;
 assign fifo_ready  = rd_state_q == RD_ACTIVE;
 assign output_valid = fifo_ready && !buf_empty;
@@ -393,29 +391,14 @@ end
 // module and it drove the reset of all 32 counter bits for no effect. On
 // start_cycle the FSM is still leaving RD_IDLE, so output_valid is low and the
 // counter is reloaded below anyway; on restart_cycle the cycle ended, which
-// requires dec_step, so dec_cnt_q has reached dec_safe and the else branch
-// reloads it as well.
+// requires dec_step and therefore takes the reload branch as well.
 always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i || set_rst_i) begin
-    dec_cnt_q  <= 32'h1;
-    dec_last_q <= dec_safe == 32'h1;
-    dec_lt_q   <= 32'h1 < dec_safe;
+    dec_countdown_q <= 32'h0;
+  end else if (!output_valid || dec_step) begin
+    dec_countdown_q <= dec_reload;
   end else begin
-    if (output_valid) begin
-      if (dec_lt_q) begin
-        dec_cnt_q  <= dec_cnt_q + 1;
-        dec_last_q <= (dec_cnt_q + 1) == dec_safe;
-        dec_lt_q   <= (dec_cnt_q + 1) <  dec_safe;
-      end else begin
-        dec_cnt_q  <= 32'h1;
-        dec_last_q <= dec_safe == 32'h1;
-        dec_lt_q   <= 32'h1 < dec_safe;
-      end
-    end else begin
-      dec_cnt_q  <= 32'h1;
-      dec_last_q <= dec_safe == 32'h1;
-      dec_lt_q   <= 32'h1 < dec_safe;
-    end
+    dec_countdown_q <= dec_countdown_q - 32'd1;
   end
 end
 
