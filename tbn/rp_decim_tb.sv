@@ -364,11 +364,98 @@ begin
 end
 endtask
 
+task automatic check_clamp_value(
+  input int signed value,
+  input bit hres_en,
+  input int signed expected
+);
+  logic signed [DW-1:0] got;
+begin
+  got = $signed(dut.clamp_dec_out(value, hres_en));
+  if (got !== expected) begin
+    $display("  ERROR: clamp(%0d, hres=%0d) exp=%0d got=%0d",
+             value, hres_en, expected, got);
+    errors++;
+  end
+end
+endtask
+
+task automatic run_clamp_boundary_case;
+  int unsigned errors_before;
+begin
+  $display("CASE START: clamp_exact_boundaries");
+  errors_before = errors;
+
+  check_clamp_value(-2049,  1'b0, -2048);
+  check_clamp_value(-2048,  1'b0, -2048);
+  check_clamp_value(-2047,  1'b0, -2047);
+  check_clamp_value( 2046,  1'b0,  2046);
+  check_clamp_value( 2047,  1'b0,  2047);
+  check_clamp_value( 2048,  1'b0,  2047);
+  check_clamp_value(-32769, 1'b1, -32768);
+  check_clamp_value(-32768, 1'b1, -32768);
+  check_clamp_value(-32767, 1'b1, -32767);
+  check_clamp_value( 32766, 1'b1,  32766);
+  check_clamp_value( 32767, 1'b1,  32767);
+  check_clamp_value( 32768, 1'b1,  32767);
+
+  if (errors == errors_before)
+    $display("CASE PASS: clamp_exact_boundaries");
+  else
+    $display("CASE DONE WITH ERRORS: clamp_exact_boundaries");
+end
+endtask
+
+task automatic run_clamp_cycle_case(
+  input string name,
+  input bit hres_en
+);
+  int signed stimulus [0:5];
+  int signed expected [0:5];
+  int unsigned i;
+  int unsigned errors_before;
+begin
+  $display("CASE START: %s", name);
+  errors_before = errors;
+  if (hres_en) begin
+    stimulus = '{-2049, -2048, -2047, 2046, 2047, 2048};
+    expected = '{-32768, -32768, -32752, 32736, 32752, 32767};
+  end else begin
+    stimulus = '{-2049, -2048, -2047, 2046, 2047, 2048};
+    expected = '{-2048, -2048, -2047, 2046, 2047, 2047};
+  end
+
+  reset_dut(1, 1'b0, hres_en);
+  for (i = 0; i < 6; i++) begin
+    @(negedge adc_clk_i);
+    dec_dat_i <= stimulus[i];
+    @(posedge adc_clk_i);
+    #1ps;
+    if (dec_val_o !== (i != 0)) begin
+      $display("  ERROR: cycle=%0d expected valid=%0d got=%0b", i, i != 0, dec_val_o);
+      errors++;
+    end
+    if ((i != 0) && ($signed(dec_dat_o) !== expected[i])) begin
+      $display("  ERROR: cycle=%0d exp=%0d got=%0d", i, expected[i], $signed(dec_dat_o));
+      errors++;
+    end
+  end
+
+  if (errors == errors_before)
+    $display("CASE PASS: %s", name);
+  else
+    $display("CASE DONE WITH ERRORS: %s", name);
+end
+endtask
+
 //------------------------------------------------------------------------------
 // test sequence
 //------------------------------------------------------------------------------
 
 initial begin
+  run_clamp_boundary_case();
+  run_clamp_cycle_case("clamp_base_cycle_exact", 1'b0);
+  run_clamp_cycle_case("clamp_hres_cycle_exact", 1'b1);
   run_case("avg_off_dec0",            0, 1'b0, 1'b0, 128);
   run_case("avg_off_dec1",            1, 1'b0, 1'b0, 128);
   run_case("avg_off_dec2",            2, 1'b0, 1'b0, 128);

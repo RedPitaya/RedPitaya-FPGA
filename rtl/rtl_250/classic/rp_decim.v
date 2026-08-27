@@ -52,17 +52,18 @@ function [DW-1:0] clamp_dec_out;
    input               hres_en_i;
 begin
    if (hres_en_i) begin
-      if (dat_i > HRES_MAX)
-         clamp_dec_out = HRES_MAX[DW-1:0];
-      else if (dat_i < HRES_MIN)
-         clamp_dec_out = HRES_MIN[DW-1:0];
+      // HRES limits are exactly the signed 16-bit range.  A value fits when
+      // every bit above bit 14 is a copy of its sign bit; no wide magnitude
+      // comparator or carry chain is needed.
+      if (|(dat_i[31:15] ^ {17{dat_i[31]}}))
+         clamp_dec_out = dat_i[31] ? HRES_MIN[DW-1:0] : HRES_MAX[DW-1:0];
       else
          clamp_dec_out = dat_i[DW-1:0];
    end else begin
-      if (dat_i > BASE_MAX)
-         clamp_dec_out = BASE_MAX[DW-1:0];
-      else if (dat_i < BASE_MIN)
-         clamp_dec_out = BASE_MIN[DW-1:0];
+      // BASE limits are exactly the signed 12-bit range.  Overflow is any
+      // upper bit that differs from the sign extension of bit 11.
+      if (|(dat_i[31:11] ^ {21{dat_i[31]}}))
+         clamp_dec_out = dat_i[31] ? BASE_MIN[DW-1:0] : BASE_MAX[DW-1:0];
       else
          clamp_dec_out = dat_i[DW-1:0];
    end
@@ -78,6 +79,7 @@ reg  [ 32-1: 0] sum_in      ;
 reg  [ 32-1: 0] sum_uns     ;
 reg  [ 17-1: 0] adc_dec_cnt ;
 reg             adc_dv      ;
+reg             adc_dv_next ;
 reg             div_go      ;
 wire            div_ok      ;
 reg             dat_got     ;
@@ -94,6 +96,20 @@ wire signed [31:0] dec_dat_base = $signed(dec_dat_i);
 wire signed [31:0] dec_dat_hres = hres_active ? (dec_dat_base <<< HRES_SHL) : dec_dat_base;
 wire signed [31:0] adc_sum_s = $signed(adc_sum);
 wire signed [31:0] dat_div_s = $signed(dat_div);
+
+// Select the decimator result combinationally, then register the selected and
+// saturated value below.  Keeping this outside the clocked block makes the
+// mux/register boundary explicit while preserving the existing latency.
+always @* begin
+   case (dec_mode_i)
+      DEC_MODE_SUM  : begin adc_dat_raw = adc_sum_s;       adc_dv_next = dec_valid;  end
+      DEC_MODE_SHR1 : begin adc_dat_raw = adc_sum_s >>> 1; adc_dv_next = dec_valid;  end
+      DEC_MODE_SHR2 : begin adc_dat_raw = adc_sum_s >>> 2; adc_dv_next = dec_valid;  end
+      DEC_MODE_SHR3 : begin adc_dat_raw = adc_sum_s >>> 3; adc_dv_next = dec_valid;  end
+      DEC_MODE_DIV  : begin adc_dat_raw = dat_div_s;       adc_dv_next = adc_dv_div; end
+      default       : begin adc_dat_raw = dec_dat_hres;    adc_dv_next = dec_valid;  end
+   endcase
+end
 
 
 
@@ -177,15 +193,7 @@ end else begin
       adc_sum   <= $signed(adc_sum) + $signed(dec_dat_hres) ;
    end
 
-   case (dec_mode_i)
-      DEC_MODE_SUM  : begin adc_dat_raw = adc_sum_s;       adc_dv <= dec_valid;  end
-      DEC_MODE_SHR1 : begin adc_dat_raw = adc_sum_s >>> 1; adc_dv <= dec_valid;  end
-      DEC_MODE_SHR2 : begin adc_dat_raw = adc_sum_s >>> 2; adc_dv <= dec_valid;  end
-      DEC_MODE_SHR3 : begin adc_dat_raw = adc_sum_s >>> 3; adc_dv <= dec_valid;  end
-      DEC_MODE_DIV  : begin adc_dat_raw = dat_div_s;       adc_dv <= adc_dv_div; end
-      default       : begin adc_dat_raw = dec_dat_hres;    adc_dv <= dec_valid;  end
-   endcase
-
+   adc_dv  <= adc_dv_next;
    adc_dat <= clamp_dec_out(adc_dat_raw, hres_active);
 end
 
