@@ -59,6 +59,8 @@ module axi_wr_fifo #(
 reg  [ FW-1: 0] wr_pt              ;
 reg  [ FW-1: 0] rd_pt              ;
 reg  [ FW  : 0] fill_lvl           ;
+reg             fill_trig_ready    ;
+reg             fill_nonzero       ;
 reg             data_in_reg        ;
 reg             clear              ;
 reg  [  4-1: 0] dat_cnt            ;
@@ -79,6 +81,10 @@ wire new_burst ;
 wire [    SW-1: 0] byte_selector ;
 wire [ DW+SW+2: 0] fifo_rdr      ;
 reg  [ DW+SW+2: 0] fifo[(1<<FW)-1:0]  ;
+
+wire [FW:0] trigger_level = {{FW-3{1'b0}}, sys_trig_size_r};
+wire [FW:0] fill_lvl_after_io = (push && !pop) ? fill_lvl + 1'b1 :
+                                  (!push && pop) ? fill_lvl - 1'b1 : fill_lvl;
 
 
 // overflow detection & indication
@@ -149,12 +155,14 @@ begin
 end
 
 
-wire fifo_flush_cond = |fill_lvl && !wr_val_i && !dat_cnt[3:1];
+wire fifo_flush_cond = fill_nonzero && !wr_val_i && !dat_cnt[3:1];
 
 always @(posedge axi_clk_i)
 begin
    if (clear) begin
       fill_lvl   <= {FW+1{1'h0}} ;
+      fill_trig_ready <= (ctrl_trig_size_i == 4'h0);
+      fill_nonzero <= 1'b0;
       fifo_flush <= 1'h0 ;
    end
    else begin
@@ -162,6 +170,12 @@ begin
          fill_lvl <= fill_lvl + {{FW{1'b0}}, 1'h1} ;
       else if(!push && pop)
          fill_lvl <= fill_lvl - {{FW{1'b0}}, 1'h1} ;
+
+      // Track the trigger comparison for the fill level that is committed on
+      // this edge.  This keeps new_burst cycle-exact while removing the FIFO
+      // level comparator from the address-register feedback path.
+      fill_trig_ready <= (fill_lvl_after_io >= trigger_level);
+      fill_nonzero <= |fill_lvl_after_io;
 
       if (fifo_flush_cond)
          fifo_flush <= 1'b1 ;
@@ -220,13 +234,13 @@ begin
       single_burst_r <= 'h0 ;
    end
    else begin
-      single_burst   <= (!fill_lvl && !fifo_flush && !dat_cnt && data_in_reg) ;
+      single_burst   <= (!fill_nonzero && !fifo_flush && !dat_cnt && data_in_reg) ;
       single_burst_r <= single_burst ;
    end
 end
 
 
-assign new_burst = (((fifo_flush && axi_wrdy_i) || (fill_lvl >= {{FW-4{1'b0}},sys_trig_size_r})) && !dat_cnt && |fill_lvl 
+assign new_burst = (((fifo_flush && axi_wrdy_i) || fill_trig_ready) && !dat_cnt && fill_nonzero
                  || single_burst_posedge)
                  && !clear_do;
 
@@ -250,8 +264,8 @@ begin
 end
 
 
-assign pop =  (!data_in_reg && fill_lvl) || ((|dat_cnt || (new_burst && axi_wvalid_o)) 
-            && axi_wrdy_i && axi_wvalid_o && fill_lvl) ;
+assign pop =  (!data_in_reg && fill_nonzero) || ((|dat_cnt || (new_burst && axi_wvalid_o))
+            && axi_wrdy_i && axi_wvalid_o && fill_nonzero) ;
 
 always @(posedge axi_clk_i)
 begin
@@ -272,7 +286,7 @@ begin
    end
    else begin
       if (address_in_range && // still in address range
-          ( (new_burst && axi_wrdy_i) || (|dat_cnt && axi_wrdy_i && fill_lvl) ) ) begin  //new burst || still data in package
+          ( (new_burst && axi_wrdy_i) || (|dat_cnt && axi_wrdy_i && fill_nonzero) ) ) begin  //new burst || still data in package
          axi_wvalid_o <= 1'h1 ;
          next_address <= next_address + DW/8  ; // in bytes
          stop_distance <= stop_distance - 1'b1;
