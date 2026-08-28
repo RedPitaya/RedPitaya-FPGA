@@ -45,3 +45,9 @@ line.
 
 xsim writes its work directory into the current directory, so run these from a
 scratch directory if you do not want xsim.dir next to the sources.
+
+AXI write FIFO boundary arithmetic regression:
+
+  xvlog -sv tbn/axi_wr_fifo_boundary_tb.sv
+  xelab axi_wr_fifo_boundary_tb -s axi_wr_fifo_boundary_tb_sim
+  xsim axi_wr_fifo_boundary_tb_sim -runall

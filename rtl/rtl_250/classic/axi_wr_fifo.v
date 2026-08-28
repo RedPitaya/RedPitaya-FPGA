@@ -63,6 +63,11 @@ reg             data_in_reg        ;
 reg             clear              ;
 reg  [  4-1: 0] dat_cnt            ;
 reg  [ AW  : 0] next_address       ;
+localparam integer WORD_AW = AW - 2;
+reg  [WORD_AW:0] stop_distance     ;
+reg  [WORD_AW:0] wrap_stop_distance;
+reg                address_in_range;
+reg                wrap_next_in_range;
 reg             fifo_flush         ;
 reg  [ AW-1: 0] sys_start_addr_r   ;
 reg  [ AW-1: 0] sys_stop_addr_r    ;
@@ -174,14 +179,34 @@ end
 
 
 
-wire [8   :0] next_end_address   = next_address[10:3] + {3'h0,fill_lvl} ; // to where we have data
-wire [AW  :0] next_stop_address  = {1'b0,sys_stop_addr_r[AW-1:3]} - next_address[AW:3] - {{AW-FW+1{1'h0}},fill_lvl} ;
+wire [8:0] next_end_address = next_address[10:3] + fill_lvl;
 
-// select which boundary condition is more restricting - 0x0 - 4k boundary is more restricting; 0x1 end address is more restricting
-wire [AW+1:0] boundary_condition = {1'b0,next_address[AW:3]} + {{AW-FW+1{1'h0}},fill_lvl} - {1'b0,sys_stop_addr_r[AW-1:3]} ;
+// Registered distance from next_address to the inclusive stop address, in
+// 64-bit words.  Keeping it in lockstep with next_address removes the
+// address-wide subtraction from burst-length generation.
+wire                 stop_before_next = stop_distance[WORD_AW];
+wire                 stop_distance_big = |stop_distance[WORD_AW-1:FW+1];
+wire [FW:0]          stop_distance_low = stop_distance[FW:0];
 
-// select which boundary condition is more restricting, next transmission would cross the 4k address boundary (64-bit access) or stop address
-wire [2   :0] boundary_cross     = {boundary_condition[AW+1], next_end_address[8],next_stop_address[AW]} ;
+// These preserve all three original relations, including exact equality:
+//   fill_lt_stop_distance == boundary_condition[AW+1]
+//   fill_gt_stop_distance == next_stop_address[AW]
+wire fill_gt_stop_distance = stop_before_next
+                           || (!stop_distance_big && (fill_lvl > stop_distance_low));
+wire fill_lt_stop_distance = !stop_before_next
+                           && (stop_distance_big || (fill_lvl < stop_distance_low));
+wire page_boundary_cross = next_end_address[8];
+
+// Calculate all short burst-length candidates in parallel.  Only the final
+// selection depends on the boundary flags.
+wire [3:0] page_burst_len = 4'hF - next_address[6:3];
+wire [3:0] stop_burst_len = sys_stop_addr_r[6:3] - next_address[6:3];
+wire [3:0] fifo_burst_len = (fifo_flush || fifo_flush_cond)
+                          ? fill_lvl[3:0] - 4'h1 : fill_lvl[3:0];
+wire       boundary_cross = page_boundary_cross || fill_gt_stop_distance;
+wire [3:0] next_burst_len = boundary_cross
+                          ? (fill_lt_stop_distance ? page_burst_len : stop_burst_len)
+                          : (|fill_lvl[FW:4] ? 4'hF : fifo_burst_len);
 
 // prevents data to be trapped in output register
 reg  single_burst    ;
@@ -213,36 +238,9 @@ begin
       axi_wlen_o   <= 4'h0 ;
    end
    else begin
-      if (new_burst && (next_address <= {1'b0,sys_stop_addr_r})) begin
-         if (boundary_cross[1:0] || fill_lvl[FW:4]) begin
-            if (fill_lvl[FW:4] && !boundary_cross[1:0]) begin  //enough space to stop address  --!boundary_cross[1:0]
-               dat_cnt    <= 4'hF ;
-               axi_wlen_o <= 4'hF ;
-            end
-            else begin
-               // select which boundary condition is more restricting 
-               // 0x0 - 4k boundary is more restricting
-               // 0x1 - end address is more restricting
-               if (boundary_cross[2]) begin
-                  dat_cnt    <= 4'hF - next_address[6:3];
-                  axi_wlen_o <= 4'hF - next_address[6:3];
-               end
-               else begin
-                  dat_cnt    <= sys_stop_addr_r[6:3] - next_address[6:3];
-                  axi_wlen_o <= sys_stop_addr_r[6:3] - next_address[6:3];
-               end
-            end
-         end
-         else begin
-            if (fifo_flush || fifo_flush_cond) begin
-               dat_cnt    <= fill_lvl[3:0] - 4'h1 ;
-               axi_wlen_o <= fill_lvl[3:0] - 4'h1 ;
-            end
-            else begin
-               dat_cnt    <= fill_lvl[3:0] ;
-               axi_wlen_o <= fill_lvl[3:0] ;
-            end
-         end
+      if (new_burst && address_in_range) begin
+         dat_cnt    <= next_burst_len;
+         axi_wlen_o <= next_burst_len;
       end
       else if (axi_wrdy_i && axi_wvalid_o && dat_cnt) begin
          dat_cnt    <= dat_cnt    - 4'h1;
@@ -261,20 +259,34 @@ begin
       axi_wvalid_o     <= 1'h0                     ;
       axi_waddr_o      <= ctrl_start_addr_i        ;
       next_address     <= {1'b0,ctrl_start_addr_i} ;
+      stop_distance    <= {2'b0,ctrl_stop_addr_i[AW-1:3]}
+                        - {2'b0,ctrl_start_addr_i[AW-1:3]} ;
+      wrap_stop_distance <= {2'b0,ctrl_stop_addr_i[AW-1:3]}
+                          - {2'b0,ctrl_start_addr_i[AW-1:3]} - 1'b1 ;
+      address_in_range <= ({1'b0,ctrl_start_addr_i} <= {1'b0,ctrl_stop_addr_i});
+      wrap_next_in_range <= ({1'b0,ctrl_start_addr_i} + DW/8
+                             <= {1'b0,ctrl_stop_addr_i});
       sys_start_addr_r <= ctrl_start_addr_i        ;
       sys_stop_addr_r  <= ctrl_stop_addr_i         ;
       sys_trig_size_r  <= ctrl_trig_size_i         ;
    end
    else begin
-      if ((next_address <= {1'b0,sys_stop_addr_r}) && // still in address rage
+      if (address_in_range && // still in address range
           ( (new_burst && axi_wrdy_i) || (|dat_cnt && axi_wrdy_i && fill_lvl) ) ) begin  //new burst || still data in package
          axi_wvalid_o <= 1'h1 ;
          next_address <= next_address + DW/8  ; // in bytes
+         stop_distance <= stop_distance - 1'b1;
+         address_in_range <= !stop_before_next
+                          && ((stop_distance > 1)
+                              || ((stop_distance == 1)
+                                  && (next_address[2:0] <= sys_stop_addr_r[2:0])));
          axi_waddr_o  <= next_address[AW-1:0] ;
       end
       else if (ctrl_wrap_i && new_burst && (axi_waddr_o==sys_stop_addr_r)) begin //wrap around
          axi_wvalid_o <= 1'h1 ;
          next_address <= {1'b0,sys_start_addr_r} + DW/8  ; // in bytes
+         stop_distance <= wrap_stop_distance;
+         address_in_range <= wrap_next_in_range;
          axi_waddr_o  <= sys_start_addr_r ;
       end
       else if (axi_wrdy_i) begin
@@ -291,7 +303,7 @@ begin
       stat_write_data_o <= 'h0 ;
    end
    else begin
-      stat_write_data_o <= (next_address <= {1'b0,sys_stop_addr_r}) ; // address in range
+      stat_write_data_o <= address_in_range;
    end
 end
 
