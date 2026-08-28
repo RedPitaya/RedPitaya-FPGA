@@ -221,6 +221,8 @@ wire             ext_trig_n   ;
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  16-1: 0] dly_cnt_lo   ;
 reg  [  16-1: 0] dly_cnt_hi   ;
+reg              rep_nonzero  ;
+reg              dly_nonzero  ;
 wire [  32-1: 0] dly_cnt = {dly_cnt_hi,dly_cnt_lo};
 // Precompute the configuration-only decrement so it is not placed behind the
 // late wrap/trigger decision in the delay counter load path.
@@ -255,10 +257,14 @@ wire             dly_start_1  ;
 (* keep = "true" *) wire [15:0] dly_cnt_lo_nxt_1;
 (* keep = "true" *) wire [15:0] dly_cnt_hi_nxt_0;
 (* keep = "true" *) wire [15:0] dly_cnt_hi_nxt_1;
+wire                    dly_nonzero_nxt_0;
+wire                    dly_nonzero_nxt_1;
 (* keep = "true" *) wire        dly_started_nxt_0;
 (* keep = "true" *) wire        dly_started_nxt_1;
 (* keep = "true" *) wire [15:0] rep_cnt_nxt_0;
 (* keep = "true" *) wire [15:0] rep_cnt_nxt_1;
+wire                    rep_nonzero_nxt_0;
+wire                    rep_nonzero_nxt_1;
 (* keep = "true" *) wire [15:0] cyc_cnt_nxt_0;
 (* keep = "true" *) wire [15:0] cyc_cnt_nxt_1;
 (* keep = "true" *) wire        dac_do_nxt_0;
@@ -345,6 +351,8 @@ always @(posedge dac_clk_i) begin
       rep_cnt      <= 16'h0 ;
       dly_cnt_lo   <= 16'h0 ;
       dly_cnt_hi   <= 16'h0 ;
+      rep_nonzero  <=  1'b0 ;
+      dly_nonzero  <=  1'b0 ;
       dly_started  <=  1'b0 ;
       dac_do       <=  1'b0 ;
       dac_rep      <=  1'b0 ;
@@ -374,14 +382,17 @@ always @(posedge dac_clk_i) begin
       if (set_rst_i) begin
          dly_cnt_lo <= 16'h0;
          dly_cnt_hi <= 16'h0;
+         dly_nonzero <= 1'b0;
          dly_started <= 1'b0;
       end else begin
          dly_cnt_lo  <= pnt_wrap ? dly_cnt_lo_nxt_1  : dly_cnt_lo_nxt_0;
          dly_cnt_hi  <= pnt_wrap ? dly_cnt_hi_nxt_1  : dly_cnt_hi_nxt_0;
+         dly_nonzero <= pnt_wrap ? dly_nonzero_nxt_1 : dly_nonzero_nxt_0;
          dly_started <= pnt_wrap ? dly_started_nxt_1 : dly_started_nxt_0;
       end
 
-      rep_cnt <= pnt_wrap ? rep_cnt_nxt_1 : rep_cnt_nxt_0;
+      rep_cnt     <= pnt_wrap ? rep_cnt_nxt_1     : rep_cnt_nxt_0;
+      rep_nonzero <= pnt_wrap ? rep_nonzero_nxt_1 : rep_nonzero_nxt_0;
 
       dac_trigr <= dac_trig; // ignore trigger when count
       buf_cycle_q <= dac_do && ~dac_npnt_sub_neg;
@@ -412,7 +423,7 @@ always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) set_rdly_m1 <= 32'h0;
 else                    set_rdly_m1 <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
 
-wire rep_arm   = dac_rep && |rep_cnt && dly_started && (dly_cnt == 32'h0);
+wire rep_arm   = dac_rep && rep_nonzero && dly_started && !dly_nonzero;
 wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
 wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
@@ -438,23 +449,28 @@ assign dac_trig_1  = trig_now || (trig_on_wrap && cycle_end_1);
 assign dly_start_0 = set_axi_en_i ? axi_first : dac_trig_0;
 assign dly_start_1 = set_axi_en_i ? axi_first : dac_trig_1;
 
-wire        dly_dec     = dac_rep && dly_started && |dly_cnt;
+wire        dly_dec     = dac_rep && dly_started && dly_nonzero;
 wire [15:0] dly_hold_lo = dly_dec ? dly_cnt_lo - 16'h1 : dly_cnt_lo;
 wire [15:0] dly_hold_hi = (dly_dec && ~|dly_cnt_lo)
                         ? dly_cnt_hi - 16'h1 : dly_cnt_hi;
+wire        dly_terminal = (dly_cnt_hi == 16'h0) && (dly_cnt_lo == 16'h1);
 wire        rep_ld    = trig_in && !do_read;
-wire        rep_dec   = !set_rgate_i && |rep_cnt && dac_rep && !dac_trigr
+wire        rep_dec   = !set_rgate_i && rep_nonzero && dac_rep && !dac_trigr
                         && (set_rnum_i != 16'hffff);
 wire        rep_clr   = set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2)
                                      || ( trig_ext_i && trig_src_i==3'd3));
 wire        cyc_dec   = !dac_trigr && |cyc_cnt && buf_cycle;
 wire        do_clr    = set_rst_i;
-wire        rep_end_c = set_rst_i || (rep_cnt==16'h0);
+wire        rep_end_c = set_rst_i || !rep_nonzero;
 
 assign dly_cnt_lo_nxt_0 = dly_start_0 ? set_rdly_m1[15:0]  : dly_hold_lo;
 assign dly_cnt_lo_nxt_1 = dly_start_1 ? set_rdly_m1[15:0]  : dly_hold_lo;
 assign dly_cnt_hi_nxt_0 = dly_start_0 ? set_rdly_m1[31:16] : dly_hold_hi;
 assign dly_cnt_hi_nxt_1 = dly_start_1 ? set_rdly_m1[31:16] : dly_hold_hi;
+assign dly_nonzero_nxt_0 = dly_start_0 ? |set_rdly_m1
+                                       : dly_dec ? !dly_terminal : dly_nonzero;
+assign dly_nonzero_nxt_1 = dly_start_1 ? |set_rdly_m1
+                                       : dly_dec ? !dly_terminal : dly_nonzero;
 assign dly_started_nxt_0 = dly_start_0 ? 1'b1 : (dac_trig_0 ? 1'b0 : dly_started);
 assign dly_started_nxt_1 = dly_start_1 ? 1'b1 : (dac_trig_1 ? 1'b0 : dly_started);
 
@@ -464,6 +480,12 @@ assign rep_cnt_nxt_0 = rep_ld                 ? set_rnum_i      :
 assign rep_cnt_nxt_1 = rep_ld                 ? set_rnum_i      :
                        (rep_dec && dac_trig_1) ? rep_cnt - 16'h1 :
                        rep_clr                ? 16'h0           : rep_cnt;
+assign rep_nonzero_nxt_0 = rep_ld                 ? |set_rnum_i          :
+                               (rep_dec && dac_trig_0) ? (rep_cnt != 16'h1) :
+                               rep_clr                ? 1'b0                : rep_nonzero;
+assign rep_nonzero_nxt_1 = rep_ld                 ? |set_rnum_i          :
+                               (rep_dec && dac_trig_1) ? (rep_cnt != 16'h1) :
+                               rep_clr                ? 1'b0                : rep_nonzero;
 
 assign cyc_cnt_nxt_0 = dac_trig_0 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
 assign cyc_cnt_nxt_1 = dac_trig_1 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
