@@ -89,25 +89,31 @@ wire [ 32-1: 0] div_out     ;
 reg             adc_dv_div  ;
 reg  [ 34-1: 0] sign_sr     ;
 reg             sign_curr   ;
-reg signed [31:0] adc_dat_raw;
+reg  [ DW-1: 0] adc_dat_next;
 wire dec_valid = (adc_dec_cnt >= set_dec_i);
 wire hres_active = set_hres_en_i;
 wire signed [31:0] dec_dat_base = $signed(dec_dat_i);
 wire signed [31:0] dec_dat_hres = hres_active ? (dec_dat_base <<< HRES_SHL) : dec_dat_base;
 wire signed [31:0] adc_sum_s = $signed(adc_sum);
 wire signed [31:0] dat_div_s = $signed(dat_div);
+wire [DW-1:0] adc_dat_pass = clamp_dec_out(dec_dat_hres, hres_active);
+wire [DW-1:0] adc_dat_sum  = clamp_dec_out(adc_sum_s, hres_active);
+wire [DW-1:0] adc_dat_shr1 = clamp_dec_out(adc_sum_s >>> 1, hres_active);
+wire [DW-1:0] adc_dat_shr2 = clamp_dec_out(adc_sum_s >>> 2, hres_active);
+wire [DW-1:0] adc_dat_shr3 = clamp_dec_out(adc_sum_s >>> 3, hres_active);
+wire [DW-1:0] adc_dat_div  = clamp_dec_out(dat_div_s, hres_active);
 
-// Select the decimator result combinationally, then register the selected and
-// saturated value below.  Keeping this outside the clocked block makes the
-// mux/register boundary explicit while preserving the existing latency.
+// Saturate each candidate before selecting the active decimation mode.  This
+// keeps the mode-select path out of the wide saturation reduction tree while
+// preserving the selected value and the existing register latency.
 always @* begin
    case (dec_mode_i)
-      DEC_MODE_SUM  : begin adc_dat_raw = adc_sum_s;       adc_dv_next = dec_valid;  end
-      DEC_MODE_SHR1 : begin adc_dat_raw = adc_sum_s >>> 1; adc_dv_next = dec_valid;  end
-      DEC_MODE_SHR2 : begin adc_dat_raw = adc_sum_s >>> 2; adc_dv_next = dec_valid;  end
-      DEC_MODE_SHR3 : begin adc_dat_raw = adc_sum_s >>> 3; adc_dv_next = dec_valid;  end
-      DEC_MODE_DIV  : begin adc_dat_raw = dat_div_s;       adc_dv_next = adc_dv_div; end
-      default       : begin adc_dat_raw = dec_dat_hres;    adc_dv_next = dec_valid;  end
+      DEC_MODE_SUM  : begin adc_dat_next = adc_dat_sum;  adc_dv_next = dec_valid;  end
+      DEC_MODE_SHR1 : begin adc_dat_next = adc_dat_shr1; adc_dv_next = dec_valid;  end
+      DEC_MODE_SHR2 : begin adc_dat_next = adc_dat_shr2; adc_dv_next = dec_valid;  end
+      DEC_MODE_SHR3 : begin adc_dat_next = adc_dat_shr3; adc_dv_next = dec_valid;  end
+      DEC_MODE_DIV  : begin adc_dat_next = adc_dat_div;  adc_dv_next = adc_dv_div; end
+      default       : begin adc_dat_next = adc_dat_pass; adc_dv_next = dec_valid;  end
    endcase
 end
 
@@ -194,7 +200,7 @@ end else begin
    end
 
    adc_dv  <= adc_dv_next;
-   adc_dat <= clamp_dec_out(adc_dat_raw, hres_active);
+   adc_dat <= adc_dat_next;
 end
 
 assign dec_dat_o = adc_dat;
