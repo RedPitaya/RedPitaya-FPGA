@@ -37,6 +37,8 @@ reg  signed [DBITS:0]             offset_calc_limit_r;
 
 reg  signed [CALC3_BITS-1:0]      gain_calc;
 reg  signed [CALC3_BITS-1:0]      gain_calc_r;
+wire signed [16:0]                gain_positive;
+wire signed [DBITS+17:0]          gain_product;
 wire                              gain_max, gain_min;
 wire signed [DBITS-1:0]           gain_calc_limit;
 
@@ -92,6 +94,11 @@ end
 // 
 ////////////////////////////////////////////////////////////
 
+// The gain is a 16-bit unsigned fixed-point value.  Keep both operands at
+// their natural widths so the multiplication fits in one DSP48.
+assign gain_positive = $signed({1'b0, gain});
+assign gain_product  = offset_calc_limit_r * gain_positive;
+
 always @(posedge adc_clk_i)
 begin
   if (adc_rstn_i == 1'b0) begin
@@ -99,8 +106,7 @@ begin
     gain_calc   <= 'h0;
   end else begin
 
-    //gain_calc_r <= $signed({offset_calc_limit,{15{1'b0}}}) * {{15{1'b0}},gain};
-    gain_calc_r <= ($signed({offset_calc_limit_r,{15{1'b0}}}) * $signed({{15{1'b0}},gain})) >>> (30);
+    gain_calc_r <= gain_product >>> 15;
     gain_calc   <= gain_calc_r; // output of multiplier needs to be registered to avoid timing issues
   end
 end
