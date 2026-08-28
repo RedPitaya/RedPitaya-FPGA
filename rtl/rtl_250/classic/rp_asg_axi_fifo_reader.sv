@@ -63,8 +63,8 @@ logic [AW-1:0] words_left_q;
 logic          last_pulse;
 logic          last_pre_pulse;
 logic [31:0]   dec_countdown_q;
+logic [31:0]   dec_reload_q;
 logic [31:0]   dec_safe;
-logic [31:0]   dec_reload;
 logic          dec_step;
 logic          words_last_q;
 logic [15:0]   cycle_cnt_q;
@@ -114,7 +114,6 @@ logic [AW-1:0] axi_stop_q;
 logic [31:0]   axi_dec_q;
 logic [AW-1:0] axi_start_use;
 logic [AW-1:0] axi_stop_use;
-logic [31:0]   axi_dec_use;
 
 //---------------------------------------------------------------------------------
 //
@@ -272,7 +271,6 @@ end
 // so compensate by +4 to compute inclusive word count
 assign axi_start_use = start_cycle ? set_axi_start_i : axi_start_q;
 assign axi_stop_use  = start_cycle ? set_axi_stop_i  : axi_stop_q;
-assign axi_dec_use   = start_cycle ? set_axi_dec_i   : axi_dec_q;
 
 // The word count is a 32 bit subtract, and computing it combinationally put
 // that carry chain in the middle of the datapath, in front of the last pulse
@@ -321,10 +319,12 @@ always_ff @(posedge dac_clk_i) begin
     axi_start_q <= '0;
     axi_stop_q  <= '0;
     axi_dec_q   <= 32'h0;
+    dec_reload_q <= 32'h0;
   end else if (start_cycle) begin
     axi_start_q <= set_axi_start_i;
     axi_stop_q  <= set_axi_stop_i;
     axi_dec_q   <= set_axi_dec_i;
+    dec_reload_q <= (set_axi_dec_i == 0) ? 32'd0 : set_axi_dec_i - 32'd1;
   end
 end
 
@@ -360,13 +360,16 @@ assign axi_last_pre_o = last_pre_pulse;
 //
 //  decimation and sample index
 
-assign dec_safe = (axi_dec_use == 0) ? 32'd1 : axi_dec_use;
-assign dec_reload = dec_safe - 32'd1;
+// Retained as the normalized active setting for observability and verification.
+assign dec_safe = (axi_dec_q == 0) ? 32'd1 : axi_dec_q;
 
 // Count remaining clocks instead of comparing an increasing counter with the
 // runtime decimation value. A zero detect now drives the sample advance path;
-// the runtime value is used only when the counter reloads. Loading dec_safe-1
-// preserves the original phase, including the zero-as-one setting.
+// the registered runtime value is used only when the counter reloads. Loading
+// decimation-1 preserves the original phase, including the zero-as-one setting.
+// The reader cannot produce a sample on start_cycle, so registering the reload
+// there removes its 32-bit subtraction from the trigger-to-counter path without
+// changing any observable counter phase.
 assign dec_step = ~|dec_countdown_q;
 assign fifo_active = rd_state_q != RD_IDLE;
 assign fifo_ready  = rd_state_q == RD_ACTIVE;
@@ -396,7 +399,7 @@ always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i || set_rst_i) begin
     dec_countdown_q <= 32'h0;
   end else if (!output_valid || dec_step) begin
-    dec_countdown_q <= dec_reload;
+    dec_countdown_q <= dec_reload_q;
   end else begin
     dec_countdown_q <= dec_countdown_q - 32'd1;
   end
