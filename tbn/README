@@ -30,6 +30,10 @@ line.
   xelab --timescale 1ns/1ps asg_pointer_pair_integration_tb -s sim
   xsim sim -runall
 
+  xvlog -sv tbn/asg_zero_flag_tb.sv
+  xelab -debug typical --timescale 1ns/1ps asg_zero_flag_tb -s sim
+  xsim sim -runall
+
   xvlog -sv rtl/rtl/interface/sys_bus_if.sv rtl/rtl/sys_bus_cdc.sv \
             tbn/sys_bus_cdc_tb.sv
   xelab -debug typical --timescale 1ns/1ps sys_bus_cdc_tb -s sim
