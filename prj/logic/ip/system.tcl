@@ -489,17 +489,17 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
   #
   # The four DMA scatter gather masters are split over two crossbars, one per PS
   # slave port, instead of being arbitrated into S_AXI_GP0 alone: a single four
-  # slave arbiter does not close timing on this part. Register slices on every
-  # port for the same reason; they cost one cycle on descriptor fetches, which
-  # are not throughput critical.
+  # slave arbiter does not close timing on this part. Keep the M00 register
+  # slices on the paths to PS, but disable the S00/S01 slices to save area.
+  # Timing closure of this configuration must be checked after routing.
   set axi_interconnect_5 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_5 ]
   set_property -dict [ list \
    CONFIG.NUM_MI {1} \
    CONFIG.NUM_SI {2} \
    CONFIG.STRATEGY {1} \
    CONFIG.M00_HAS_REGSLICE {1} \
-   CONFIG.S00_HAS_REGSLICE {1} \
-   CONFIG.S01_HAS_REGSLICE {1} \
+   CONFIG.S00_HAS_REGSLICE {0} \
+   CONFIG.S01_HAS_REGSLICE {0} \
  ] $axi_interconnect_5
 
   # Create instance: axi_interconnect_6, and set properties
@@ -509,8 +509,8 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.NUM_SI {2} \
    CONFIG.STRATEGY {1} \
    CONFIG.M00_HAS_REGSLICE {1} \
-   CONFIG.S00_HAS_REGSLICE {1} \
-   CONFIG.S01_HAS_REGSLICE {1} \
+   CONFIG.S00_HAS_REGSLICE {0} \
+   CONFIG.S01_HAS_REGSLICE {0} \
  ] $axi_interconnect_6
 
   # Create instance: axis_clock_converter_2, and set properties
