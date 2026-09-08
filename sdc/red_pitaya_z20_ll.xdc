@@ -361,7 +361,7 @@ set_max_delay -quiet -datapath_only 8.000 \
   -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]*}]
 set_max_delay -quiet -datapath_only 8.000 \
   -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]}] \
-  -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_rdata_reg[*]}]
+  -to   [get_pins -quiet {ps/axi_slave_gp0/axi\\.RDATA_reg[*]/D}]
 set_bus_skew -quiet 6.000 \
   -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_addr_reg[*]/Q}] \
   -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr_reg[*]*/D}]
@@ -370,7 +370,7 @@ set_bus_skew -quiet 6.000 \
   -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]*/D}]
 set_bus_skew -quiet 6.000 \
   -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]/Q}] \
-  -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_rdata_reg[*]/D}]
+  -to   [get_pins -quiet {ps/axi_slave_gp0/axi\\.RDATA_reg[*]/D}]
 set_max_delay -quiet -datapath_only 8.000 -from [get_pins -quiet i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins -quiet {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
 set_false_path -quiet -from [get_pins -quiet {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins -quiet {dac_dat_*[*]/D}]
 

@@ -14,7 +14,6 @@ module sys_bus_cdc (
 */
 reg ctrl_do         ;
 reg ctrl_ack        ;
-reg [32-1:0] ctrl_rdata;
 
 (* ASYNC_REG = "TRUE" *)
 reg [2:0] ctrl_done_csff  ;
@@ -63,7 +62,6 @@ begin
     begin
         ctrl_do         <= 1'b0 ;
         ctrl_ack        <= 1'b0 ;
-        ctrl_rdata      <= 32'h0;
         ctrl_done_csff  <= 3'h0 ;
         ctrl_addr       <= 32'h0;
         ctrl_wdata      <= 32'h0;
@@ -78,20 +76,22 @@ begin
 
       ctrl_done_csff  <= {ctrl_done_csff[1:0], reg_done} ;
       ctrl_ack <= ctrl_done_event;
-
-      // reg_rdata was captured with the slave ACK in bus_m.clk and remains
-      // unchanged until a later read completes.  The synchronized completion
-      // toggle therefore acts as the bundled-data qualifier: capture the bus
-      // first and expose ACK only after this controller-domain register is
-      // updated.
-      if (ctrl_done_event && ctrl_re)
-        ctrl_rdata <= reg_rdata;
     end
 end
 
+// Bundled data: reg_rdata carries the payload and reg_done is the qualifier.
+// Both are launched on the same bus_m.clk edge, so by the time the toggle has
+// crossed the three synchronizer stages and the master samples on the ACK
+// cycle, reg_rdata has had three bus_s.clk periods to settle - one more than
+// the destination-domain copy this replaced, which sampled a stage earlier.
+// The earliest reg_rdata can change again is two further bus_s periods plus
+// the round trip of the next request, so back-to-back reads cannot tear.
+// rtl_250 has always been wired this way.  Note that tbn/sys_bus_cdc_tb.sv
+// covers the capture enable, not this settling margin: it passes with the
+// payload sampled a cycle earlier, so it will not catch a regression here.
 assign bus_s.ack   = pll_locked_i ? ctrl_ack                 : 1'b1;
 assign bus_s.err   = pll_locked_i ? 1'b0                     : 1'b1;
-assign bus_s.rdata = pll_locked_i ? ctrl_rdata               : 32'hDEADBEEF;
+assign bus_s.rdata = pll_locked_i ? reg_rdata                : 32'hDEADBEEF;
 
 // latch control
 always @ (posedge bus_s.clk)

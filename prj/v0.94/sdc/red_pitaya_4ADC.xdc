@@ -55,13 +55,13 @@ set_max_delay -datapath_only 8.000 -from [get_pins adc_dat_t*[3][*]/C] -to [get_
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/*.inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/*.inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 # The read-data bus is bundled with the synchronized completion handshake.  It
-# is stable from the slave ACK until ctrl_rdata captures it, so constrain the
+# is stable from the slave ACK until the AXI slave captures it in RDATA, so constrain the
 # data path to one ctrl-clock period independently of the unrelated ADC clock
 # phase.  Keep these lookups strict: a hierarchy change must not silently drop
 # the CDC timing guarantee.
 set_max_delay -datapath_only 8.000 \
   -from [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]/C}] \
-  -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_rdata_reg[*]/D}]
+  -to [get_pins {ps/axi_slave_gp0/axi\\.RDATA_reg[*]/D}]
 # Address and write data are latched before the request toggle crosses the
 # clock boundary.  Bound the bundled data paths so they settle before the
 # synchronized request can be acted upon in the destination domain.
