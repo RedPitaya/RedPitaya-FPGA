@@ -52,8 +52,6 @@ set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {i_asg/ch*/inst_axi_
 set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {spi_done_csff*/D}]
 set_max_delay -datapath_only 8.000 -from [get_pins adc_dat_t*[2][*]/C] -to [get_pins adc_dat_r_reg*[2][*]/D]
 set_max_delay -datapath_only 8.000 -from [get_pins adc_dat_t*[3][*]/C] -to [get_pins adc_dat_r_reg*[3][*]/D]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/*.inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/*.inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
 # The read-data bus is bundled with the synchronized completion handshake.  It
 # is stable from the slave ACK until the AXI slave captures it in RDATA, so constrain the
 # data path to one ctrl-clock period independently of the unrelated ADC clock
@@ -67,10 +65,10 @@ set_max_delay -datapath_only 8.000 \
 # synchronized request can be acted upon in the destination domain.
 set_max_delay -datapath_only 8.000 \
   -from [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_addr_reg[*]/C}] \
-  -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr_reg[*]/D}]
+  -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D}]
 set_max_delay -datapath_only 8.000 \
   -from [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_wdata_reg[*]/C}] \
-  -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]/D}]
+  -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata*[*]*/D}]
 set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
 
 
