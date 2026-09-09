@@ -20,6 +20,9 @@ logic                set_hres_en_i;
 logic                adc_arm_do_i;
 logic                dec_val_o;
 logic [DW-1:0]       dec_dat_o;
+`ifdef RP_DECIM_PREDECODED_MODE
+logic [2:0]          dec_mode_i;
+`endif
 logic signed [DW-1:0] dec_dat_o_valid_hold;
 int unsigned          dec_valid_count;
 
@@ -102,7 +105,11 @@ function automatic int signed apply_hres_scale(
   input bit hres_en
 );
 begin
+`ifdef RP_DECIM_PREDECODED_MODE
+  if (hres_en)  apply_hres_scale = trunc_dw(dat <<< 4);
+`else
   if (hres_en)  apply_hres_scale = trunc_dw(dat <<< 2);
+`endif
   else          apply_hres_scale = trunc_dw(dat);
 end
 endfunction
@@ -126,6 +133,22 @@ begin
   endcase
 end
 endfunction
+
+`ifdef RP_DECIM_PREDECODED_MODE
+always_comb begin
+  if (!set_avg_en_i)
+    dec_mode_i = 3'd0;
+  else begin
+    case (set_dec_i)
+      17'd1:  dec_mode_i = 3'd1;
+      17'd2:  dec_mode_i = 3'd2;
+      17'd4:  dec_mode_i = 3'd3;
+      17'd8:  dec_mode_i = 3'd4;
+      default: dec_mode_i = (set_dec_i >= 17'd16) ? 3'd5 : 3'd0;
+    endcase
+  end
+end
+`endif
 
 task automatic build_expected(
   input int unsigned dec,
@@ -341,11 +364,98 @@ begin
 end
 endtask
 
+task automatic check_clamp_value(
+  input int signed value,
+  input bit hres_en,
+  input int signed expected
+);
+  logic signed [DW-1:0] got;
+begin
+  got = $signed(dut.clamp_dec_out(value, hres_en));
+  if (got !== expected) begin
+    $display("  ERROR: clamp(%0d, hres=%0d) exp=%0d got=%0d",
+             value, hres_en, expected, got);
+    errors++;
+  end
+end
+endtask
+
+task automatic run_clamp_boundary_case;
+  int unsigned errors_before;
+begin
+  $display("CASE START: clamp_exact_boundaries");
+  errors_before = errors;
+
+  check_clamp_value(-2049,  1'b0, -2048);
+  check_clamp_value(-2048,  1'b0, -2048);
+  check_clamp_value(-2047,  1'b0, -2047);
+  check_clamp_value( 2046,  1'b0,  2046);
+  check_clamp_value( 2047,  1'b0,  2047);
+  check_clamp_value( 2048,  1'b0,  2047);
+  check_clamp_value(-32769, 1'b1, -32768);
+  check_clamp_value(-32768, 1'b1, -32768);
+  check_clamp_value(-32767, 1'b1, -32767);
+  check_clamp_value( 32766, 1'b1,  32766);
+  check_clamp_value( 32767, 1'b1,  32767);
+  check_clamp_value( 32768, 1'b1,  32767);
+
+  if (errors == errors_before)
+    $display("CASE PASS: clamp_exact_boundaries");
+  else
+    $display("CASE DONE WITH ERRORS: clamp_exact_boundaries");
+end
+endtask
+
+task automatic run_clamp_cycle_case(
+  input string name,
+  input bit hres_en
+);
+  int signed stimulus [0:5];
+  int signed expected [0:5];
+  int unsigned i;
+  int unsigned errors_before;
+begin
+  $display("CASE START: %s", name);
+  errors_before = errors;
+  if (hres_en) begin
+    stimulus = '{-2049, -2048, -2047, 2046, 2047, 2048};
+    expected = '{-32768, -32768, -32752, 32736, 32752, 32767};
+  end else begin
+    stimulus = '{-2049, -2048, -2047, 2046, 2047, 2048};
+    expected = '{-2048, -2048, -2047, 2046, 2047, 2047};
+  end
+
+  reset_dut(1, 1'b0, hres_en);
+  for (i = 0; i < 6; i++) begin
+    @(negedge adc_clk_i);
+    dec_dat_i <= stimulus[i];
+    @(posedge adc_clk_i);
+    #1ps;
+    if (dec_val_o !== (i != 0)) begin
+      $display("  ERROR: cycle=%0d expected valid=%0d got=%0b", i, i != 0, dec_val_o);
+      errors++;
+    end
+    if ((i != 0) && ($signed(dec_dat_o) !== expected[i])) begin
+      $display("  ERROR: cycle=%0d exp=%0d got=%0d", i, expected[i], $signed(dec_dat_o));
+      errors++;
+    end
+  end
+
+  if (errors == errors_before)
+    $display("CASE PASS: %s", name);
+  else
+    $display("CASE DONE WITH ERRORS: %s", name);
+end
+endtask
+
 //------------------------------------------------------------------------------
 // test sequence
 //------------------------------------------------------------------------------
 
 initial begin
+  run_clamp_boundary_case();
+  run_clamp_cycle_case("clamp_base_cycle_exact", 1'b0);
+  run_clamp_cycle_case("clamp_hres_cycle_exact", 1'b1);
   run_case("avg_off_dec0",            0, 1'b0, 1'b0, 128);
   run_case("avg_off_dec1",            1, 1'b0, 1'b0, 128);
   run_case("avg_off_dec2",            2, 1'b0, 1'b0, 128);
@@ -358,6 +468,17 @@ initial begin
   run_case("avg_on_dec4",             4, 1'b1, 1'b0, 128);
   run_case("avg_on_dec8",             8, 1'b1, 1'b0, 128);
   run_case("avg_on_dec3_fallback",    3, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec5_fallback",    5, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec6_fallback",    6, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec7_fallback",    7, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec9_fallback",    9, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec10_fallback",  10, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec11_fallback",  11, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec12_fallback",  12, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec13_fallback",  13, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec14_fallback",  14, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec15_fallback",  15, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec16_divider",   16, 1'b1, 1'b0, 256);
   run_case("avg_on_dec17_divider",   17, 1'b1, 1'b0, 256);
   run_case("avg_on_dec64_divider",   64, 1'b1, 1'b0, 512);
 
@@ -389,8 +510,13 @@ rp_decim #(
   .adc_rstn_i   (adc_rstn_i  ),
   .dec_dat_i    (dec_dat_i   ),
   .set_dec_i    (set_dec_i   ),
+`ifndef RP_DECIM_PREDECODED_MODE
   .set_avg_en_i (set_avg_en_i),
+`endif
   .set_hres_en_i  (set_hres_en_i ),
+`ifdef RP_DECIM_PREDECODED_MODE
+  .dec_mode_i   (dec_mode_i),
+`endif
   .adc_arm_do_i (adc_arm_do_i),
   .dec_val_o    (dec_val_o   ),
   .dec_dat_o    (dec_dat_o   )

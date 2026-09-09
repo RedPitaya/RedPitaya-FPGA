@@ -489,17 +489,17 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
   #
   # The four DMA scatter gather masters are split over two crossbars, one per PS
   # slave port, instead of being arbitrated into S_AXI_GP0 alone: a single four
-  # slave arbiter does not close timing on this part. Register slices on every
-  # port for the same reason; they cost one cycle on descriptor fetches, which
-  # are not throughput critical.
+  # slave arbiter does not close timing on this part. Keep the M00 register
+  # slices on the paths to PS, but disable the S00/S01 slices to save area.
+  # Timing closure of this configuration must be checked after routing.
   set axi_interconnect_5 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_5 ]
   set_property -dict [ list \
    CONFIG.NUM_MI {1} \
    CONFIG.NUM_SI {2} \
    CONFIG.STRATEGY {1} \
    CONFIG.M00_HAS_REGSLICE {1} \
-   CONFIG.S00_HAS_REGSLICE {1} \
-   CONFIG.S01_HAS_REGSLICE {1} \
+   CONFIG.S00_HAS_REGSLICE {0} \
+   CONFIG.S01_HAS_REGSLICE {0} \
  ] $axi_interconnect_5
 
   # Create instance: axi_interconnect_6, and set properties
@@ -509,8 +509,8 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.NUM_SI {2} \
    CONFIG.STRATEGY {1} \
    CONFIG.M00_HAS_REGSLICE {1} \
-   CONFIG.S00_HAS_REGSLICE {1} \
-   CONFIG.S01_HAS_REGSLICE {1} \
+   CONFIG.S00_HAS_REGSLICE {0} \
+   CONFIG.S01_HAS_REGSLICE {0} \
  ] $axi_interconnect_6
 
   # Create instance: axis_clock_converter_2, and set properties
@@ -527,13 +527,11 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.IS_ACLK_ASYNC {0} \
  ] $axis_data_fifo_2
 
-  # Create instance: axis_data_fifo_6, and set properties
-  set axis_data_fifo_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:2.0 axis_data_fifo_6 ]
-  set_property -dict [ list \
-   CONFIG.FIFO_DEPTH {2048} \
-   CONFIG.FIFO_MODE {2} \
-   CONFIG.IS_ACLK_ASYNC {0} \
- ] $axis_data_fifo_6
+  # No buffer on axi_dma_2/M_AXIS_MM2S: the stream leaves through
+  # M_AXI_STR_TX2 into axi_dtx[2], whose only driver in every red_pitaya_top
+  # variant is "assign axi_dtx[2].TREADY = 1'b1" - the data is discarded, so a
+  # 2048 deep FIFO buffered nothing observable and cost 97 LUT / 108 FF / 1
+  # RAMB36 / 1 RAMB18.  Restore it here if a real consumer is ever wired up.
 
   # Create instance: proc_sys_reset, and set properties
   set proc_sys_reset_3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_3 ]
@@ -604,7 +602,7 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
   connect_bd_intf_net -intf_net axi_dma_1_M_AXI_MM2S [get_bd_intf_pins axi_dma_1/M_AXI_MM2S] [get_bd_intf_pins axi_interconnect_2/S00_AXI]
   connect_bd_intf_net -intf_net axi_dma_1_M_AXI_S2MM [get_bd_intf_pins axi_dma_1/M_AXI_S2MM] [get_bd_intf_pins axi_interconnect_2/S01_AXI]
   connect_bd_intf_net -intf_net axi_dma_1_M_AXI_SG [get_bd_intf_pins axi_dma_1/M_AXI_SG] [get_bd_intf_pins axi_interconnect_5/S01_AXI]
-  connect_bd_intf_net -intf_net axi_dma_2_M_AXIS_MM2S [get_bd_intf_pins axi_dma_2/M_AXIS_MM2S] [get_bd_intf_pins axis_data_fifo_6/S_AXIS]
+  connect_bd_intf_net -intf_net axi_dma_2_M_AXIS_MM2S [get_bd_intf_pins axi_dma_2/M_AXIS_MM2S] [get_bd_intf_pins axis_clock_converter_6/S_AXIS]
   connect_bd_intf_net -intf_net axi_dma_2_M_AXI_SG [get_bd_intf_pins axi_dma_2/M_AXI_SG] [get_bd_intf_pins axi_interconnect_6/S00_AXI]
   connect_bd_intf_net -intf_net axi_dma_3_M_AXIS_MM2S [get_bd_intf_ports M_AXI_STR_TX3] [get_bd_intf_pins axi_dma_3/M_AXIS_MM2S]
   connect_bd_intf_net -intf_net axi_dma_3_M_AXI_MM2S [get_bd_intf_pins axi_dma_3/M_AXI_MM2S] [get_bd_intf_pins axi_interconnect_4/S00_AXI]
@@ -624,7 +622,6 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
   connect_bd_intf_net -intf_net axis_clock_converter_2_M_AXIS [get_bd_intf_pins axis_clock_converter_2/M_AXIS] [get_bd_intf_pins axis_data_fifo_2/S_AXIS]
   connect_bd_intf_net -intf_net axis_clock_converter_6_M_AXIS [get_bd_intf_ports M_AXI_STR_TX2] [get_bd_intf_pins axis_clock_converter_6/M_AXIS]
   connect_bd_intf_net -intf_net axis_data_fifo_2_M_AXIS [get_bd_intf_pins axi_dma_2/S_AXIS_S2MM] [get_bd_intf_pins axis_data_fifo_2/M_AXIS]
-  connect_bd_intf_net -intf_net axis_data_fifo_6_M_AXIS [get_bd_intf_pins axis_clock_converter_6/S_AXIS] [get_bd_intf_pins axis_data_fifo_6/M_AXIS]
   connect_bd_intf_net -intf_net processing_system7_0_M_AXI_GP0 [get_bd_intf_ports M_AXI_GP0] [get_bd_intf_pins processing_system7/M_AXI_GP0]
   connect_bd_intf_net -intf_net processing_system7_0_ddr [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_fixed_io [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7/FIXED_IO]
@@ -662,7 +659,7 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
   [get_bd_pins axi_interconnect_5/M00_ARESETN] [get_bd_pins axi_interconnect_5/S00_ARESETN] [get_bd_pins axi_interconnect_5/S01_ARESETN]\
   [get_bd_pins axi_interconnect_6/ARESETN] [get_bd_pins axi_interconnect_6/M00_ARESETN] [get_bd_pins axi_interconnect_6/S00_ARESETN] [get_bd_pins axi_interconnect_6/S01_ARESETN]\
   [get_bd_pins axis_clock_converter_2/m_axis_aresetn] [get_bd_pins axis_clock_converter_6/s_axis_aresetn] [get_bd_pins axis_data_fifo_2/s_axis_aresetn]\
-  [get_bd_pins axis_data_fifo_6/s_axis_aresetn] [get_bd_pins proc_sys_reset_1/interconnect_aresetn] [get_bd_pins xadc/s_axi_aresetn]
+  [get_bd_pins proc_sys_reset_1/interconnect_aresetn] [get_bd_pins xadc/s_axi_aresetn]
 
   connect_bd_net -net processing_system7_0_fclk_clk2 [get_bd_ports FCLK_CLK2] [get_bd_pins processing_system7/FCLK_CLK2] [get_bd_pins proc_sys_reset_2/slowest_sync_clk]
   connect_bd_net -net processing_system7_0_fclk_reset0_n [get_bd_ports FCLK_RESET0_N] [get_bd_pins processing_system7/FCLK_RESET0_N] [get_bd_pins proc_sys_reset_0/ext_reset_in]
@@ -685,7 +682,7 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
   [get_bd_pins axi_interconnect_5/S00_ACLK] [get_bd_pins axi_interconnect_5/S01_ACLK] \
   [get_bd_pins axi_interconnect_6/ACLK] [get_bd_pins axi_interconnect_6/M00_ACLK] \
   [get_bd_pins axi_interconnect_6/S00_ACLK] [get_bd_pins axi_interconnect_6/S01_ACLK] \
-  [get_bd_pins axis_clock_converter_2/m_axis_aclk] [get_bd_pins axis_clock_converter_6/s_axis_aclk] [get_bd_pins axis_data_fifo_2/s_axis_aclk] [get_bd_pins axis_data_fifo_6/s_axis_aclk] \
+  [get_bd_pins axis_clock_converter_2/m_axis_aclk] [get_bd_pins axis_clock_converter_6/s_axis_aclk] [get_bd_pins axis_data_fifo_2/s_axis_aclk] \
   [get_bd_pins processing_system7/FCLK_CLK1] [get_bd_pins processing_system7/M_AXI_GP1_ACLK] [get_bd_pins processing_system7/S_AXI_GP0_ACLK] \
   [get_bd_pins processing_system7/S_AXI_GP1_ACLK] \
   [get_bd_pins processing_system7/S_AXI_HP0_ACLK] [get_bd_pins processing_system7/S_AXI_HP1_ACLK] [get_bd_pins processing_system7/S_AXI_HP2_ACLK] \

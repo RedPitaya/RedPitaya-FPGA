@@ -105,7 +105,9 @@ wire [    N_CH-1: 0] axi_clk           ;
 wire [    N_CH-1: 0] axi_rstn          ;
 
 wire [       4-1: 0] adc_arm_do        ;
+wire [       4-1: 0] adc_arm_do_applied;
 wire [       4-1: 0] adc_rst_do        ;
+wire [       4-1: 0] adc_rst_do_applied;
 wire [       4-1: 0] adc_trig_sw       ;
 wire [       4-1: 0] adc_we_keep       ;
 wire [       4-1: 0] trig_dis_clr      ;
@@ -171,6 +173,33 @@ wire [       4-1: 0] irq_evt_fill_ch;
 wire [       8-1: 0] split_irq_evt;
 wire [       8-1: 0] split_irq_auto_clr;
 
+localparam [2:0] DEC_MODE_PASS = 3'd0;
+localparam [2:0] DEC_MODE_SUM  = 3'd1;
+localparam [2:0] DEC_MODE_SHR1 = 3'd2;
+localparam [2:0] DEC_MODE_SHR2 = 3'd3;
+localparam [2:0] DEC_MODE_SHR3 = 3'd4;
+localparam [2:0] DEC_MODE_DIV  = 3'd5;
+
+function [2:0] decode_dec_mode;
+  input [16:0] dec;
+  input        avg_en;
+begin
+  if (!avg_en)
+    decode_dec_mode = DEC_MODE_PASS;
+  else begin
+    case (dec)
+      17'd1:  decode_dec_mode = DEC_MODE_SUM;
+      17'd2:  decode_dec_mode = DEC_MODE_SHR1;
+      17'd4:  decode_dec_mode = DEC_MODE_SHR2;
+      17'd8:  decode_dec_mode = DEC_MODE_SHR3;
+      17'd16: decode_dec_mode = DEC_MODE_DIV;
+      default:
+        decode_dec_mode = (dec > 17'd16) ? DEC_MODE_DIV : DEC_MODE_PASS;
+    endcase
+  end
+end
+endfunction
+
 
 wire [   4*RSZ-1: 0] adc_wp_act   ;
 wire [    4*DW-1: 0] adc_bram_in  ;
@@ -192,7 +221,8 @@ assign irq_evt_fill_ch = adc_dly_do_ch_d & ~adc_dly_do_ch;
 assign irq_evt[0] = |(irq_evt_trig_ch & ~indep_mode);
 assign irq_evt[1] = |(irq_evt_fill_ch & ~indep_mode);
 assign split_irq_evt = {irq_evt_fill_ch & indep_mode, irq_evt_trig_ch & indep_mode};
-assign split_irq_auto_clr = {(adc_rst_do | adc_arm_do), (adc_rst_do | adc_arm_do)};
+assign split_irq_auto_clr = {(adc_rst_do_applied | adc_arm_do_applied),
+                             (adc_rst_do_applied | adc_arm_do_applied)};
 
 always @(posedge adc_clk_i[0]) begin
   if (adc_rstn_i[0] == 1'b0) begin
@@ -220,7 +250,7 @@ always @(posedge adc_clk_i[0]) begin
     adc_trig_d      <= adc_trig;
     adc_dly_do_ch_d <= adc_dly_do_ch;
 
-    if (|adc_rst_do || |adc_arm_do)
+    if (|adc_rst_do_applied || |adc_arm_do_applied)
       irq_sts <= 2'b0;
     else
       irq_sts <= (irq_sts & ~irq_clr) | irq_evt;
@@ -247,6 +277,37 @@ wire            adc_dly_do   ;
 
 wire            axi_dv_del;
 wire            dec_val;
+
+// Apply the selected decimator settings, ARM and RESET as one per-channel package.
+// The compact mode removes the wide set_dec decode from the sample-data path.
+reg  [16:0] dec_cfg_applied;
+reg         dec1_cfg_applied;
+reg         hres_cfg_applied;
+reg         arm_applied;
+reg         rst_applied;
+reg  [ 2:0] dec_mode_applied;
+
+always @(posedge adc_clk_i[GV])
+if (adc_rstn_i[GV] == 1'b0) begin
+  dec_cfg_applied  <= 17'd1;
+  dec1_cfg_applied <= 1'b1;
+  hres_cfg_applied <= 1'b0;
+  arm_applied      <= 1'b0;
+  rst_applied      <= 1'b0;
+  dec_mode_applied <= DEC_MODE_PASS;
+end else begin
+  dec_cfg_applied  <= set_dec[(GV+1)*17-1:GV*17];
+  dec1_cfg_applied <= set_dec1[GV];
+  hres_cfg_applied <= set_hres_en[GV];
+  arm_applied      <= adc_arm_do[GV];
+  rst_applied      <= adc_rst_do[GV];
+  dec_mode_applied <= decode_dec_mode(
+                        set_dec[(GV+1)*17-1:GV*17],
+                        set_avg_en[GV]);
+end
+
+assign adc_arm_do_applied[GV] = arm_applied;
+assign adc_rst_do_applied[GV] = rst_applied;
 
 //assign adc_calib_in  = adc_dat_i[(GV+1)*DW-1:GV*DW] ;
 wire  adc_sign_a = adc_dat_i[(GV+1)*DW-1];
@@ -301,10 +362,10 @@ rp_decim #(
 
    // Connection to AXI master
   .dec_dat_i    ( adc_dec_in                 ),  // data in
-  .set_dec_i    ( set_dec[(GV+1)*17-1:GV*17] ),  // decimation
-  .set_avg_en_i ( set_avg_en[GV]             ),  // averaging enable
-  .set_hres_en_i  ( set_hres_en[GV]              ),  // high-resolution precision enable
-  .adc_arm_do_i ( adc_arm_do[GV]             ),
+  .set_dec_i    ( dec_cfg_applied  ),  // decimation
+  .set_hres_en_i( hres_cfg_applied ),  // high-resolution precision enable
+  .dec_mode_i   ( dec_mode_applied ),
+  .adc_arm_do_i ( arm_applied      ),
 
   .dec_val_o    ( dec_val       ),
   .dec_dat_o    ( adc_dly_in    )   // decimated data out
@@ -359,7 +420,7 @@ rp_trig_src #(
   .adc_rstn_i     ( adc_rstn_i[GV]  ),  // ADC reset - active low
 
    // Connection to AXI master
-  .adc_rst_do_i   ( adc_rst_do[GV]   ),
+  .adc_rst_do_i   ( rst_applied       ),
   .adc_dly_do_i   ( adc_dly_do       ),
   .trig_dis_clr_i ( trig_dis_clr[GV] ),
 
@@ -388,10 +449,10 @@ rp_bram_sm #(
 
    // Connection to AXI master
   .set_dly_i      ( set_adc_dly[(GV+1)*32 -1:GV*32 ]  ),
-  .set_dec1_i     ( set_dec1[GV]                      ),
-  .adc_rst_do_i   ( adc_rst_do[GV]                    ),
+  .set_dec1_i     ( dec1_cfg_applied                   ),
+  .adc_rst_do_i   ( rst_applied                       ),
   .adc_we_keep_i  ( adc_we_keep[GV]                   ),
-  .adc_arm_do_i   ( adc_arm_do[GV]                    ),
+  .adc_arm_do_i   ( arm_applied                       ),
   .adc_trig_i     ( adc_trig[GV]                      ),
   .adc_dv_i       ( adc_dv_del[GV]                    ),
   .indep_mode_i   ( indep_mode[GV]                    ),
@@ -447,10 +508,10 @@ rp_axi_sm #(
   .axi_dat_i        ( axi_ram_in                        ),
   .axi_dv_i         ( axi_dv_del                        ),
   .set_dly_i        ( set_axi_dly[(GV+1)*32 -1:GV*32 ]  ),
-  .set_dec1_i       ( set_dec1[GV]                      ),
-  .adc_rst_do_i     ( adc_rst_do[GV]                    ),
+  .set_dec1_i       ( dec1_cfg_applied                   ),
+  .adc_rst_do_i     ( rst_applied                       ),
   .adc_we_keep_i    ( adc_we_keep[GV]                   ),
-  .adc_arm_do_i     ( adc_arm_do[GV]                    ),
+  .adc_arm_do_i     ( arm_applied                       ),
   .adc_trig_i       ( adc_trig[GV]                      ),
   .indep_mode_i     ( indep_mode[GV]                    ),
 
@@ -471,6 +532,8 @@ genvar GM;
 generate
 for(GM = N_CH ; GM < 4 ; GM = GM + 1) begin // pad out remaining channels
 
+assign adc_arm_do_applied[GM]              = 1'b0;
+assign adc_rst_do_applied[GM]              = 1'b0;
 assign adc_bram_in[(GM+1)*DW -1:GM*DW ] = {DW{1'b0}};
 assign adc_dv_del[GM]                   =  1'b0;
 assign adc_dv_del_p[GM]                 =  1'b0;

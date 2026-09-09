@@ -33,14 +33,18 @@ reg signed  [15:0]                gain, gain_reg;
 reg  signed [DBITS:0]             offset_calc;
 wire                              offs_max, offs_min;
 wire signed [DBITS:0]             offset_calc_limit;
+reg  signed [DBITS:0]             offset_calc_limit_r;
 
 reg  signed [CALC3_BITS-1:0]      gain_calc;
 reg  signed [CALC3_BITS-1:0]      gain_calc_r;
+wire signed [16:0]                gain_positive;
+wire signed [DBITS+17:0]          gain_product;
 wire                              gain_max, gain_min;
 wire signed [DBITS-1:0]           gain_calc_limit;
 
 reg                               s_axis_tvalid_p1;
 reg                               s_axis_tvalid_p2;
+reg                               s_axis_tvalid_p3;
 
 initial begin
     //$display ("DBITS=%0d (CALC3_BITS-C_START-1)=%0d (CALC3_BITS)-C_END)=%0d ", DBITS, (CALC3_BITS-C_START-1), ((CALC3_BITS)-C_END));
@@ -90,6 +94,11 @@ end
 // 
 ////////////////////////////////////////////////////////////
 
+// The gain is a 16-bit unsigned fixed-point value.  Keep both operands at
+// their natural widths so the multiplication fits in one DSP48.
+assign gain_positive = $signed({1'b0, gain});
+assign gain_product  = offset_calc_limit_r * gain_positive;
+
 always @(posedge adc_clk_i)
 begin
   if (adc_rstn_i == 1'b0) begin
@@ -97,8 +106,7 @@ begin
     gain_calc   <= 'h0;
   end else begin
 
-    //gain_calc_r <= $signed({offset_calc_limit,{15{1'b0}}}) * {{15{1'b0}},gain};
-    gain_calc_r <= ($signed({offset_calc_limit,{15{1'b0}}}) * $signed({{15{1'b0}},gain})) >>> (30);
+    gain_calc_r <= gain_product >>> 15;
     gain_calc   <= gain_calc_r; // output of multiplier needs to be registered to avoid timing issues
   end
 end
@@ -133,6 +141,16 @@ assign offs_min = (offset_calc[DBITS:DBITS-1] == 2'b10);
 
 assign offset_calc_limit = offs_max ? CALC_MAX : (offs_min ? CALC_MIN : offset_calc);
 
+// Register the saturated offset before the DSP multiplier.  This separates
+// the saturation compare/mux from the DSP input path at 250 MHz.
+always @(posedge adc_clk_i)
+begin
+  if (adc_rstn_i == 1'b0)
+    offset_calc_limit_r <= 'h0;
+  else
+    offset_calc_limit_r <= offset_calc_limit;
+end
+
 ////////////////////////////////////////////////////////////
 // Name : Master AXI-S TDATA
 // 
@@ -156,11 +174,13 @@ begin
   if (adc_rstn_i == 1'b0) begin
     s_axis_tvalid_p1  <= 1'b0;
     s_axis_tvalid_p2  <= 1'b0;
+    s_axis_tvalid_p3  <= 1'b0;
     calib_dout_tvalid_o     <= 1'b0;   
   end else begin
     s_axis_tvalid_p1  <= calib_din_tvalid_i;
     s_axis_tvalid_p2  <= s_axis_tvalid_p1;
-    calib_dout_tvalid_o     <= s_axis_tvalid_p2;   
+    s_axis_tvalid_p3  <= s_axis_tvalid_p2;
+    calib_dout_tvalid_o     <= s_axis_tvalid_p3;
   end
 end
 

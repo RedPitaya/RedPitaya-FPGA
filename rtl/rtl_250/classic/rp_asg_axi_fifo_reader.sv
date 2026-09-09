@@ -62,9 +62,11 @@ logic [AW-1:0] period_words;
 logic [AW-1:0] words_left_q;
 logic          last_pulse;
 logic          last_pre_pulse;
-logic [31:0]   dec_cnt_q;
+logic [31:0]   dec_countdown_q;
+logic [31:0]   dec_reload_q;
 logic [31:0]   dec_safe;
 logic          dec_step;
+logic          words_last_q;
 logic [15:0]   cycle_cnt_q;
 
 logic [1:0]    sample_index;
@@ -112,22 +114,30 @@ logic [AW-1:0] axi_stop_q;
 logic [31:0]   axi_dec_q;
 logic [AW-1:0] axi_start_use;
 logic [AW-1:0] axi_stop_use;
-logic [31:0]   axi_dec_use;
 
 //---------------------------------------------------------------------------------
 //
 //  Trig sync
 
+// trig_i is combinational in the ASG channel and carries the full read pointer
+// comparison (a 62 bit carry chain) with it. Registering it before the edge
+// detector keeps that chain out of the FSM, the decimation counter and the word
+// counters, which start their own logic levels from here. Costs one dac clock
+// before an AXI playback starts.
+logic trig_q;
 logic trig_r;
 
 always_ff @(posedge dac_clk_i) begin
-  if (!dac_rstn_i || set_rst_i)
+  if (!dac_rstn_i || set_rst_i) begin
+    trig_q <= 1'b0;
     trig_r <= 1'b0;
-  else
-    trig_r <= trig_i;
+  end else begin
+    trig_q <= trig_i;
+    trig_r <= trig_q;
+  end
 end
 
-assign trig_edge = trig_i & ~trig_r;
+assign trig_edge = trig_q & ~trig_r;
 assign repeat_req = repeat_i && set_axi_en_i;
 
 always_ff @(posedge dac_clk_i) begin
@@ -261,8 +271,19 @@ end
 // so compensate by +4 to compute inclusive word count
 assign axi_start_use = start_cycle ? set_axi_start_i : axi_start_q;
 assign axi_stop_use  = start_cycle ? set_axi_stop_i  : axi_stop_q;
-assign axi_dec_use   = start_cycle ? set_axi_dec_i   : axi_dec_q;
-assign period_words  = ((axi_stop_use + 4 - axi_start_use) >> 3) + 1;
+
+// The word count is a 32 bit subtract, and computing it combinationally put
+// that carry chain in the middle of the datapath, in front of the last pulse
+// and of the word counter reload. It only depends on configuration, so it is
+// held in a register, refreshed while the reader is idle and frozen for the
+// duration of a playback - which is what latching axi_start_q/axi_stop_q at
+// start_cycle already did for the running cycles.
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i)
+    period_words <= '0;
+  else if (rd_state_q == RD_IDLE)
+    period_words <= ((set_axi_stop_i + 4 - set_axi_start_i) >> 3) + 1;
+end
 
 assign start_cycle   = (rd_state_q == RD_IDLE) && (rd_state_d != RD_IDLE);
 assign restart_cycle = cycle_done && (cycle_cnt_q == 16'h1) && (trig_req || repeat_req);
@@ -272,18 +293,23 @@ assign cycle_reload  = start_cycle || restart_cycle;
 always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i || set_rst_i) begin
     words_left_q <= '0;
+    words_last_q <= 1'b0;
     cycle_cnt_q  <= '0;
   end else begin
     if (cycle_reload) begin
       words_left_q <= period_words;
+      words_last_q <= period_words == {{(AW-1){1'b0}},1'b1};
       cycle_cnt_q  <= set_cyc_cnt_i;
     end else if (advance_cycle) begin
       words_left_q <= period_words;
+      words_last_q <= period_words == {{(AW-1){1'b0}},1'b1};
       if (cycle_cnt_q > 16'h1)
         cycle_cnt_q <= cycle_cnt_q - 16'h1;
     end else if (consume_word) begin
-      if (|words_left_q)
+      if (|words_left_q) begin
         words_left_q <= words_left_q - 1'b1;
+        words_last_q <= words_left_q == {{(AW-2){1'b0}},2'b10};
+      end
     end
   end
 end
@@ -293,10 +319,12 @@ always_ff @(posedge dac_clk_i) begin
     axi_start_q <= '0;
     axi_stop_q  <= '0;
     axi_dec_q   <= 32'h0;
+    dec_reload_q <= 32'h0;
   end else if (start_cycle) begin
     axi_start_q <= set_axi_start_i;
     axi_stop_q  <= set_axi_stop_i;
     axi_dec_q   <= set_axi_dec_i;
+    dec_reload_q <= (set_axi_dec_i == 0) ? 32'd0 : set_axi_dec_i - 32'd1;
   end
 end
 
@@ -332,13 +360,22 @@ assign axi_last_pre_o = last_pre_pulse;
 //
 //  decimation and sample index
 
-assign dec_safe = (axi_dec_use == 0) ? 32'd1 : axi_dec_use;
-assign dec_step = dec_cnt_q == dec_safe;
+// Retained as the normalized active setting for observability and verification.
+assign dec_safe = (axi_dec_q == 0) ? 32'd1 : axi_dec_q;
+
+// Count remaining clocks instead of comparing an increasing counter with the
+// runtime decimation value. A zero detect now drives the sample advance path;
+// the registered runtime value is used only when the counter reloads. Loading
+// decimation-1 preserves the original phase, including the zero-as-one setting.
+// The reader cannot produce a sample on start_cycle, so registering the reload
+// there removes its 32-bit subtraction from the trigger-to-counter path without
+// changing any observable counter phase.
+assign dec_step = ~|dec_countdown_q;
 assign fifo_active = rd_state_q != RD_IDLE;
 assign fifo_ready  = rd_state_q == RD_ACTIVE;
 assign output_valid = fifo_ready && !buf_empty;
 assign consume_word = output_valid && dec_step && (sample_index == (NUM_SAMPS-1));
-assign cycle_done  = consume_word && (words_left_q == {{(AW-1){1'b0}},1'b1});
+assign cycle_done  = consume_word && words_last_q;
 assign stop_cycle  = cycle_done && (cycle_cnt_q == 16'h1) && !(trig_req || repeat_req);
 assign burst_first_sample = burst_first_pending_q && output_valid;
 assign axi_first_o = burst_first_sample;
@@ -353,20 +390,18 @@ always_ff @(posedge dac_clk_i) begin
   end
 end
 
+// cycle_reload is deliberately absent here: it is the deepest signal in this
+// module and it drove the reset of all 32 counter bits for no effect. On
+// start_cycle the FSM is still leaving RD_IDLE, so output_valid is low and the
+// counter is reloaded below anyway; on restart_cycle the cycle ended, which
+// requires dec_step and therefore takes the reload branch as well.
 always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i || set_rst_i) begin
-    dec_cnt_q <= 32'h1;
-  end else if (cycle_reload) begin
-    dec_cnt_q <= 32'h1;
+    dec_countdown_q <= 32'h0;
+  end else if (!output_valid || dec_step) begin
+    dec_countdown_q <= dec_reload_q;
   end else begin
-    if (output_valid) begin
-      if (dec_cnt_q < dec_safe)
-        dec_cnt_q <= dec_cnt_q + 1;
-      else
-        dec_cnt_q <= 32'h1;
-    end else begin
-      dec_cnt_q <= 32'h1;
-    end
+    dec_countdown_q <= dec_countdown_q - 32'd1;
   end
 end
 

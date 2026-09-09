@@ -217,6 +217,11 @@ wire             ext_trig_n   ;
 
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
+// Zero flags for the two counters, kept out of rep_arm and so out of the
+// dac_trig decode.  Updated one cycle ahead: "about to be zero" is "currently
+// one".  Bit exact copies of |rep_cnt and (dly_cnt != 0).
+reg              rep_nonzero  ;
+reg              dly_nonzero  ;
 // (set_rdly_i - 1) is a 32 bit subtract on a configuration value. Computed in
 // the load path it sat behind dac_trig, which already arrives at the end of the
 // read pointer comparison, so the two carry chains ended up in series. It takes
@@ -261,10 +266,14 @@ wire             dly_start_1  ;
 // apart, see the comment next to their assignments.
 (* keep = "true" *) wire [  32-1: 0] dly_cnt_nxt_0     ;
 (* keep = "true" *) wire [  32-1: 0] dly_cnt_nxt_1     ;
+wire                              dly_nonzero_nxt_0 ;
+wire                              dly_nonzero_nxt_1 ;
 (* keep = "true" *) wire             dly_started_nxt_0 ;
 (* keep = "true" *) wire             dly_started_nxt_1 ;
 (* keep = "true" *) wire [  16-1: 0] rep_cnt_nxt_0     ;
 (* keep = "true" *) wire [  16-1: 0] rep_cnt_nxt_1     ;
+wire                              rep_nonzero_nxt_0 ;
+wire                              rep_nonzero_nxt_1 ;
 (* keep = "true" *) wire [  16-1: 0] cyc_cnt_nxt_0     ;
 (* keep = "true" *) wire [  16-1: 0] cyc_cnt_nxt_1     ;
 (* keep = "true" *) wire             dac_do_nxt_0      ;
@@ -333,6 +342,8 @@ always @(posedge dac_clk_i) begin
       cyc_cnt      <= 16'h0 ;
       rep_cnt      <= 16'h0 ;
       dly_cnt      <= 32'h0 ;
+      rep_nonzero  <=  1'b0 ;
+      dly_nonzero  <=  1'b0 ;
       dly_started  <=  1'b0 ;
       dac_do       <=  1'b0 ;
       dac_rep      <=  1'b0 ;
@@ -354,14 +365,17 @@ always @(posedge dac_clk_i) begin
       // decision selects between them.  See the comment at their definition.
       if (set_rst_i) begin
          dly_cnt <= 32'h0;
+         dly_nonzero <= 1'b0;
          dly_started <= 1'b0;
       end else begin
          dly_cnt     <= pnt_wrap ? dly_cnt_nxt_1     : dly_cnt_nxt_0     ;
+         dly_nonzero <= pnt_wrap ? dly_nonzero_nxt_1 : dly_nonzero_nxt_0 ;
          dly_started <= pnt_wrap ? dly_started_nxt_1 : dly_started_nxt_0 ;
       end
 
       // repetitions counter
-      rep_cnt <= pnt_wrap ? rep_cnt_nxt_1 : rep_cnt_nxt_0 ;
+      rep_cnt     <= pnt_wrap ? rep_cnt_nxt_1     : rep_cnt_nxt_0     ;
+      rep_nonzero <= pnt_wrap ? rep_nonzero_nxt_1 : rep_nonzero_nxt_0 ;
 
       // count number of table read cycles
       dac_trigr <= dac_trig; // ignore trigger when count
@@ -371,12 +385,17 @@ always @(posedge dac_clk_i) begin
 `else
       if (set_rst_i) begin
          dly_cnt <= 32'h0;
+         dly_nonzero <= 1'b0;
          dly_started <= 1'b0;
       end else begin
-         if (dly_start)
+         if (dly_start) begin
             dly_cnt <= set_rdly_m1;
-         else if (dac_rep && dly_started && |dly_cnt)
+            dly_nonzero <= |set_rdly_m1;
+         end
+         else if (dac_rep && dly_started && dly_nonzero) begin
             dly_cnt <= dly_cnt - 32'h1;
+            dly_nonzero <= (dly_cnt != 32'h1);
+         end
 
          if (dly_start)
             dly_started <= 1'b1;
@@ -385,12 +404,18 @@ always @(posedge dac_clk_i) begin
       end
 
       // repetitions counter
-      if (trig_in && !do_read)
+      if (trig_in && !do_read) begin
          rep_cnt <= set_rnum_i;
-      else if (!set_rgate_i && (|rep_cnt && dac_rep && (dac_trig && !dac_trigr)) && (set_rnum_i != 16'hffff)) // only substract at the end of a cycle; 16'hffff is infinite pulses
+         rep_nonzero <= |set_rnum_i;
+      end
+      else if (!set_rgate_i && (rep_nonzero && dac_rep && (dac_trig && !dac_trigr)) && (set_rnum_i != 16'hffff)) begin // only substract at the end of a cycle; 16'hffff is infinite pulses
          rep_cnt <= rep_cnt - 16'h1 ;
-      else if (set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2) || (trig_ext_i && trig_src_i==3'd3)))
+         rep_nonzero <= (rep_cnt != 16'h1);
+      end
+      else if (set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2) || (trig_ext_i && trig_src_i==3'd3))) begin
          rep_cnt <= 16'h0 ;
+         rep_nonzero <= 1'b0;
+      end
 
       // count number of table read cycles
       dac_trigr <= dac_trig; // ignore trigger when count
@@ -436,7 +461,7 @@ always @(posedge dac_clk_i) begin
       // in repetition mode
       if (dac_trig && !set_rst_i)
          dac_rep <= 1'b1 ;
-      else if (set_rst_i || (rep_cnt==16'h0))
+      else if (set_rst_i || !rep_nonzero)
          dac_rep <= 1'b0 ;
 `endif
    end
@@ -446,7 +471,7 @@ always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) set_rdly_m1 <= 32'h0;
 else                    set_rdly_m1 <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
 
-wire rep_arm   = dac_rep && |rep_cnt && dly_started && (dly_cnt == 32'h0);
+wire rep_arm   = dac_rep && rep_nonzero && dly_started && !dly_nonzero;
 wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
 wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
@@ -497,22 +522,28 @@ assign dly_start_1 = set_axi_en_i ? axi_first : dac_trig_1;
 
 // Terms shared by both variants: everything that does not depend on the wrap
 // decision, i.e. only registers and configuration.
-wire             dly_dec   = dac_rep && dly_started && |dly_cnt;
+wire             dly_dec   = dac_rep && dly_started && dly_nonzero;
 wire [  32-1: 0] dly_hold  = dly_dec ? dly_cnt - 32'h1 : dly_cnt;
+wire             dly_terminal = (dly_cnt == 32'h1);
 wire             rep_ld    = trig_in && !do_read;
-wire             rep_dec   = !set_rgate_i && |rep_cnt && dac_rep && !dac_trigr
+wire             rep_dec   = !set_rgate_i && rep_nonzero && dac_rep && !dac_trigr
                              && (set_rnum_i != 16'hffff); // 16'hffff is infinite pulses
 wire             rep_clr   = set_rgate_i && ((!trig_ext_i && trig_src_i==3'd2)
                                           || ( trig_ext_i && trig_src_i==3'd3));
 wire             cyc_dec   = !dac_trigr && |cyc_cnt && buf_cycle;
 wire             do_clr    = set_rst_i;                  // wrap term added per variant
-wire             rep_end_c = set_rst_i || (rep_cnt==16'h0);
+wire             rep_end_c = set_rst_i || !rep_nonzero;
 
 // The two next state variants.  Each pair differs only in which value of the
 // wrap decision was substituted, so the selected result is the original
 // expression.
 assign dly_cnt_nxt_0     = dly_start_0 ? set_rdly_m1 : dly_hold;
 assign dly_cnt_nxt_1     = dly_start_1 ? set_rdly_m1 : dly_hold;
+
+assign dly_nonzero_nxt_0 = dly_start_0 ? |set_rdly_m1
+                                       : dly_dec ? !dly_terminal : dly_nonzero;
+assign dly_nonzero_nxt_1 = dly_start_1 ? |set_rdly_m1
+                                       : dly_dec ? !dly_terminal : dly_nonzero;
 
 assign dly_started_nxt_0 = dly_start_0 ? 1'b1 : (dac_trig_0 ? 1'b0 : dly_started);
 assign dly_started_nxt_1 = dly_start_1 ? 1'b1 : (dac_trig_1 ? 1'b0 : dly_started);
@@ -523,6 +554,13 @@ assign rep_cnt_nxt_0     = rep_ld                 ? set_rnum_i      :
 assign rep_cnt_nxt_1     = rep_ld                 ? set_rnum_i      :
                            (rep_dec && dac_trig_1) ? rep_cnt - 16'h1 :
                            rep_clr                ? 16'h0           : rep_cnt;
+
+assign rep_nonzero_nxt_0 = rep_ld                  ? |set_rnum_i        :
+                           (rep_dec && dac_trig_0) ? (rep_cnt != 16'h1) :
+                           rep_clr                 ? 1'b0               : rep_nonzero;
+assign rep_nonzero_nxt_1 = rep_ld                  ? |set_rnum_i        :
+                           (rep_dec && dac_trig_1) ? (rep_cnt != 16'h1) :
+                           rep_clr                 ? 1'b0               : rep_nonzero;
 
 assign cyc_cnt_nxt_0     = dac_trig_0 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
 assign cyc_cnt_nxt_1     = dac_trig_1 ? set_ncyc_i : (cyc_dec ? cyc_cnt - 16'h1 : cyc_cnt);
