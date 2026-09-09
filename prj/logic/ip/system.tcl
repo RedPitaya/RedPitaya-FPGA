@@ -498,8 +498,8 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.NUM_SI {2} \
    CONFIG.STRATEGY {1} \
    CONFIG.M00_HAS_REGSLICE {1} \
-   CONFIG.S00_HAS_REGSLICE {0} \
-   CONFIG.S01_HAS_REGSLICE {0} \
+   CONFIG.S00_HAS_REGSLICE {1} \
+   CONFIG.S01_HAS_REGSLICE {1} \
  ] $axi_interconnect_5
 
   # Create instance: axi_interconnect_6, and set properties
@@ -509,8 +509,8 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
    CONFIG.NUM_SI {2} \
    CONFIG.STRATEGY {1} \
    CONFIG.M00_HAS_REGSLICE {1} \
-   CONFIG.S00_HAS_REGSLICE {0} \
-   CONFIG.S01_HAS_REGSLICE {0} \
+   CONFIG.S00_HAS_REGSLICE {1} \
+   CONFIG.S01_HAS_REGSLICE {1} \
  ] $axi_interconnect_6
 
   # Create instance: axis_clock_converter_2, and set properties
@@ -739,5 +739,4 @@ set M_AXI_STR_TX0_aclk [ create_bd_port -dir I -type clk -freq_hz $::logic_freq 
 ##################################################################
 
 create_root_design ""
-
 
