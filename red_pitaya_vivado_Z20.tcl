@@ -124,6 +124,12 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 if {$prj_name != "pyrpl"} {
    add_files -fileset sources_1      ../../$path_rtl
    add_files -fileset constrs_1      $path_sdc/red_pitaya_z20.xdc
+   if {$prj_name == "stream_app"} {
+      add_files -fileset constrs_1 $path_sdc_prj/red_pitaya_z20_adc.xdc
+      set_property PROCESSING_ORDER LATE [get_files red_pitaya_z20_adc.xdc]
+   } else {
+      add_files -fileset constrs_1 $path_sdc/red_pitaya_z20_adc_default.xdc
+   }
 }
 
 add_files  -fileset sources_1 -norecurse $path_rtl_prj
