@@ -68,6 +68,7 @@ set_property -dict [list \
     CONFIG.MMCM_CLKOUT3_DIVIDE {16} \
     CONFIG.NUM_OUT_CLKS {4} \
     CONFIG.PRIM_IN_FREQ {125} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.PRIMITIVE {MMCM} \
     CONFIG.USE_LOCKED {true} \
     CONFIG.USE_RESET {false}

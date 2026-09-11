@@ -99,6 +99,7 @@ set_property -dict [ list \
     CONFIG.NUM_OUT_CLKS {4} \
     CONFIG.PRIMITIVE {MMCM} \
     CONFIG.PRIM_IN_FREQ {125} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.USE_LOCKED {true} \
     CONFIG.USE_RESET {true} \
     CONFIG.RESET_TYPE {ACTIVE_LOW} \
@@ -141,6 +142,7 @@ set_property -dict [ list \
     CONFIG.NUM_OUT_CLKS {4} \
     CONFIG.PRIMITIVE {MMCM} \
     CONFIG.PRIM_IN_FREQ {125} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.USE_LOCKED {true} \
     CONFIG.USE_RESET {true} \
     CONFIG.RESET_TYPE {ACTIVE_LOW} \
