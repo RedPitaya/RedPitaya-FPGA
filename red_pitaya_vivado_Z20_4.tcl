@@ -247,14 +247,19 @@ foreach file $rptFiles {
 
 open_run impl_1
 
-# The normal implementation run can leave the remaining control paths within a
-# few picoseconds of closure on this device.  A post-route physical optimization
-# can shorten those routed nets without changing the RTL or relaxing any path.
-# Re-route and regenerate the sign-off report before applying the timing gate.
-phys_opt_design -directive Explore
-route_design
-report_timing_summary -delay_type min_max -max_paths 20 \
-   -report_unconstrained -file $path_out/red_pitaya_top_Z20_4_timing_summary_routed.rpt
+# Skip setup optimization when setup already passes; it can reduce hold slack.
+set rp_wns ""
+catch {set rp_wns [get_property SLACK [get_timing_paths -delay_type max -max_paths 1]]}
+
+if {[string is double -strict $rp_wns] && $rp_wns < 0} {
+   puts "post-route optimization: WNS = $rp_wns ns, running phys_opt_design"
+   phys_opt_design -directive Explore
+   route_design
+   report_timing_summary -delay_type min_max -max_paths 20 \
+      -report_unconstrained -file $path_out/red_pitaya_top_Z20_4_timing_summary_routed.rpt
+} else {
+   puts "post-route optimization: WNS = $rp_wns ns, skipped"
+}
 
 # Refuse to emit a bitstream that does not meet timing.
 # Override for a deliberate experimental build: make ... DEFINES=ALLOW_TIMING_FAIL

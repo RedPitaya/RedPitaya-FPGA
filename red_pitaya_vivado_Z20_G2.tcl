@@ -250,6 +250,20 @@ foreach file $rptFiles {
 
 open_run impl_1
 
+# Only when setup is missed: on a closed design this pass costs hold slack.
+set rp_wns ""
+catch {set rp_wns [get_property SLACK [get_timing_paths -delay_type max -max_paths 1]]}
+
+if {[string is double -strict $rp_wns] && $rp_wns < 0} {
+   puts "post-route optimization: WNS = $rp_wns ns, running phys_opt_design"
+   phys_opt_design -directive Explore
+   route_design
+   report_timing_summary -delay_type min_max -max_paths 20 \
+      -report_unconstrained -file $path_out/red_pitaya_top_timing_summary_routed.rpt
+} else {
+   puts "post-route optimization: WNS = $rp_wns ns, nothing to gain - skipped"
+}
+
 # Refuse to emit a bitstream that does not meet timing.
 # Override for a deliberate experimental build: make ... DEFINES=ALLOW_TIMING_FAIL
 source [file join $::RP_ROOT_DIR red_pitaya_vivado_timing_gate.tcl]

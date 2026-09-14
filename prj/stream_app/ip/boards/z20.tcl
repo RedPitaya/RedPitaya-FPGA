@@ -36,6 +36,7 @@ set_property -dict [ list \
 
 # Create instance: clk_gen, and set properties
 set clk_gen [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_gen ]
+# Delay ADC capture by 0.508625 ns; shift every MMCM output equally to preserve relative phases.
 set_property -dict [list \
     CONFIG.CLKIN1_JITTER_PS {80.0} \
     CONFIG.CLKOUT1_JITTER {119.348} \
@@ -53,6 +54,10 @@ set_property -dict [list \
     CONFIG.CLKOUT4_PHASE_ERROR {96.948} \
     CONFIG.CLKOUT4_REQUESTED_OUT_FREQ {61.44} \
     CONFIG.CLKOUT4_USED {true} \
+    CONFIG.CLKOUT1_REQUESTED_PHASE {22.500} \
+    CONFIG.CLKOUT2_REQUESTED_PHASE {45.000} \
+    CONFIG.CLKOUT3_REQUESTED_PHASE {60.000} \
+    CONFIG.CLKOUT4_REQUESTED_PHASE {11.250} \
     CONFIG.CLK_OUT1_PORT {clk_125} \
     CONFIG.CLK_OUT2_PORT {clk_200} \
     CONFIG.CLK_OUT3_PORT {clk_333} \
@@ -67,6 +72,7 @@ set_property -dict [list \
     CONFIG.NUM_OUT_CLKS {4} \
     CONFIG.PRIMITIVE {MMCM} \
     CONFIG.PRIM_IN_FREQ {122.88} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.USE_LOCKED {true} \
     CONFIG.USE_RESET {false}
 ] $clk_gen
