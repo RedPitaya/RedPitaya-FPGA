@@ -52,8 +52,12 @@
 /* ---------------------------------------------------------------- EEPROM -- */
 
 #define EEPROM_ADDR         0x50u   /* atmel,24c64 on i2c0 */
-#define EEPROM_ENV_OFFSET   0x1800u /* u-boot environment block */
-#define EEPROM_ENV_SIZE     0x0400u
+/* The u-boot environment block at 0x1800 starts with a 4-byte CRC32 written by
+ * fw_setenv; the entries follow it. Reading from 0x1800 would glue those bytes
+ * to the name of the first entry, and a zero among them would end the parse
+ * right away. */
+#define EEPROM_ENV_OFFSET   0x1804u
+#define EEPROM_ENV_SIZE     0x03FCu
 
 /* Half a bit period. Sized so the bus stays under 100 kHz even with the CPU at
  * its maximum; a slower CPU only slows the transfer down. */
