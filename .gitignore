@@ -2,4 +2,9 @@ build
 *.log
 *.jou
 synReport.txt*
-tmp
+tmpprj/fsbl/src/rp_ram_profiles.h
+prj/fsbl/ps7_init_1024.c
+prj/fsbl/test/ref.c
+prj/fsbl/test/test_patch
+prj/fsbl/test/test_env
+__pycache__/

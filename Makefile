@@ -7,7 +7,6 @@
 PRJ   ?= v0.94
 MODEL ?= Z10
 FPGA_VERSION ?= z10_125
-RAM   ?= 512
 HWID  ?= ""
 DEFINES ?= ""
 DTS_VER ?= 2025.1
@@ -132,9 +131,45 @@ dts: $(DEVICE_TREE)
 
 fsbl: fsbl_dts
 
+# The FSBL is built once, for the 16-bit DDR bus, and learns at run time
+# whether the board carries the second DDR chip. The 1 GB configuration is
+# carried as a register delta extracted from a throw-away 1 GB build, so the
+# two never drift apart.
+FSBL_APP     = prj/fsbl/build-fsbl/redpitaya_platform/zynq_fsbl
+FSBL_SRC     = prj/fsbl/src
+FSBL_REF_1GB = prj/fsbl/ps7_init_1024.c
+GNU_ARM_BIN ?= $(dir $(XILINX_VIVADO))gnu/aarch32/lin/gcc-arm-none-eabi/bin
+
 fsbl_build:
-	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=$(RAM) DTS_VER=$(DTS_VER)
+	# reference pass: only the generated PS init tables are kept
+	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=1024 DTS_VER=$(DTS_VER)
 	xsct red_pitaya_hsi_fsbl.tcl fsbl
+	cp $(FSBL_APP)/ps7_init.c $(FSBL_REF_1GB)
+	# real pass
+	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=512 DTS_VER=$(DTS_VER)
+	xsct red_pitaya_hsi_fsbl.tcl fsbl
+	python3 scripts/gen_ddr_patch.py \
+		--ps7-512 $(FSBL_APP)/ps7_init.c \
+		--ps7-1024 $(FSBL_REF_1GB) \
+		--out $(FSBL_APP)/rp_ddr_1gb_patch.c
+	cp $(FSBL_SRC)/*.c $(FSBL_SRC)/*.h $(FSBL_APP)/
+	sed -i 's|^LN_FLAGS := |LN_FLAGS := -Wl,--wrap=ps7_init |' $(FSBL_APP)/Makefile
+	PATH=$(GNU_ARM_BIN):$$PATH $(MAKE) -C $(FSBL_APP)
+	cp $(FSBL_APP)/fsbl.elf prj/fsbl/out/fsbl.elf
+
+# Host-side checks: the delta really turns the 512 MB tables into the 1 GB
+# ones, and the environment parser handles the blobs it will meet.
+fsbl_test:
+	python3 prj/fsbl/test/gen_ref.py $(FSBL_REF_1GB) prj/fsbl/test/ref.c
+	gcc -std=c99 -Wall -Wextra -Iprj/fsbl/test -I$(FSBL_SRC) -Iprj/fsbl/test/stub \
+		$(FSBL_APP)/ps7_init.c $(FSBL_SRC)/rp_ddr_patch.c \
+		$(FSBL_APP)/rp_ddr_1gb_patch.c prj/fsbl/test/ref.c \
+		prj/fsbl/test/test_patch.c -o prj/fsbl/test/test_patch
+	prj/fsbl/test/test_patch
+	gcc -std=c99 -Wall -Wextra -Wno-unused-function -DRP_HW_REV_HOST_TEST \
+		-I$(FSBL_SRC) $(FSBL_SRC)/rp_hw_rev.c prj/fsbl/test/test_env.c \
+		-o prj/fsbl/test/test_env
+	prj/fsbl/test/test_env
 
 fsbl_dts: fsbl_build
 	echo $@
