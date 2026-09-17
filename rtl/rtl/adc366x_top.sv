@@ -35,7 +35,14 @@ module adc366x_top
 
 
 genvar GV;
-localparam BDIV = 8/LW  ;
+// BUFR_DIVIDE takes a string, so it cannot be written as 8/LW.  Keep the two in
+// step anyway: a 1-lane interface carries 16 bits per parallel word and needs a
+// divide of 8, the 2-lane one carries 8 and needs 4.  Until now BDIV was
+// computed here and then ignored - the instance below hardcoded "4" - so LW=1
+// would have run the parallel clock at twice the right rate with nothing
+// reporting it.  Only LW=2 is built today; this makes the other value fail
+// loudly rather than silently.
+localparam BDIV_S = (LW == 1) ? "8" : (LW == 2) ? "4" : "unsupported LW";
 localparam PDW  = 16/LW ;
 
 wire ser_clk ;
@@ -90,8 +97,7 @@ BUFIO bufio_inst (
 
 
 BUFR #(
-//  .BUFR_DIVIDE ( BDIV      ),  // Values: "BYPASS, 1, 2, 3, 4, 5, 6, 7, 8" 
-  .BUFR_DIVIDE ( "4"       ),  // Values: "BYPASS, 1, 2, 3, 4, 5, 6, 7, 8" 
+  .BUFR_DIVIDE ( BDIV_S    ),  // Values: "BYPASS, 1, 2, 3, 4, 5, 6, 7, 8" 
   .SIM_DEVICE  ( "7SERIES" )   // Must be set to "7SERIES" 
 )
 BUFR_inst

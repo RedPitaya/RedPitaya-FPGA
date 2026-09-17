@@ -122,6 +122,16 @@ if {$prj_name != "pyrpl"} {
    add_files -fileset constrs_1      $path_sdc/red_pitaya_z20_ll.xdc
    # Z20_ll defaults to STEMlab 125-14 TI (500 MHz ADC ADDCLK).  The 65-16 TI
    # uses the same RTL and pins, but its ADDCLK is 250 MHz.
+   #
+   # The shipped build leaves LL_ADC_65 out on purpose, so one bitstream serves
+   # both boards.  That is safe in the direction it matters: without the
+   # override the 65-16 has its 250 MHz ADDCLK constrained as if it were
+   # 500 MHz, which asks for half the period the hardware actually provides.
+   # The input delays are the same numbers either way - tCD is a property of
+   # the ADC output stage and does not scale with the bit rate - so the only
+   # difference is that pessimism, and the 65-16 closes with margin to spare.
+   # Build with DEFINES=LL_ADC_65 to see the true 65-16 numbers; do not ship
+   # the result as a separate image without a reason to.
    if {[lsearch -exact $prj_defs "LL_ADC_65"] >= 0} {
       add_files -fileset constrs_1   $path_sdc/red_pitaya_z20_ll_65.xdc
       set_property PROCESSING_ORDER LATE [get_files red_pitaya_z20_ll_65.xdc]
