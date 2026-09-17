@@ -69,6 +69,15 @@ reg  signed [25-1:0]  r2_reg; // r2sum-10 = 23->25
 reg  signed [(DW+18)-1:0]  r01_reg; // DIN + 18 = 32->34
 reg  signed [30-1:0]  r02_reg; // BB mult - 10 = 28->30
 
+// The four widths below carry "old->new" notes from the DW=14->16 conversion, but
+// the widening they suggest is NOT needed and must not be applied.  Peak occupancy
+// at DW=16, measured over every shipped coefficient set (LV 1:1, HV 1:20, NEW) with
+// full-scale sine, square, step, chirp, noise and an adversarial worst-case search:
+// aa_mult 7%, r3_sum 67%, r3_reg_dsp* 67%, pp_mult 0.1%.  The signals that really
+// did need the extra bits are r01_reg, r2_sum and r2_reg above, all sized exactly.
+// Widening r3_sum past 48 bits additionally pushes the IIR1 adder out of the
+// DSP48E1 P port into fabric carry logic, costing ~1.4 ns on the feedback loop -
+// enough to miss setup on a 125 MHz par_clk.
 wire signed [41-1:0]  aa_mult; // r3reg_dsp1 + coeff_aa = 41->43
 wire signed [48-1:0]  r3_sum; // r2reg+25+1 = 49->51
 (* use_dsp="yes" *) reg  signed [23-1:0]  r3_reg_dsp1; // r3_sum-25 = 23->25
