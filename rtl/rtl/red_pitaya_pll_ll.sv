@@ -25,10 +25,39 @@ module red_pitaya_pll_ll (
 );
 
 logic clk_fb;
-// -45 puts clk_dac_1p in phase with clk_dac_1x, so the inversion in the
-// dac_wrt ODDR lands the strobe edge half a period after the data launch,
-// centred between data changes.  Not yet verified on hardware.
-`define DAC_CLK_PHASE -45
+// DAC write strobe phase; CLKOUT3_PHASE below is DAC_CLK_PHASE + PHASE_OFFSET.
+// -270 is the centre of the window both LL board types latch correctly in.
+// Do not change it from a timing report - see below, the report is wrong here.
+//
+// Swept in 45 deg steps with OUT looped back to IN, on a STEMlab 65-16 TI v1.3
+// and a STEMlab 125-14 TI v1.3, both running the same bitstream. Worst
+// deviation of a sample from the line through its neighbours, both channels,
+// 10 kHz to 1 MHz:
+//
+//   total phase       0    -45    -90   -135   -180   -225   -270   -315
+//   65-16 TI         ok     ok    bad    bad   marg     ok     ok     ok
+//   125-14 TI         -    bad    bad    bad    bad     ok     ok     ok
+//
+// The two windows overlap on -225..-315, and -270 sits in the middle of the
+// overlap with a clean step either side on both boards. -315, the centre of
+// the 65-16 window alone, is one step from the bad edge on the 125-14.
+//
+// At -270 the full loopback suite - sine from 1 kHz to 5 MHz, 0.1 to 2.0 Vpp,
+// ramps both ways, triangle, square, both channels - shows no deviation above
+// each board's own noise floor, against 21343 and 17704 bad samples on the
+// 125-14 at -90.
+//
+// Static timing disagrees: it likes -90, which is in the bad zone on both
+// boards, and rejects -270 on hold. Two reasons, both outside this file:
+//   - the DAC2904 needs tS 2 ns / tH 1.5 ns, which is what set_output_delay
+//     in sdc/red_pitaya_z20_ll.xdc claims, yet the analysis optimum lands
+//     about 225 deg away from the measured one;
+//   - the datasheet also requires the DAC CLK rising edge at or before the
+//     WRT rising edge, within tCW = 0..tPW-2 ns. DAC_CLK comes from the board
+//     oscillator, not from the FPGA, and nothing constrains WRT against it.
+// Until both are sorted out the LL projects build with
+// DEFINES=ALLOW_TIMING_FAIL.
+`define DAC_CLK_PHASE -225
 `define PHASE_OFFSET -45
 
 PLLE2_ADV #(
