@@ -209,8 +209,16 @@ create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
 create_generated_clock -quiet -name id/dna_clk -source [get_pins -quiet id/dna_clk_reg/C] -divide_by 8 [get_pins -quiet id/dna_clk_reg/Q]
 create_generated_clock -quiet -name i_hk/dna_clk -source [get_pins -quiet i_hk/dna_clk_reg/C] -divide_by 16 [get_pins -quiet i_hk/dna_clk_reg/Q]
-create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 -invert [get_ports dac_wrta_o]
-create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divide_by 1 -invert [get_ports dac_wrtb_o]
+# The dac_wrt ODDR carries D1=0/D2=1, so the textbook declaration of the
+# forwarded clock takes -invert.  It analyses the wrong edge: with -invert the
+# tool's optimum sits 180 deg from the phase the DAC actually latches at,
+# measured by loopback on a 65-16 TI and a 125-14 TI.  Without it the analysis
+# accepts the phase that works (setup +0.928, hold +1.780 at CLKOUT3 -270) and
+# rejects the one that corrupts the output (hold -2.220 at -90), so the gate
+# now catches what it let through in b780bce.  Anchored to measurement; see
+# rtl/rtl/red_pitaya_pll_ll.sv for the sweep.
+create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 [get_ports dac_wrta_o]
+create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divide_by 1 [get_ports dac_wrtb_o]
 
 
 #set_false_path -from [get_clocks clk_fpga_0]    -to [get_clocks pll_adc_clk]

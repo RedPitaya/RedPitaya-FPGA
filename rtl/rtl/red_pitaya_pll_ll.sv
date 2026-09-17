@@ -47,16 +47,17 @@ logic clk_fb;
 // each board's own noise floor, against 21343 and 17704 bad samples on the
 // 125-14 at -90.
 //
-// Static timing disagrees: it likes -90, which is in the bad zone on both
-// boards, and rejects -270 on hold. Two reasons, both outside this file:
-//   - the DAC2904 needs tS 2 ns / tH 1.5 ns, which is what set_output_delay
-//     in sdc/red_pitaya_z20_ll.xdc claims, yet the analysis optimum lands
-//     about 225 deg away from the measured one;
-//   - the datasheet also requires the DAC CLK rising edge at or before the
-//     WRT rising edge, within tCW = 0..tPW-2 ns. DAC_CLK comes from the board
-//     oscillator, not from the FPGA, and nothing constrains WRT against it.
-// Until both are sorted out the LL projects build with
-// DEFINES=ALLOW_TIMING_FAIL.
+// Static timing used to prefer -90, the middle of the bad zone, because the
+// forwarded-clock declaration in sdc/red_pitaya_z20_ll.xdc analysed the wrong
+// edge of dac_wrt. That is fixed there, and the analysis now agrees with the
+// sweep: -270 closes with setup +0.928 and hold +1.780, -90 fails hold by
+// 2.220 ns. The gate would have caught b780bce.
+//
+// Still not modelled anywhere: the DAC2904 also requires the DAC CLK rising
+// edge at or before the WRT rising edge, within tCW = 0..tPW-2 ns. DAC_CLK
+// comes from the board oscillator rather than the FPGA, and no constraint
+// relates WRT to it, so a phase moved inside the window above can still break
+// that requirement without the tools noticing.
 `define DAC_CLK_PHASE -225
 `define PHASE_OFFSET -45
 
