@@ -318,6 +318,74 @@ set_output_delay -clock [get_clocks dac_wrta_o] -min -add_delay -1.400 [get_port
 set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports {dac_datb_o[*]}]
 
 
+# DAC2904 tCW - deliberately NOT constrained, and it cannot be.
+#
+# The converter has a double latch: data enters the input latch on WRT rising,
+# moves to the DAC latch on WRT falling, and reaches the output on the next CLK
+# rising edge.  That ordering is the tCW row of the datasheet - "delay rising
+# CLK edge to rising WRT edge, 0 .. tPW-2 ns" - and the text next to it adds
+# that the condition "can simply be met by connecting the WRT and CLK lines
+# together", which is how TI characterised the part.  On this board they are
+# not connected: DAC_CLK comes from the on-board oscillator straight to the
+# converter and to dac_clk_i, while WRT is generated inside the FPGA.  With a
+# 4 ns pulse on both, the legal window is 2 ns wide.
+#
+# Measured on the routed design, arrival of the WRT rising edge at the port
+# relative to a dac_clk_i edge, over both process corners:
+#
+#     CLKOUT3   Slow 0.95V 85C      Fast 1.05V 0C      spread
+#     -225      16.592 .. 17.435    10.494 .. 11.296   6.94 ns
+#     -270      15.592 .. 16.435     9.494 .. 10.296   6.94 ns
+#     -315      14.592 .. 15.435     8.494 ..  9.296   6.94 ns
+#
+# The path is IBUF, PLL, BUFG, clock tree, ODDR, OBUF, and it spans 6.94 ns
+# between the corners against an 8.000 ns period.  Modulo the period that is
+# 87% of the cycle, so over the datasheet PVT range the CLK-to-WRT relationship
+# sweeps almost every value it can take, and no CLKOUT3 phase keeps it inside a
+# 2 ns window.  Taking the three phases above: -225 complies at the slow corner
+# and misses at the fast one, -315 the other way round, -270 straddles the
+# boundary at both.  Shifting the phase moves the arc, it cannot shorten it.
+#
+# Nor can the requirement be written as a constraint.  Vivado compares absolute
+# times, and because the delay exceeds one period the reference edge differs
+# per corner - 16.000 ns at the slow corner, 8.000 ns at the fast one.  A single
+# set_output_delay -min/-max pair applies the same window to both, so it checks
+# the lower bound where the upper one binds and vice versa: exactly the two
+# bounds that matter are the two it cannot see.  Multicycle paths do not help,
+# -hold only moves the capture edge earlier.  A constraint that covers one
+# corner out of two is worse than none, because it reads as a guarantee.
+#
+# What makes the interface work anyway is the failure mode.  A violation on the
+# "CLK rises shortly after WRT" side means the CLK edge transfers the word the
+# DAC latch already held, which costs one sample of latency, equally on both
+# channels, and is invisible in the output waveform.  The dangerous case is a
+# CLK edge landing on WRT falling, where it races the input-to-DAC-latch
+# transfer.  Both of the boards this was measured on are clean through the
+# whole loopback suite, and so is -315, which the analysis above puts outside
+# the window at the slow corner.
+#
+# So the phase in rtl/rtl/red_pitaya_pll_ll.sv is chosen on the data setup and
+# hold window against WRT, constrained just above, which is the relationship
+# that corrupts samples when it is missed.  tCW gives no basis to prefer any of
+# -225, -270 or -315.
+#
+# If tCW ever has to be met properly, the arc has to be shortened rather than
+# moved.  The PLL runs COMPENSATION = ZHOLD with CLKFBIN tied straight to
+# CLKFBOUT, so the BUFG and the clock tree sit outside the feedback loop and
+# their corner spread lands in full on the strobe.  Closing the loop through a
+# BUFG that matches the output one would leave roughly the ODDR and OBUF spread,
+# about 2.5 ns.  That changes every clock the PLL produces, the ADC capture
+# included, so it needs a board to verify and is not done here.
+#
+# Each build writes out/datasheet.rpt.  Its "Clock to port" rows for dac_wrta_o
+# and dac_wrtb_o are the same measurement for the design as built, quoted as max
+# and min against dac_clk with the clock uncertainty already folded in - so the
+# figure to read there is the spread between the two columns, 7.26 ns for the
+# build this note was written against.  The absolute values are referenced to
+# whichever dac_clk edge Vivado picks and are 12 ns lower than the arrivals
+# tabulated above; the spread is what a phase change has to be judged on.
+
+
 
 
 # These are the first stages of the explicit request/acknowledge synchronizers.

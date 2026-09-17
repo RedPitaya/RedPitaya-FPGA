@@ -53,11 +53,14 @@ logic clk_fb;
 // sweep: -270 closes with setup +0.928 and hold +1.780, -90 fails hold by
 // 2.220 ns. The gate would have caught b780bce.
 //
-// Still not modelled anywhere: the DAC2904 also requires the DAC CLK rising
-// edge at or before the WRT rising edge, within tCW = 0..tPW-2 ns. DAC_CLK
-// comes from the board oscillator rather than the FPGA, and no constraint
-// relates WRT to it, so a phase moved inside the window above can still break
-// that requirement without the tools noticing.
+// The DAC2904 also requires the DAC CLK rising edge at or before the WRT rising
+// edge, within tCW = 0..tPW-2 ns. That one is not constrained and cannot be:
+// dac_clk_i to dac_wrt spans 6.94 ns between process corners against an 8 ns
+// period, so the relationship sweeps most of the cycle and no phase here keeps
+// it inside the 2 ns window. Missing it costs a sample of latency rather than
+// data, which is why the boards measure clean either way. The analysis, the
+// measured numbers per phase and what it would take to fix are in
+// sdc/red_pitaya_z20_ll.xdc next to the dac_data_o constraints.
 `define DAC_CLK_PHASE -225
 `define PHASE_OFFSET -45
 

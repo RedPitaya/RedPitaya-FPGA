@@ -96,6 +96,23 @@ proc rp_check_timing {{report_dir ""}} {
     }
 
     # -----------------------------------------------------------------------
+    # Step 2b: datasheet report.
+    #
+    # Slack only covers relationships that are constrained.  The DAC2904 tCW
+    # requirement is not one of them and cannot be - see the long note in
+    # sdc/red_pitaya_z20_ll.xdc - so the only way it stays visible is to write
+    # the clock-to-port numbers out with every build.  Its "Clock to port" rows
+    # for dac_wrta_o and dac_wrtb_o are what a future phase change has to be
+    # read against.  Useful for the ADC and GPIO ports of the other models too,
+    # which is why it is not conditional.
+    # -----------------------------------------------------------------------
+    if {$report_dir ne ""} {
+        if {[catch {report_datasheet -file [file join $report_dir datasheet.rpt]} e]} {
+            puts "TIMING GATE: datasheet report skipped ($e)"
+        }
+    }
+
+    # -----------------------------------------------------------------------
     # Step 3: verdict.  Hold is checked as well as setup - an earlier build
     # reached WHS -0.474 ns / THS -342.782 ns mid-flow, which a setup-only gate
     # would have waved through.
