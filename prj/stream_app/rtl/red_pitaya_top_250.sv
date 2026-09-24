@@ -343,6 +343,10 @@ i_hk (
   .rstn_i          (rstn_hk    ),  // reset - active low
   .fclk_i          (fclk[0]    ),  // clock
   .frstn_i         (frstn[0]   ),  // reset - active low
+  // The frequency meter measures the ADC clock itself, as on every other
+  // platform, not the halved clock the system bus runs on.
+  .mes_clk_i       (clk_250    ),  // measured clock
+  .mes_rstn_i      (rstn_hk    ),  // reset - active low
   // LED
   .led_o           (led_hk),  // LED output
   // idelay control
