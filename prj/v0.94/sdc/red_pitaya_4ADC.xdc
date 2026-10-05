@@ -47,6 +47,12 @@ set_false_path -from [get_clocks pll_adc_clk_1] -to [get_clocks clk_fpga_0]
 set_false_path -from [get_clocks pll_adc_clk_0] -to [get_clocks pll_adc_10mhz]
 set_false_path -from [get_clocks pll_adc_10mhz] -to [get_clocks pll_adc_clk_0]
 set_false_path -from [get_clocks adc_clk_23] -to [get_clocks pll_adc_clk_0]
+# Mirrored sys-bus writes leave the CDC of bus 1 (adc_clk_01) and are consumed
+# by i_scope_2_3 (adc_clk_23). Address and data are registered one cycle before
+# the write strobe and held until ACK, so bound the crossing as a datapath.
+set_max_delay -datapath_only 8.000 \
+  -from [get_pins {sys_bus_interconnect/for_bus[1].inst_sys_bus_cdc/bus_m\\.*/C sys_bus_interconnect/for_bus[1].inst_sys_bus_cdc/reg_write*/C}] \
+  -to [get_clocks pll_adc_clk_1]
 
 set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
 set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {spi_done_csff*/D}]

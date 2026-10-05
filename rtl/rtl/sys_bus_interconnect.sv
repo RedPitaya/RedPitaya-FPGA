@@ -99,17 +99,18 @@ assign bus_s_sync_cs = {SN{bus_s_cs[SYNC_IN_BUS]}} & {syncd_cs};
 generate
 for (genvar i=0; i<SN; i++) begin: for_bus
 
-// Mirrored writes must enter each destination's CDC independently.  Selecting
-// another destination bus after its CDC creates a direct clock-domain crossing
-// between the two slave clocks.  Decode from the controller-domain request and
-// include the mirror in the target CDC request instead.
+// Mirrored writes are taken from the output of the SYNC_IN_BUS CDC, so every
+// slave sees ARM, trigger source and the other synchronised registers on the
+// same edge. Separate CDCs per slave settle with independent latency and make
+// the write pointers of the scope cores drift apart. The direct crossing into
+// the other slave clock is bounded in the board XDC.
 assign bus_s_sync_adr[i] = bus_s_sync_cs[i] &&
-                             ((req_addr[SW-1:0] == SYNC_REG_OFS1) ||
-                              (req_addr[SW-1:0] == SYNC_REG_OFS2) ||
-                              (req_addr[SW-1:0] == SYNC_REG_OFS3) ||
-                              (req_addr[SW-1:0] == SYNC_REG_OFS4) ||
-                              (req_addr[SW-1:0] == SYNC_REG_OFS5) ||
-                              (req_addr[SW-1:0] == SYNC_REG_OFS6));
+                             ((`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS1) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS2) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS3) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS4) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS5) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS6));
 
 assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) || 
                          (i == SYNC_OUT_BUS2) || 
@@ -130,7 +131,7 @@ if (PIPE_IN_BUS) begin : gen_output_pipeline
   end else begin
     pipe_addr[i]  <= req_addr;
     pipe_wdata[i] <= req_wdata;
-    pipe_wen[i]   <= (bus_s_cs[i] | bus_s_sync_adr[i]) & req_wen;
+    pipe_wen[i]   <= bus_s_cs[i] & req_wen;
     pipe_ren[i]   <= bus_s_cs[i] & req_ren;
   end
 
@@ -141,7 +142,7 @@ if (PIPE_IN_BUS) begin : gen_output_pipeline
 end else begin : gen_output_bypass
   assign `BUS_NAME_I1[i].addr  = req_addr;
   assign `BUS_NAME_I1[i].wdata = req_wdata;
-  assign `BUS_NAME_I1[i].wen   = (bus_s_cs[i] | bus_s_sync_adr[i]) & req_wen;
+  assign `BUS_NAME_I1[i].wen   = bus_s_cs[i] & req_wen;
   assign `BUS_NAME_I1[i].ren   = bus_s_cs[i] & req_ren;
 end
 
@@ -153,9 +154,9 @@ sys_bus_cdc inst_sys_bus_cdc
   .bus_s(`BUS_NAME_I1[i])
 );
 
-assign `BUS_NAME_S[i].addr   = `BUS_NAME_I2[i].addr;
-assign `BUS_NAME_S[i].wdata  = `BUS_NAME_I2[i].wdata;
-assign `BUS_NAME_S[i].wen    = `BUS_NAME_I2[i].wen;
+assign `BUS_NAME_S[i].addr   = bus_s_sync_adr[i] ? `BUS_NAME_I2[SYNC_IN_BUS].addr  : `BUS_NAME_I2[i].addr;
+assign `BUS_NAME_S[i].wdata  = bus_s_sync_adr[i] ? `BUS_NAME_I2[SYNC_IN_BUS].wdata : `BUS_NAME_I2[i].wdata;
+assign `BUS_NAME_S[i].wen    = bus_s_sync_adr[i] ? `BUS_NAME_I2[SYNC_IN_BUS].wen   : `BUS_NAME_I2[i].wen;
 assign `BUS_NAME_S[i].ren    = `BUS_NAME_I2[i].ren;
 
 assign `BUS_NAME_I2[i].rdata = `BUS_NAME_S[i].rdata;
