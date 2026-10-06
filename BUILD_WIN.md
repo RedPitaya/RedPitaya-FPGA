@@ -27,7 +27,7 @@ It is recommended to set the following environment variable:
 set XILINX_VIVADO=C:\Xilinx\Vivado\2025.1
 ```
 
-The [open_vivado.bat](/home/yura/projects/a014-redpitaya/redpitaya-fpga/open_vivado.bat:1) script first looks for `vivado.bat` at `%XILINX_VIVADO%\bin\vivado.bat`, then falls back to:
+The [open_vivado.bat](/open_vivado.bat) script first looks for `vivado.bat` at `%XILINX_VIVADO%\bin\vivado.bat`, then falls back to:
 
 ```text
 C:\Xilinx\Vivado\2025.1\bin\vivado.bat

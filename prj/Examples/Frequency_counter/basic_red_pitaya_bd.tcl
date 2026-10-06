@@ -1,3 +1,5 @@
+set project_name freq
+
 # ==================================================================================================
 # block_design.tcl - Create Vivado Project - basic red pitaya block design
 #
