@@ -56,7 +56,6 @@ Use it only for debugging - for example to get an image for a hardware experimen
 
 The gate itself is shared by all models and lives in `red_pitaya_vivado_timing_gate.tcl`.
 
-
 ## Repository structure
 
 - `prj/` - project directory; each subdirectory defines a separate build configuration and its own project-specific overrides.
