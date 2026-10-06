@@ -67,7 +67,7 @@ module red_pitaya_top_4ADC #(
 // GPIO parameter
 localparam int unsigned GDW = DWE+DWE;
 
-logic [4-1:0] fclk ;  // {200MHz, 166MHz, 142MHz, 125MHz}
+logic [4-1:0] fclk ;  // {clk3, clk2, clk1, clk0} = {200MHz, 50MHz, 125MHz, 125MHz}
 logic [4-1:0] frstn;
 
 // PLL signals

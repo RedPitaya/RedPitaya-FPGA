@@ -12,6 +12,11 @@ set prj_dir "build"
 set prj_board "z20_250"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
+# Absolute path to this directory, captured before the cd below changes the
+# working directory.  Needed to source red_pitaya_vivado_timing_gate.tcl later:
+# by then the cwd is prj/<name>, so a relative path would resolve inside it.
+set ::RP_ROOT_DIR [file normalize [file dirname [info script]]]
+
 cd prj/$prj_name
 #cd prj/$::argv 0
 
@@ -94,7 +99,9 @@ if {$prj_name == "stream_app"} {
 }
 
 if {$prj_name == "logic"} {
-   set ::logic_freq 125000000
+   # adc_clk is 250 MHz on this board, and clk1_freq keeps the 250 MHz default
+   # to match it: the only model where the two are equal.
+   set ::logic_freq 250000000
 }
 
 set_property verilog_define [concat Z20_250 $prj_defs] [current_fileset]
@@ -161,10 +168,22 @@ if {[file exists $path_sdc_prj/red_pitaya_z20_250.xdc]} {
 }
 
 ################################################################################
-# ser parameter containing Git hash
+# set parameter containing Git hash
 ################################################################################
+# Falls back to a placeholder hash when git is not installed, or when the
+# repository has no .git (e.g. it was extracted from a zip archive), so the
+# build does not abort just because git information is unavailable.
 
-set gith [exec git log -1 --format="%H"]
+set gith "0000000000000000000000000000000000000000"
+if {[catch {exec git --version}]} {
+    puts "WARNING: git executable not found - GITH will use a placeholder value."
+} elseif {![file exists [file join $::RP_ROOT_DIR .git]]} {
+    puts "WARNING: .git not found in $::RP_ROOT_DIR (repository may have been extracted from a zip archive) - GITH will use a placeholder value."
+} elseif {[catch {exec git -C $::RP_ROOT_DIR log -1 --format="%H"} git_hash_result]} {
+    puts "WARNING: git log failed ($git_hash_result) - GITH will use a placeholder value."
+} else {
+    set gith $git_hash_result
+}
 set_property generic "GITH=160'h$gith" [current_fileset]
 set_property top $prj_top [current_fileset]
 
@@ -178,7 +197,44 @@ update_compile_order -fileset sources_1
 
 if {$dev_mode == 1} {return}
 
-launch_runs synth_1
+################################################################################
+# Parallel jobs for launch_runs.
+#
+# synth_1 depends on 8 out-of-context IP synthesis runs.  Without -jobs Vivado
+# defaults to 1 and runs them one after another; the top-level synthesis only
+# starts once the last one is done.  From a build log:
+#   09:38:18  Launched system_axi_protocol_converter_0_0_synth_1, ... (8 runs)
+#   09:48:54  **** Start of session      <- synth_1 began 10 min 36 s later
+#   09:52:55  synth_1 finished           <- and itself took about 4 min
+# synth_design is already multithreaded, so this queueing was the bottleneck.
+#
+# nproc is tried first because it honours sched_getaffinity, so taskset and a
+# cpuset-limited container are respected.  /proc/cpuinfo is a fallback for the
+# case where exec fails - under Vivado, exec inherits Vivado's LD_LIBRARY_PATH
+# and system binaries can fail to load.
+#
+# A CPU *quota* (cgroup cpu.max) is not visible to either probe, and every
+# parallel job is a separate Vivado process needing roughly 1-3 GB.  On a
+# constrained or memory-tight machine set the count explicitly:
+#   RP_JOBS=4 make PRJ=... MODEL=...
+################################################################################
+set rp_jobs 0
+if {[info exists ::env(RP_JOBS)] && [string is integer -strict $::env(RP_JOBS)]} {
+  set rp_jobs $::env(RP_JOBS)
+}
+if {$rp_jobs < 1} { catch {set rp_jobs [string trim [exec nproc]]} }
+if {![string is integer -strict $rp_jobs] || $rp_jobs < 1} {
+  set rp_jobs 0
+  catch {
+    set fh [open /proc/cpuinfo r]
+    set rp_jobs [regexp -all -line {^processor\s*:} [read $fh]]
+    close $fh
+  }
+}
+if {![string is integer -strict $rp_jobs] || $rp_jobs < 1} { set rp_jobs 1 }
+puts "launch_runs synth_1 -jobs $rp_jobs"
+
+launch_runs synth_1 -jobs $rp_jobs
 wait_on_run synth_1
 
 set rptFiles [glob -nocomplain -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
@@ -207,6 +263,12 @@ foreach file $rptFiles {
 #wait_on_run impl_1
 
 open_run impl_1
+
+# Refuse to emit a bitstream that does not meet timing.
+# Override for a deliberate experimental build: make ... DEFINES=ALLOW_TIMING_FAIL
+source [file join $::RP_ROOT_DIR red_pitaya_vivado_timing_gate.tcl]
+rp_check_timing $path_out
+
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 write_bitstream -force            $path_out/red_pitaya
 write_cfgmem -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 $path_out/red_pitaya.bit" -file $path_out/red_pitaya.bin

@@ -75,6 +75,8 @@ module scope_cfg
    output wire [S_AXIS_DATA_BITS-1:0]  cfg_trig_low_level_o    ,
    output wire [S_AXIS_DATA_BITS-1:0]  cfg_trig_high_level_o   ,
    output wire                         cfg_trig_edge_o         ,
+   output wire                         cfg_trigger_mode_o      ,
+   input  wire                         sts_armed_i             ,
 
    output wire [    DEC_CNT_BITS-1:0]  cfg_dec_factor_o        ,
    output wire [  DEC_SHIFT_BITS-1:0]  cfg_dec_rshift_o        ,
@@ -150,6 +152,7 @@ localparam TRIG_POST_CNT_ADDR       = 12'h1C;  // Trigger post count address
 localparam TRIG_LOW_LEVEL_ADDR      = 12'h20;  // Trigger low level address
 localparam TRIG_HIGH_LEVEL_ADDR     = 12'h24;  // Trigger high level address
 localparam TRIG_EDGE_ADDR           = 12'h28;  // Trigger edge address
+localparam TRIG_MODE_ADDR           = 12'h2C;  // Trigger mode control and armed status address
 localparam DEC_FACTOR_ADDR          = 12'h30;  // Decimation factor address
 localparam DEC_RSHIFT_ADDR          = 12'h34;  // Decimation right shift address
 localparam AVG_EN_ADDR              = 12'h38;  // Average enable address
@@ -234,7 +237,8 @@ reg  [TRIG_CNT_BITS-1:0]    cfg_trig_post_samp;
 
 reg  [S_AXIS_DATA_BITS-1:0] cfg_trig_low_level;
 reg  [S_AXIS_DATA_BITS-1:0] cfg_trig_high_level;
-reg                         cfg_trig_edge;  
+reg                         cfg_trig_edge;
+reg                         cfg_trigger_mode;
 
 reg                         cfg_avg_en; 
 reg                         cfg_hres_en;
@@ -408,6 +412,7 @@ begin
       cfg_trig_low_level      <=   'h0;
       cfg_trig_high_level     <=   'h0;
       cfg_trig_edge           <=  1'b0;
+      cfg_trigger_mode        <=  1'b0;
       cfg_dec_factor          <=   'h0;
       cfg_dec_rshift          <=   'h0;
       cfg_avg_en              <=  1'b0;
@@ -433,6 +438,7 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_LOW_LEVEL_ADDR)   )  cfg_trig_low_level      <= reg_wdat_adc[S_AXIS_DATA_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_HIGH_LEVEL_ADDR)  )  cfg_trig_high_level     <= reg_wdat_adc[S_AXIS_DATA_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_EDGE_ADDR)        )  cfg_trig_edge           <= reg_wdat_adc[0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_MODE_ADDR)        )  cfg_trigger_mode        <= reg_wdat_adc[0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==DEC_FACTOR_ADDR)       )  cfg_dec_factor          <= reg_wdat_adc[DEC_CNT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==DEC_RSHIFT_ADDR)       )  cfg_dec_rshift          <= reg_wdat_adc[DEC_SHIFT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==AVG_EN_ADDR)           )  cfg_avg_en              <= reg_wdat_adc[0];
@@ -492,6 +498,7 @@ begin
       TRIG_LOW_LEVEL_ADDR    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-S_AXIS_DATA_BITS{1'b0}}, cfg_trig_low_level};       end
       TRIG_HIGH_LEVEL_ADDR   : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-S_AXIS_DATA_BITS{1'b0}}, cfg_trig_high_level};      end
       TRIG_EDGE_ADDR         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}               , cfg_trig_edge};            end
+      TRIG_MODE_ADDR         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{23{1'b0}}, sts_armed_i, {7{1'b0}}, cfg_trigger_mode};   end
       DEC_FACTOR_ADDR        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-DEC_CNT_BITS{1'b0}}     , cfg_dec_factor};           end
       DEC_RSHIFT_ADDR        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-DEC_SHIFT_BITS{1'b0}}   , cfg_dec_rshift};           end
       AVG_EN_ADDR            : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , cfg_hres_en, cfg_avg_en};  end
@@ -639,6 +646,7 @@ assign cfg_trig_post_samp_o    = cfg_trig_post_samp;
 assign cfg_trig_low_level_o    = cfg_trig_low_level;
 assign cfg_trig_high_level_o   = cfg_trig_high_level;
 assign cfg_trig_edge_o         = cfg_trig_edge;
+assign cfg_trigger_mode_o      = cfg_trigger_mode;
 
 assign cfg_dec_factor_o        = cfg_dec_factor;
 assign cfg_dec_rshift_o        = cfg_dec_rshift;

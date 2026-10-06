@@ -36,6 +36,7 @@ set_property -dict [ list \
 
 # Create instance: clk_gen, and set properties
 set clk_gen [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_gen ]
+# Delay ADC capture by 0.508625 ns; shift every MMCM output equally to preserve relative phases.
 set_property -dict [list \
     CONFIG.CLKIN1_JITTER_PS {80.0} \
     CONFIG.CLKOUT1_JITTER {119.348} \
@@ -53,6 +54,10 @@ set_property -dict [list \
     CONFIG.CLKOUT4_PHASE_ERROR {96.948} \
     CONFIG.CLKOUT4_REQUESTED_OUT_FREQ {61.44} \
     CONFIG.CLKOUT4_USED {true} \
+    CONFIG.CLKOUT1_REQUESTED_PHASE {22.500} \
+    CONFIG.CLKOUT2_REQUESTED_PHASE {45.000} \
+    CONFIG.CLKOUT3_REQUESTED_PHASE {60.000} \
+    CONFIG.CLKOUT4_REQUESTED_PHASE {11.250} \
     CONFIG.CLK_OUT1_PORT {clk_125} \
     CONFIG.CLK_OUT2_PORT {clk_200} \
     CONFIG.CLK_OUT3_PORT {clk_333} \
@@ -67,6 +72,7 @@ set_property -dict [list \
     CONFIG.NUM_OUT_CLKS {4} \
     CONFIG.PRIMITIVE {MMCM} \
     CONFIG.PRIM_IN_FREQ {122.88} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.USE_LOCKED {true} \
     CONFIG.USE_RESET {false}
 ] $clk_gen
@@ -182,7 +188,7 @@ connect_bd_net -net rp_concat_0_event_reset [get_bd_pins rp_concat/event_reset] 
 connect_bd_net -net rp_concat_0_event_start [get_bd_pins rp_concat/event_start] [get_bd_pins rp_dac/event_ip_start] [get_bd_pins rp_gpio/event_ip_start] [get_bd_pins rp_oscilloscope/event_ip_start]
 connect_bd_net -net rp_concat_0_event_stop [get_bd_pins rp_concat/event_stop] [get_bd_pins rp_dac/event_ip_stop] [get_bd_pins rp_gpio/event_ip_stop] [get_bd_pins rp_oscilloscope/event_ip_stop]
 connect_bd_net -net rp_concat_event_trig [get_bd_pins rp_concat/event_trig] [get_bd_pins rp_dac/event_ip_trig] [get_bd_pins rp_gpio/event_ip_trig] [get_bd_pins rp_oscilloscope/event_ip_trig]
-connect_bd_net -net rp_concat_ext_trig_ip [get_bd_ports trig_in] [get_bd_pins rp_concat/ext_trig_ip]
+connect_bd_net -net rp_ext_trig_raw [get_bd_ports trig_in] [get_bd_pins rp_gpio/ext_trig_i]
 connect_bd_net -net rp_concat_trig [get_bd_pins rp_concat/trig] [get_bd_pins rp_dac/trig_ip] [get_bd_pins rp_gpio/trig_ip] [get_bd_pins rp_oscilloscope/trig_ip]
 connect_bd_net -net rp_dac_dac1_event_op [get_bd_pins rp_concat/gen1_event_ip] [get_bd_pins rp_dac/dac1_event_op]
 connect_bd_net -net rp_dac_dac1_trig_op [get_bd_pins rp_concat/gen1_trig_ip] [get_bd_pins rp_dac/dac1_trig_op]
@@ -192,7 +198,7 @@ connect_bd_net -net rp_dac_intr [get_bd_pins intr_concat/In14] [get_bd_pins rp_d
 connect_bd_net -net rp_gpio_event_op [get_bd_pins rp_concat/la_event_ip] [get_bd_pins rp_gpio/la_event_op]
 connect_bd_net -net rp_gpio_intr [get_bd_pins intr_concat/In13] [get_bd_pins rp_gpio/intr]
 connect_bd_net -net rp_gpio_trig_op [get_bd_pins rp_concat/la_trig_ip] [get_bd_pins rp_gpio/la_trig_op]
-connect_bd_net -net rp_gpio_trig_o_trig [get_bd_ports gpio_trig] [get_bd_pins rp_gpio/gpio_trig_o]
+connect_bd_net -net rp_gpio_trig_o_trig [get_bd_ports gpio_trig] [get_bd_pins rp_gpio/gpio_trig_o] [get_bd_pins rp_concat/ext_trig_ip]
 connect_bd_net -net rp_oscilloscope_0_clksel [get_bd_ports clksel] [get_bd_pins rp_oscilloscope/clksel_o]
 connect_bd_net [get_bd_pins rst_gen/dcm_locked] [get_bd_pins rst_gen2/dcm_locked] [get_bd_pins clk_gen/locked]
 connect_bd_net -net slave_mode_in [get_bd_ports daisy_slave] [get_bd_pins rp_oscilloscope/daisy_slave_i]

@@ -676,6 +676,5 @@ begin
   trig_ext_sync2 <= trig_ext_sync1;
 end
 assign trig_ext_syncd = clksel ? trig_ext : trig_ext_sync2;
-assign external_trig = trig_ext_syncd | gpio_trig;
 
 endmodule

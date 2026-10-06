@@ -272,6 +272,7 @@ wire [5:0]rp_concat_0_trig;
   .event_ip_stop(rp_concat_0_event_stop),
   .event_ip_trig(rp_concat_0_event_trig),
   .trig_ip(rp_concat_0_trig),
+  .ext_trig_i(1'b0),
   .la_event_op(la_event_op),    
   .la_trig_op(la_trig_op),    
    

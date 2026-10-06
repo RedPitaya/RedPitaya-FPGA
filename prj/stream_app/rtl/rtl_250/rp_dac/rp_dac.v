@@ -128,9 +128,11 @@ wire [ 5-1:0]                   cfg_chb_outshift;
 wire [16-1:0]                   cfg_cha_setdec;
 wire [16-1:0]                   cfg_chb_setdec;
 
-wire [EVENT_SRC_NUM-1:0]        cfg_event_sel;
+wire [3-1:0]                    cfg_event_sel;
 wire [EVENT_SRC_NUM-1:0]        cfg_event_op;
 wire [TRIG_SRC_NUM -1:0]        cfg_trig_mask;
+wire [1:0]                      cfg_trigger_mode;
+wire [1:0]                      sts_armed;
 
 wire [ 8-1:0]                   cfg_ctrl_reg_cha;
 wire [ 8-1:0]                   cfg_ctrl_reg_chb;
@@ -159,22 +161,26 @@ reg                             rstn_cfg;
 assign intr = 1'b0;
 assign dac1_event_op = cfg_event_op;
 assign dac2_event_op = cfg_event_op;
-assign dac_data_cha_o = dac_a_r;
-assign dac_data_chb_o = dac_b_r;
 
 wire [DAC_DATA_BITS-1:0]        dac_data_cha, dac_data_chb;
 reg  [DAC_DATA_BITS-1:0]        dac_a_r, dac_b_r;
-reg  [DAC_DATA_BITS-1:0]        dac_a_diff, dac_b_diff;    
+reg  [DAC_DATA_BITS-1:0]        dac_a_diff, dac_b_diff;
+assign dac_data_cha_o = dac_a_r;
+assign dac_data_chb_o = dac_b_r;
 always @(posedge clk)
 begin
-  dac_a_r <= dac_data_cha;
-  dac_b_r <= dac_data_chb;
-  dac_a_diff <= dac_data_cha - dac_a_r;
-  dac_b_diff <= dac_data_chb - dac_b_r;
   if (~rstn_cfg) begin
+    dac_a_r      <= 'h0;
+    dac_b_r      <= 'h0;
+    dac_a_diff   <= 'h0;
+    dac_b_diff   <= 'h0;
     errs_cnt_cha <= 'h0;
     errs_cnt_chb <= 'h0;
   end else begin
+    dac_a_r    <= dac_data_cha;
+    dac_b_r    <= dac_data_chb;
+    dac_a_diff <= dac_data_cha - dac_a_r;
+    dac_b_diff <= dac_data_chb - dac_b_r;
     if (cfg_errs_rst)
       errs_cnt_cha <= 'h0;  
     else if ((dac_a_diff != cfg_cha_setdec) & (dac_a_diff != 'h0) & (dac_a_diff < 16'h7000))
@@ -254,6 +260,9 @@ dac_cfg #(
   .cfg_event_op_reset_o     (cfg_event_op[3]),
   .cfg_event_sts_i          (cfg_event_op),
   .cfg_event_sel_o          (cfg_event_sel),
+  .cfg_trig_mask_o          (cfg_trig_mask),
+  .cfg_trigger_mode_o       (cfg_trigger_mode),
+  .sts_armed_i              (sts_armed),
 
   .dac_cha_conf_o           (dac_cha_conf),
   .dac_chb_conf_o           (dac_chb_conf),
@@ -325,7 +334,9 @@ dac_top #(
   .event_sel        (cfg_event_sel),
   .event_val        (event_val),
   .trig_ip          (trig_ip),
-  .trig_op          (dac1_trig_op),  
+  .trig_op          (dac1_trig_op),
+  .trigger_mode_i   (cfg_trigger_mode[0]),
+  .armed_o          (sts_armed[0]),
   .reg_sts          (sts_cha),
   .dac_conf         (dac_cha_conf),
   .dac_scale        (cfg_cha_scale),
@@ -388,7 +399,9 @@ dac_top #(
   .event_sel        (cfg_event_sel),
   .event_val        (event_val),
   .trig_ip          (trig_ip),
-  .trig_op          (dac2_trig_op),  
+  .trig_op          (dac2_trig_op),
+  .trigger_mode_i   (cfg_trigger_mode[1]),
+  .armed_o          (sts_armed[1]),
   .reg_sts          (sts_chb),
   .dac_conf         (dac_chb_conf),
   .dac_scale        (cfg_chb_scale),

@@ -119,9 +119,10 @@ system system_i (
   .DDR_reset_n       (DDR_reset_n      ),
   .DDR_we_n          (DDR_we_n         ),
   // FCLKs
+  // Frequencies come from clk0..3_freq in red_pitaya_vivado_<MODEL>.tcl.
   .FCLK_CLK0         (fclk_clk[0]      ),  // 125 MHz
-  .FCLK_CLK1         (fclk_clk[1]      ),  // 142 MHz
-  .FCLK_CLK2         (fclk_clk[2]      ),  // 166 MHz
+  .FCLK_CLK1         (fclk_clk[1]      ),  // 250 MHz, matched to adc_clk
+  .FCLK_CLK2         (fclk_clk[2]      ),  // 50 MHz
   .FCLK_CLK3         (fclk_clk[3]      ),  // 200 MHz
   .FCLK_RESET0_N     (fclk_rstn[0]     ),
   .FCLK_RESET1_N     (fclk_rstn[1]     ),

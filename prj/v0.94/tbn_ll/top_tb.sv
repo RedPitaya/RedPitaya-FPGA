@@ -47,7 +47,8 @@ wire           DDR_we_n   ;
 logic         [ 2-1:0] adc_dat1;
 logic         [ 2-1:0] adc_dat2;
 logic                  adc_fr;
-logic         [ 2-1:0] adc_odclk;
+logic                  adc_refclk;
+wire          [ 2-1:0] adc_odclk = {adc_refclk, ~adc_refclk};
 logic         [ 2-1:0] adc_idclk;
 
 // DAC
@@ -91,6 +92,9 @@ logic               rstn;
 // clock
 initial        clk = 1'b0;
 always #(TP/2) clk = ~clk;
+
+initial adc_refclk = 1'b0;
+always #1ns adc_refclk = ~adc_refclk;
 
 initial        pll_ref = 1'b0;
 always #(RP/2) pll_ref = ~pll_ref;
@@ -290,7 +294,6 @@ red_pitaya_top #(
   .adc_fclk_i  (adc_fclk  ),  // ADC frame clock {p,n}
   .adc_data_i  (adc_data  ),  // ADC data {p,n}
   .adc_datb_i  (adc_datb  ),  // ADC data {p,n}
-  .adc_dclk_o  (adc_odclk ),  // ADC data clock {p,n}
   .adc_rst_o   (),   // ADC reset
   .adc_pdn_o   (),   // ADC power down
   .adc_sen_o   (),   // ADC serial en

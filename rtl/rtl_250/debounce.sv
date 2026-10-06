@@ -22,6 +22,7 @@ module debounce #(
 );
 
 logic [CW-1:0] cnt;  // counter
+(* ASYNC_REG = "TRUE", SHREG_EXTRACT = "NO" *)
 logic    [1:0] d_s;  // input synchronizer
 
 // prevention of metastability problems

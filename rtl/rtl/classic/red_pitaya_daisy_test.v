@@ -141,6 +141,17 @@ reg            rx_dv       ;
 reg  [16-1: 0] rx_dat      ;
 reg            rx_err_inc  ;
 reg            rx_dat_inc  ;
+`ifdef Z20_LL
+(* ASYNC_REG = "TRUE" *) reg [15:0] tx_dat_rx_meta;
+(* ASYNC_REG = "TRUE" *) reg [15:0] tx_dat_rx;
+(* ASYNC_REG = "TRUE" *) reg        stat_clr_rx_meta;
+(* ASYNC_REG = "TRUE" *) reg        stat_clr_rx;
+wire [15:0] expected_tx_dat = tx_dat_rx;
+wire        stat_clr = stat_clr_rx;
+`else
+wire [15:0] expected_tx_dat = tx_dat;
+wire        stat_clr = stat_clr_i;
+`endif
 
 always @(posedge rx_clk_i) begin
    if (rx_rstn_i == 1'b0) begin
@@ -150,24 +161,36 @@ always @(posedge rx_clk_i) begin
       rx_dat     <= 16'h0 ;
       rx_err_inc <=  1'b0 ;
       rx_dat_inc <=  1'b0 ;
+`ifdef Z20_LL
+      tx_dat_rx_meta  <= 16'h0;
+      tx_dat_rx       <= 16'h0;
+      stat_clr_rx_meta <= 1'b0;
+      stat_clr_rx      <= 1'b0;
+`endif
    end
    else begin
+`ifdef Z20_LL
+      tx_dat_rx_meta   <= tx_dat;
+      tx_dat_rx        <= tx_dat_rx_meta;
+      stat_clr_rx_meta <= stat_clr_i;
+      stat_clr_rx      <= stat_clr_rx_meta;
+`endif
       rx_dv      <= rx_dv_i  ;
       rx_dat     <= rx_dat_i ;
 
-      rx_err_inc <= rx_dv && (rx_dat != tx_dat) && (rx_dat != 16'h0) ;
-      rx_dat_inc <= rx_dv && (rx_dat == tx_dat) && (rx_dat != 16'h0) ;
+      rx_err_inc <= rx_dv && (rx_dat != expected_tx_dat) && (rx_dat != 16'h0) ;
+      rx_dat_inc <= rx_dv && (rx_dat == expected_tx_dat) && (rx_dat != 16'h0) ;
 
       // counting errors
       if (rx_err_inc)
          rx_err_cnt <= rx_err_cnt + 32'h1 ;
-      else if (stat_clr_i)
+      else if (stat_clr)
          rx_err_cnt <= 32'h0 ;
 
       // counting successfull transfer
       if (rx_dat_inc)
          rx_dat_cnt <= rx_dat_cnt + 32'h1 ;
-      else if (stat_clr_i)
+      else if (stat_clr)
          rx_dat_cnt <= 32'h0 ;
 
    end
@@ -183,4 +206,3 @@ end
 
 
 endmodule
-

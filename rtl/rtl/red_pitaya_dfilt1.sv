@@ -89,6 +89,9 @@ logic signed [40-1:0] pp_mult;
 logic signed [16-1:0] r4_sum ;
 logic signed [15-1:0] r4_reg ;
 logic signed [15-1:0] r3_shr ;
+`ifdef Z20_LL
+logic signed [15-1:0] r4_scale;
+`endif
 
 assign pp_mult = r4_reg * cfg_pp_i;
 assign r4_sum  = r3_shr + (pp_mult >>> 16);
@@ -110,8 +113,22 @@ logic signed [40-1:0] kk_mult  ;
 //logic signed [15-1:0] r4_reg_rr;
 logic signed [14-1:0] r5_reg   ;
 
+`ifdef Z20_LL
+// Keep the recursive IIR state in r4_reg unchanged.  Scaling gets its own
+// pipeline copy so the pp_mult carry chain no longer terminates directly at
+// the B input register of the scaling DSP.
+always_ff @(posedge adc_clk_i)
+if (~adc_rstn_i)
+   r4_scale <= '0;
+else
+   r4_scale <= r4_reg;
+
+always_ff @(posedge adc_clk_i)
+   kk_mult <= r4_scale * cfg_kk_i;
+`else
 always_ff @(posedge adc_clk_i)
    kk_mult <= r4_reg * cfg_kk_i;
+`endif
 
 always_ff @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin

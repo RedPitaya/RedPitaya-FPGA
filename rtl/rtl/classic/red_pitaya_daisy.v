@@ -296,6 +296,8 @@ reg            rxp_dv_n     ;
 reg  [ 4-1: 0] tx_rx_new    ;
 reg            tx_rx_dv     ;
 reg  [16-1: 0] tx_rx_dat    ; 
+(* ASYNC_REG = "TRUE" *) reg [1:0] sync_mode_tx_r;
+(* ASYNC_REG = "TRUE" *) reg [1:0] sync_mode_rx_r;
 
 always @(posedge par_clk_i) begin
    if (par_rstn_i == 1'b0) begin
@@ -305,8 +307,10 @@ always @(posedge par_clk_i) begin
       tx_rx_new  <=  4'h0 ;
       tx_rx_dv   <=  1'b0 ;
       tx_rx_dat  <= 16'h0 ; 
+      sync_mode_tx_r <= 2'b00;
    end
    else begin
+      sync_mode_tx_r <= {sync_mode_tx_r[0], sync_mode_i};
       // sync custom data
       tx_cfg_new <= {tx_cfg_new[4-2:0], cfg_tx_sys_n};
       if (tx_cfg_new[4-2] ^ tx_cfg_new[4-1]) begin
@@ -326,7 +330,7 @@ always @(posedge par_clk_i) begin
    end
 end
 
-assign tx_sel = sync_mode_i ? 3'h1 : tx_cfg_sel;
+assign tx_sel = sync_mode_tx_r[1] ? 3'h1 : tx_cfg_sel;
 // output data selector
 always @(*) begin
    case (tx_sel)
@@ -348,6 +352,10 @@ end
 always @(posedge rxp_clk) begin
    rxp_dvr[GV]           <= rxp_dv[GV]  ;
    rxp_datr[GV*16 +: 16] <= rxp_dat[GV*16 +: 16] ;
+   if (!rxp_rstn)
+     sync_mode_rx_r <= 2'b00;
+   else
+     sync_mode_rx_r <= {sync_mode_rx_r[0], sync_mode_i};
 end
 
 // latch received data if not zero
@@ -365,7 +373,7 @@ end
 
 assign par_rdy_o[GV]           = txp_rdy[GV] && (tx_cfg_sel == 3'h1) ;
 assign par_dv_o[GV]            = rxp_dvr[GV]   ;
-assign par_dat_o[GV*16 +: 16]  = sync_mode_i ? rxp_dat[GV*16 +: 16] : rxp_datr[GV*16 +: 16]  ;
+assign par_dat_o[GV*16 +: 16]  = sync_mode_rx_r[1] ? rxp_dat[GV*16 +: 16] : rxp_datr[GV*16 +: 16]  ;
 
 
 end
@@ -413,26 +421,34 @@ end
 
 
 
+(* ASYNC_REG = "TRUE" *) reg [4*32-1:0] rxp_dat_sys_meta;
+(* ASYNC_REG = "TRUE" *) reg [4*32-1:0] tst_err_cnt_sys_meta;
+(* ASYNC_REG = "TRUE" *) reg [4*32-1:0] tst_dat_cnt_sys_meta;
 reg  [ 4*32-1: 0] rxp_dat_sys      ;
 reg  [ 4*32-1: 0] tst_err_cnt_sys  ;
 reg  [ 4*32-1: 0] tst_dat_cnt_sys  ;
+(* ASYNC_REG = "TRUE" *) reg [1:0] cfg_rx_trained_sys;
 
 always @(posedge sys_clk_i) begin
    sys_err_o <= 1'b0 ;
 
-   rxp_dat_sys     <= {rxp_dat_n[3*16 +: 16], rxp_dat[3*16 +: 16],
+   rxp_dat_sys_meta <= {rxp_dat_n[3*16 +: 16], rxp_dat[3*16 +: 16],
                        rxp_dat_n[2*16 +: 16], rxp_dat[2*16 +: 16],
                        rxp_dat_n[1*16 +: 16], rxp_dat[1*16 +: 16],
                        rxp_dat_n[0*16 +: 16], rxp_dat[0*16 +: 16]} ;
 
-   tst_err_cnt_sys <= {{4-N_DATS{32'h0}},tst_err_cnt}   ;
-   tst_dat_cnt_sys <= {{4-N_DATS{32'h0}},tst_dat_cnt}   ;
+   tst_err_cnt_sys_meta <= {{4-N_DATS{32'h0}},tst_err_cnt}   ;
+   tst_dat_cnt_sys_meta <= {{4-N_DATS{32'h0}},tst_dat_cnt}   ;
+   rxp_dat_sys     <= rxp_dat_sys_meta;
+   tst_err_cnt_sys <= tst_err_cnt_sys_meta;
+   tst_dat_cnt_sys <= tst_dat_cnt_sys_meta;
+   cfg_rx_trained_sys <= {cfg_rx_trained_sys[0], cfg_rx_trained};
 
    casez (sys_addr_i[19:0])
      20'h00000 : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { {32-2{1'b0}}, cfg_rx_en, cfg_tx_en }                     ; end
 
      20'h00004 : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { cfg_tx_sys[32-1:16], 12'h0, cfg_tx_sys[3-1:0] }          ; end
-     20'h00008 : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { 27'h0, cfg_rx_trained, 3'h0, cfg_rx_train }              ; end
+     20'h00008 : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { 27'h0, cfg_rx_trained_sys[1], 3'h0, cfg_rx_train }       ; end
      20'h0000C : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { rxp_dat_sys[0*32 +: 32] }                                ; end
 
      20'h00010 : begin sys_ack_o <= sys_ack;       sys_rdata_o <= { {32-1{1'b0}}, cfg_tst_clr }                              ; end
@@ -475,4 +491,3 @@ assign debug_o = {dd_par_cnt[26], 1'b0, cfg_rx_trained, cfg_rx_train, 1'b0, 1'b0
 
 
 endmodule
-

@@ -73,7 +73,7 @@ module red_pitaya_top #(
 // GPIO parameter
 localparam int unsigned GDW = 8+8;
 
-logic [4-1:0] fclk ;  // {200MHz, 166MHz, 142MHz, 125MHz}
+logic [4-1:0] fclk ;  // {clk3, clk2, clk1, clk0} = {200MHz, 50MHz, 125MHz, 125MHz}
 logic [4-1:0] frstn;
 
 // PLL signals
@@ -580,7 +580,10 @@ for (genvar i=0; i<MNA; i++) begin: for_dac
   );
 
   // output registers + signed to unsigned (also to negative slope)
-  assign dac_dat[i] = {str_dac[i].TDATA[0][14-1], ~str_dac[i].TDATA[0][14-2:0]};
+  // Has to be a register: the ODDR below keeps its default DDR_CLK_EDGE, so D2
+  // is captured on the falling edge and gets only half a period.
+  always_ff @(posedge dac_clk_1x)
+  dac_dat[i] <= {str_dac[i].TDATA[0][14-1], ~str_dac[i].TDATA[0][14-2:0]};
   assign str_dac[i].TREADY = 1'b1;
 
 end: for_dac

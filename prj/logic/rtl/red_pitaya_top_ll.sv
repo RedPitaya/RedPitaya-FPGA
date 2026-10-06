@@ -42,7 +42,6 @@ module red_pitaya_top_ll #(
   input  logic           [ 2-1:0] adc_fclk_i,  // ADC frame clock {p,n}
   input  logic [ 2-1: 0] [ 2-1:0] adc_data_i,  // ADC data {p,n}
   input  logic [ 2-1: 0] [ 2-1:0] adc_datb_i,  // ADC data {p,n}
-  output logic           [ 2-1:0] adc_dclk_o,  // ADC data clock {p,n}
   output logic                    adc_rst_o,   // ADC reset
   output logic                    adc_pdn_o,   // ADC power down
   output logic                    adc_sen_o,   // ADC serial en
@@ -85,11 +84,10 @@ module red_pitaya_top_ll #(
 localparam int unsigned GDW = 8+8;
 localparam RST_MAX = 64;
 
-logic [4-1:0] fclk ;  // {200MHz, 166MHz, 142MHz, 125MHz}
+logic [4-1:0] fclk ;  // {clk3, clk2, clk1, clk0} = {200MHz, 50MHz, 125MHz, 125MHz}
 logic [4-1:0] frstn;
 
 logic                 dac_clk_in;
-logic                 pll_adc_dclk;
 logic                 pll_adc_clk;
 logic                 pll_dac_clk_1x;
 logic                 pll_dac_clk_1p;
@@ -108,6 +106,7 @@ logic                 ser_clk ;
 // PDM clock and reset
 logic                 pdm_clk ;
 logic                 pdm_rstn;
+(* ASYNC_REG = "TRUE" *) logic [2-1:0] pdm_rst_sync = '0;
 
 // ADC clock/reset
 logic                 adc_clk;
@@ -205,7 +204,16 @@ irq_t irq;
 
 // system bus
 sys_bus_if   ps_sys       (.clk (adc_clk), .rstn (adc_rstn));
-sys_bus_if   sys [16-1:0] (.clk (adc_clk), .rstn (adc_rstn));
+sys_bus_if   sys [16-1:0] ();
+generate
+for (genvar i=0; i<16; i++) begin: for_sys_clk
+  // PDM configuration is consumed in the 250 MHz PDM domain.  Giving this
+  // slave that clock makes the interconnect's per-slave sys_bus_cdc perform
+  // the complete request/data/response transfer before regset_pdm sees it.
+  assign sys[i].clk  = (i == 5) ? pdm_clk  : adc_clk;
+  assign sys[i].rstn = (i == 5) ? pdm_rstn : adc_rstn;
+end: for_sys_clk
+endgenerate
 
 // GPIO interface
 gpio_if #(.DW (24)) gpio ();
@@ -226,7 +234,6 @@ red_pitaya_pll_ll pll (
   .clk         (dac_clk_in),  // clock
   .rstn        (rstn_pll  ),  // reset - active low
   // output clocks
-  .clk_dclk    (pll_adc_dclk  ),  // ADC DCO clock - 250MHz
   .clk_adc     (pll_adc_clk   ),  // ADC clock - system
   .clk_dac_1x  (pll_dac_clk_1x),  // DAC clock 125MHz
   .clk_dac_1p  (pll_dac_clk_1p),  // DAC clock 125MHz -90DGR
@@ -241,7 +248,7 @@ BUFG bufg_dac_clk_1x (.O (dac_clk_1x), .I (pll_dac_clk_1x));
 BUFG bufg_dac_clk_1p (.O (dac_clk_1p), .I (pll_dac_clk_1p));
 BUFG bufg_dac_axi_clk (.O (dac_axi_clk), .I (pll_ser_clk));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
-BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
+BUFG bufg_pdm_clk    (.O (pdm_clk   ), .I (pll_pwm_clk   ));
 
 
 always @(posedge adc_clk) begin
@@ -266,8 +273,8 @@ assign dac_dat_b = dac_dat[0];
 
 always @(posedge dac_clk_1x)
 begin
-  dac_data_o <= {dac_dat_a[14-1], ~dac_dat_a[14-2:2]};
-  dac_datb_o <= {dac_dat_b[14-1], ~dac_dat_b[14-2:2]};
+  dac_data_o <= dac_dat_a;
+  dac_datb_o <= dac_dat_b;
 end
 
 // DDR outputs
@@ -292,7 +299,6 @@ logic                  adc_dat_rdv   ;
 assign adc_dat_p_in = {adc_datb_i[1][1], adc_datb_i[0][1], adc_data_i[1][1], adc_data_i[0][1], adc_fclk_i[1]} ;
 assign adc_dat_n_in = {adc_datb_i[1][0], adc_datb_i[0][0], adc_data_i[1][0], adc_data_i[0][0], adc_fclk_i[0]} ;
 
-OBUFDS  i_OBUFDS_adc_dco       (.I (pll_adc_dclk ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
 IBUFGDS i_IBUFGDS_adc_dco      (.I (adc_dclk_i[1]), .IB (adc_dclk_i[0]), .O  (adc_dclk_in)  );
 IBUFDS  i_IBUFDS_adc_dat [4:0] (.I (adc_dat_p_in),  .IB (adc_dat_n_in),  .O  (adc_ser)      );
 
@@ -354,7 +360,7 @@ assign pll_hi_o  = 1'b0;
 assign pll_lo_o  = 1'b1;
 
 logic top_rst;
-assign top_rst = ~frstn[0] | ~rst_after_locked;
+assign top_rst = ~frstn[0] | rst_after_locked;
 
 // ADC reset (active low)
 always_ff @(posedge adc_clk, posedge top_rst)
@@ -366,10 +372,13 @@ always_ff @(posedge dac_clk_1x, posedge top_rst)
 if (top_rst) dac_rst  <= 1'b1;
 else         dac_rst  <= top_rst;
 
-// PDM reset (active low)
-always_ff @(posedge pdm_clk, posedge top_rst)
-if (top_rst) pdm_rstn <= 1'b0;
-else         pdm_rstn <= ~top_rst;
+// PDM reset (active low).  top_rst is long compared with a PDM clock period;
+// synchronizing both assertion and release avoids an asynchronous recovery
+// path from the ADC-domain reset counter into the PDM domain.
+always_ff @(posedge pdm_clk)
+  pdm_rst_sync <= {pdm_rst_sync[0], ~top_rst};
+
+assign pdm_rstn = pdm_rst_sync[1];
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Connections to PS
@@ -655,18 +664,20 @@ sys_bus_stub sys_bus_stub_6 (sys[6]);
 // Daisy dummy code
 ////////////////////////////////////////////////////////////////////////////////
 
-OBUFDS i_OBUF_0
+OBUFTDS #(.IOSTANDARD ("DIFF_SSTL18_I")) i_OBUFT_0
 (
   .O  ( daisy_p_o[0]  ),
   .OB ( daisy_n_o[0]  ),
-  .I  ( 1'bz          )
+  .I  ( 1'b0          ),
+  .T  ( 1'b1          )
 );
 
-OBUFDS i_OBUF_1
+OBUFTDS #(.IOSTANDARD ("DIFF_SSTL18_I")) i_OBUFT_1
 (
   .O  ( daisy_p_o[1]  ),
   .OB ( daisy_n_o[1]  ),
-  .I  ( 1'bz          )
+  .I  ( 1'b0          ),
+  .T  ( 1'b1          )
 );
 
 

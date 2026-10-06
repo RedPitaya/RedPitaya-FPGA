@@ -536,6 +536,7 @@ assign indep_mode_o          = indep_mode      ;
 assign axi_en_pulse_o        = axi_en_pulse    ;
 assign new_trg_src_o         = new_trg_src_x   ;
 assign trg_src_o             = trg_src_x       ;
+
 assign set_dec1_o            = set_dec1_x      ;
 assign filt_rstn_o           = filt_rstn       ;
 assign set_tresh_o           = set_tresh       ;
@@ -543,7 +544,7 @@ assign set_dly_o             = set_dly_x       ;
 assign set_dec_o             = set_dec_x       ;
 assign set_hyst_o            = set_hyst        ;
 assign set_avg_en_o          = set_avg_en_x    ;
-assign set_hres_en_o           = set_hres_en_x     ;
+assign set_hres_en_o         = set_hres_en_x   ;
 assign set_filt_aa_o         = set_filt_aa     ;
 assign set_filt_bb_o         = set_filt_bb     ;
 assign set_filt_kk_o         = set_filt_kk     ;

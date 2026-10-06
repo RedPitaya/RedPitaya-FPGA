@@ -15,7 +15,6 @@ module red_pitaya_pll_ll (
   input  logic clk       ,  // clock
   input  logic rstn      ,  // reset - active low
   // output clocks
-  output logic clk_dclk  ,  // ADC DCO clock
   output logic clk_adc   ,  // ADC clock - system
   output logic clk_dac_1x,  // DAC clock
   output logic clk_dac_1p,  // DAC clock - 90 phase
@@ -26,7 +25,43 @@ module red_pitaya_pll_ll (
 );
 
 logic clk_fb;
-`define DAC_CLK_PHASE -180
+// DAC write strobe phase; CLKOUT3_PHASE below is DAC_CLK_PHASE + PHASE_OFFSET.
+// -270 is the centre of the window both LL board types latch correctly in.
+// Do not change it from a timing report - see below, the report is wrong here.
+//
+// Swept in 45 deg steps with OUT looped back to IN, on a STEMlab 65-16 TI v1.3
+// and a STEMlab 125-14 TI v1.3, both running the same bitstream. Worst
+// deviation of a sample from the line through its neighbours, both channels,
+// 10 kHz to 1 MHz:
+//
+//   total phase       0    -45    -90   -135   -180   -225   -270   -315
+//   65-16 TI         ok     ok    bad    bad   marg     ok     ok     ok
+//   125-14 TI         -    bad    bad    bad    bad     ok     ok     ok
+//
+// The two windows overlap on -225..-315, and -270 sits in the middle of the
+// overlap with a clean step either side on both boards. -315, the centre of
+// the 65-16 window alone, is one step from the bad edge on the 125-14.
+//
+// At -270 the full loopback suite - sine from 1 kHz to 5 MHz, 0.1 to 2.0 Vpp,
+// ramps both ways, triangle, square, both channels - shows no deviation above
+// each board's own noise floor, against 21343 and 17704 bad samples on the
+// 125-14 at -90.
+//
+// Static timing used to prefer -90, the middle of the bad zone, because the
+// forwarded-clock declaration in sdc/red_pitaya_z20_ll.xdc analysed the wrong
+// edge of dac_wrt. That is fixed there, and the analysis now agrees with the
+// sweep: -270 closes with setup +0.928 and hold +1.780, -90 fails hold by
+// 2.220 ns. The gate would have caught b780bce.
+//
+// The DAC2904 also requires the DAC CLK rising edge at or before the WRT rising
+// edge, within tCW = 0..tPW-2 ns. That one is not constrained and cannot be:
+// dac_clk_i to dac_wrt spans 6.94 ns between process corners against an 8 ns
+// period, so the relationship sweeps most of the cycle and no phase here keeps
+// it inside the 2 ns window. Missing it costs a sample of latency rather than
+// data, which is why the boards measure clean either way. The analysis, the
+// measured numbers per phase and what it would take to fix are in
+// sdc/red_pitaya_z20_ll.xdc next to the dac_data_o constraints.
+`define DAC_CLK_PHASE -225
 `define PHASE_OFFSET -45
 
 PLLE2_ADV #(
@@ -45,7 +80,7 @@ PLLE2_ADV #(
    .CLKOUT2_DIVIDE       ( 8         ), // 125 MHz -90 deg
    .CLKOUT2_PHASE        ( -90.000   ),
    .CLKOUT2_DUTY_CYCLE   ( 0.5       ),
-   .CLKOUT3_DIVIDE       ( 8         ), // 125 MHz -135 deg
+   .CLKOUT3_DIVIDE       ( 8         ), // 125 MHz -90 deg
    .CLKOUT3_PHASE        ( `DAC_CLK_PHASE + `PHASE_OFFSET ),
    //.CLKOUT3_PHASE        (-135.000   ),
    .CLKOUT3_DUTY_CYCLE   ( 0.5       ),
@@ -60,7 +95,7 @@ PLLE2_ADV #(
 ) pll (
    // Output clocks
    .CLKFBOUT     (clk_fb    ),
-   .CLKOUT0      (clk_dclk  ),
+   .CLKOUT0      (          ),
    .CLKOUT1      (clk_adc   ),
    .CLKOUT2      (clk_dac_1x),
    .CLKOUT3      (clk_dac_1p),

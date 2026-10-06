@@ -39,6 +39,11 @@ module rp_dma_mm2s
   output [32-1:0]                       diag_reg2,
   input                                 set_8bit_i,
 
+  // playback trigger gating, clk_adc (s_axis_aclk) domain
+  input  wire                           trigger_mode_i,
+  input  wire                           trigger_pulse_i,
+  output wire                           armed_o,
+
   // 
   output wire [3:0]                       m_axi_arid_o     , // read address ID
   output wire [AXI_ADDR_BITS-1: 0]        m_axi_araddr_o   , // read address
@@ -175,7 +180,10 @@ rp_dma_mm2s_downsize #(
   .fifo_rd_re     (fifo_rd_re),     
   .dac_pntr_step  (dac_step),
   .set_8bit_i     (set_8bit_i),
-  .m_axis_tdata   (dac_rdata_o),      
+  .trigger_mode_i (trigger_mode_i),
+  .trigger_pulse_i(trigger_pulse_i),
+  .armed_o        (armed_o),
+  .m_axis_tdata   (dac_rdata_o),
   .m_axis_tvalid  (dac_rvalid_o));      
 
 

@@ -38,6 +38,12 @@ module red_pitaya_hk #(
   input                fclk_i     ,  // clock
   input                frstn_i    ,  // reset - active low
 
+  // Clock the frequency meter measures. On this board the system runs at half
+  // the ADC clock, so measuring clk_i would report half of what arrives at the
+  // FPGA; every other platform meters the ADC clock itself.
+  input                mes_clk_i  ,  // measured clock
+  input                mes_rstn_i ,  // reset - active low
+
   // LED
   output reg [DWL-1:0] led_o      ,  // LED output
   // idelay control
@@ -318,7 +324,9 @@ end
 //---------------------------------------------------------------------------------
 //
 //  Frequency meter
-wire [32-1: 0] fmtr_freq  ;
+wire [32-1: 0] fmtr_freq_mes ;
+reg  [32-1: 0] fmtr_freq_r   ;
+reg  [32-1: 0] fmtr_freq     ;
 
 freq_meter #(
   .GCL  ( 32'd15625000 ), // Gate counter length - 1/8 of s, 125000000/8
@@ -326,15 +334,23 @@ freq_meter #(
 ) i_freq_meter
 (
   // measured clock
-  .mes_clk_i     (  clk_i        ),
-  .mes_rstn_i    (  rstn_i       ),
+  .mes_clk_i     (  mes_clk_i    ),
+  .mes_rstn_i    (  mes_rstn_i   ),
   // reference clock
   .ref_clk_i     (  fclk_i       ),
   .ref_rstn_i    (  frstn_i      ),
   // result
-  .freq_o        (  fmtr_freq    ),  // @ mes_clk_i
+  .freq_o        (  fmtr_freq_mes),  // @ mes_clk_i
   .freq_ref_o    (               )   // @ ref_clk_i
 );
+
+// The result crosses from the measured clock to the bus clock. Both come from
+// the same MMCM with a fixed 2:1 ratio, so these are related clocks and two
+// registers are enough; the value only changes once every 1/8 of a second.
+always @(posedge clk_i) begin
+  fmtr_freq_r <= fmtr_freq_mes ;
+  fmtr_freq   <= fmtr_freq_r   ;
+end
 
 
 //---------------------------------------------------------------------------------

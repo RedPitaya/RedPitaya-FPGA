@@ -117,7 +117,7 @@ end
 
 always @(posedge axi_clk_i) begin
   axidly_val_o <= adc_dv_r[1];
-  axidly_dat_o <= axi_fifo[2];
+  axidly_dat_o <= axi_fifo[1]; // same pipeline depth as the valid above
 end
 
 assign dly_valp_o    = adc_dv_r[dat_dly];

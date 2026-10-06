@@ -218,7 +218,8 @@ wire [TRIG_CNT_BITS-1:0]    cfg_trig_post_samp;
 
 wire [S_AXIS_DATA_BITS-1:0] cfg_trig_low_level;
 wire [S_AXIS_DATA_BITS-1:0] cfg_trig_high_level;
-wire                        cfg_trig_edge;  
+wire                        cfg_trig_edge;
+wire                        cfg_trigger_mode;
 wire                        trig_mod_op;
 
 wire                        cfg_avg_en; 
@@ -264,6 +265,7 @@ wire [4*32-1:0]             curr_wp;
 wire [ 4*4-1:0]             osc_event_op;
 wire [NUM_CHANNELS-1:0]     osc_trig_op;
 wire [NUM_CHANNELS-1:0]     ser_trig;
+wire [NUM_CHANNELS-1:0]     adc_armed;
 
 wire [4*32-1:0]             diag1;
 wire [4*32-1:0]             diag2;
@@ -291,6 +293,7 @@ assign loopback_sel  = cfg_loopback[8-1:0];
 
 assign intr = |dma_intr;
 assign trig_out = |ser_trig;
+wire sts_armed = &adc_armed;
 
 always @(posedge m_axi_osc1_aclk)
 begin
@@ -459,6 +462,8 @@ scope_cfg #(
   .cfg_trig_low_level_o     (cfg_trig_low_level),
   .cfg_trig_high_level_o    (cfg_trig_high_level),
   .cfg_trig_edge_o          (cfg_trig_edge),
+  .cfg_trigger_mode_o       (cfg_trigger_mode),
+  .sts_armed_i              (sts_armed),
 
   .cfg_dec_factor_o         (cfg_dec_factor),
   .cfg_dec_rshift_o         (cfg_dec_rshift),
@@ -554,6 +559,8 @@ osc_top #(
   .sts_trig_pre_overflow_o  (sts_trig_pre_overflow[GV]),
   .sts_trig_post_overflow_o (sts_trig_post_overflow[GV]),
   .cfg_trig_edge_i          (cfg_trig_edge),
+  .cfg_trigger_mode_i       (cfg_trigger_mode),
+  .sts_armed_o              (adc_armed[GV]),
 
   .cfg_dec_factor_i         (cfg_dec_factor),
   .cfg_dec_rshift_i         (cfg_dec_rshift),

@@ -22,9 +22,6 @@ set_property PACKAGE_PIN Y6  [get_ports {adc_dclk_i[0]}] ; # ADDCLK_n
 set_property PACKAGE_PIN Y7  [get_ports {adc_dclk_i[1]}] ; # ADDCLK_p
 set_property PACKAGE_PIN Y8  [get_ports {adc_fclk_i[0]}] ; # ADFCLK_n
 set_property PACKAGE_PIN Y9  [get_ports {adc_fclk_i[1]}] ; # ADFCLK_p
-set_property PACKAGE_PIN V10 [get_ports {adc_dclk_o[0]}] ; # ADDCLKIN_n
-set_property PACKAGE_PIN V11 [get_ports {adc_dclk_o[1]}] ; # ADDCLKIN_p
-
 set_property PACKAGE_PIN U8  [get_ports {adc_data_i[0][0]}] ; # ADA0_n
 set_property PACKAGE_PIN U9  [get_ports {adc_data_i[0][1]}] ; # ADA0_p
 set_property PACKAGE_PIN Y11 [get_ports {adc_data_i[1][0]}] ; # ADA1_n
@@ -49,7 +46,7 @@ set_property -dict {IOSTANDARD LVCMOS18  SLEW SLOW  DRIVE 8  PACKAGE_PIN Y13}  [
 
 
 
-set_property -dict {IOSTANDARD LVCMOS33   PACKAGE_PIN Y16 }  [get_ports out_sync_o] ; 
+set_property -quiet -dict {IOSTANDARD LVCMOS33 PACKAGE_PIN Y16} [get_ports -quiet out_sync_o]
 
 ### DAC
 
@@ -154,12 +151,12 @@ set_property PACKAGE_PIN K16 [get_ports exp_p_io[ 6]] ; # DIO6_P
 set_property PACKAGE_PIN J16 [get_ports exp_n_io[ 6]] ; # DIO6_N
 set_property PACKAGE_PIN M14 [get_ports exp_p_io[ 7]] ; # DIO7_P
 set_property PACKAGE_PIN M15 [get_ports exp_n_io[ 7]] ; # DIO7_N
-set_property PACKAGE_PIN M17 [get_ports exp_p_io[ 8]] ; # DIO8_P
-set_property PACKAGE_PIN M18 [get_ports exp_n_io[ 8]] ; # DIO8_N
-set_property PACKAGE_PIN N20 [get_ports exp_p_io[ 9]] ; # DIO9_P
-set_property PACKAGE_PIN P20 [get_ports exp_n_io[ 9]] ; # DIO9_N
-set_property PACKAGE_PIN N18 [get_ports exp_p_io[10]] ; # DIO10_P
-set_property PACKAGE_PIN P19 [get_ports exp_n_io[10]] ; # DIO10_N
+set_property -quiet PACKAGE_PIN M17 [get_ports -quiet exp_p_io[8]]  ; # DIO8_P
+set_property -quiet PACKAGE_PIN M18 [get_ports -quiet exp_n_io[8]]  ; # DIO8_N
+set_property -quiet PACKAGE_PIN N20 [get_ports -quiet exp_p_io[9]]  ; # DIO9_P
+set_property -quiet PACKAGE_PIN P20 [get_ports -quiet exp_n_io[9]]  ; # DIO9_N
+set_property -quiet PACKAGE_PIN N18 [get_ports -quiet exp_p_io[10]] ; # DIO10_P
+set_property -quiet PACKAGE_PIN P19 [get_ports -quiet exp_n_io[10]] ; # DIO10_N
 
 #set_property PULLDOWN TRUE [get_ports {exp_p_io[0]}]
 #set_property PULLDOWN TRUE [get_ports {exp_n_io[0]}]
@@ -195,22 +192,33 @@ set_property PACKAGE_PIN J14 [get_ports {led_o[7]}] ; # LED7
 
 
 ### I2C1
-set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8  PACKAGE_PIN T15}  [get_ports i2c1_sda_io] ; # 
-set_property -dict {IOSTANDARD LVCMOS33  SLEW FAST  DRIVE 8  PACKAGE_PIN P14}  [get_ports i2c1_scl_io] ; # 
+set_property -quiet -dict {IOSTANDARD LVCMOS33 SLEW FAST DRIVE 8 PACKAGE_PIN T15} [get_ports -quiet i2c1_sda_io]
+set_property -quiet -dict {IOSTANDARD LVCMOS33 SLEW FAST DRIVE 8 PACKAGE_PIN P14} [get_ports -quiet i2c1_scl_io]
 
 ############################################################################
 # Clock constraints                                                        #
 ############################################################################
 
-create_clock -period 8.000 -name adc_dclk [get_ports {adc_dclk_i[1]}]
+# ADC3664 ADDCLK is the source-synchronous serial interface clock.  In the
+# 125 MSPS, 16-bit two-wire mode it runs at 4x the sample rate.  The BUFR /4
+# in adc366x_top generates the 125 MHz parallel clock used by the fabric.
+create_clock -period 2.000 -name adc_dclk [get_ports {adc_dclk_i[1]}]
 create_clock -period 8.000 -name dac_clk [get_ports dac_clk_i]
 create_clock -period 4.000 -name rx_clk [get_ports {daisy_p_i[1]}]
 
 
-create_generated_clock -name i_hk/dna_clk -source [get_pins pll/pll/CLKOUT1] -divide_by 16 [get_pins i_hk/dna_clk_reg/Q]
-#create_generated_clock -name {adc_dclk_o[1]} -source [get_pins ODDR_dclk/C] -divide_by 1 [get_ports {adc_dclk_o[1]}]
-create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 -invert [get_ports dac_wrta_o]
-create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divide_by 1 -invert [get_ports dac_wrtb_o]
+create_generated_clock -quiet -name id/dna_clk -source [get_pins -quiet id/dna_clk_reg/C] -divide_by 8 [get_pins -quiet id/dna_clk_reg/Q]
+create_generated_clock -quiet -name i_hk/dna_clk -source [get_pins -quiet i_hk/dna_clk_reg/C] -divide_by 16 [get_pins -quiet i_hk/dna_clk_reg/Q]
+# The dac_wrt ODDR carries D1=0/D2=1, so the textbook declaration of the
+# forwarded clock takes -invert.  It analyses the wrong edge: with -invert the
+# tool's optimum sits 180 deg from the phase the DAC actually latches at,
+# measured by loopback on a 65-16 TI and a 125-14 TI.  Without it the analysis
+# accepts the phase that works (setup +0.928, hold +1.780 at CLKOUT3 -270) and
+# rejects the one that corrupts the output (hold -2.220 at -90), so the gate
+# now catches what it let through in b780bce.  Anchored to measurement; see
+# rtl/rtl/red_pitaya_pll_ll.sv for the sweep.
+create_generated_clock -name dac_wrta_o -source [get_pins oddr_dac_wrta/C] -divide_by 1 [get_ports dac_wrta_o]
+create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divide_by 1 [get_ports dac_wrtb_o]
 
 
 #set_false_path -from [get_clocks clk_fpga_0]    -to [get_clocks pll_adc_clk]
@@ -222,27 +230,87 @@ create_generated_clock -name dac_wrtb_o -source [get_pins oddr_dac_wrtb/C] -divi
 #set_false_path -from [get_clocks pll_adc_clk2d] -to [get_clocks pll_pwm_clk]
 #set_false_path -from [get_clocks pll_adc_10mhz] -to [get_clocks pll_adc_clk2d]
 
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_data_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_data_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_datb_i[0][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_datb_i[1][*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay 0.000 [get_ports {adc_fclk_i[*]}]
-set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay 0.300 [get_ports {adc_fclk_i[*]}]
-set_input_delay -clock [get_clocks adc_dclk] -min -add_delay 0.000 [get_ports {adc_fclk_i[*]}]
-set_input_delay -clock [get_clocks adc_dclk] -max -add_delay 0.300 [get_ports {adc_fclk_i[*]}]
+############################################################################
+# ADC366x serial LVDS receive interface                                    #
+############################################################################
+#
+# Contract, from the RTL and from the ADC3664 data sheet (TI SBAS888B,
+# December 2020, revised July 2022):
+#
+#   * The link is source synchronous: the ADC forwards its bit clock on
+#     ADDCLK (adc_dclk_i) together with the data lanes and the frame clock.
+#     adc366x_top clocks the ISERDESE2 directly from that pin through a BUFIO
+#     (ser_clk) and derives the parallel clock with a BUFR /4, so there is no
+#     PLL in the capture path and every input delay below is relative to
+#     adc_dclk.
+#   * 125 MSPS in the 16 bit two wire mode is 1000 Mbps per lane, DDR, so
+#     ADDCLK runs at 500 MHz (create_clock -period 2.000 above) and one bit
+#     lasts 1.000 ns.  Data is edge aligned: the data sheet specifies tCD,
+#     "DCLK rising edge to output data delay", not a centred window.
+#   * Data sheet numbers for the two wire mode at 125 MSPS (875 Mbps row,
+#     the closest specified two wire operating point):
+#         tCD  MIN -0.2 ns   NOM 0.1 ns     (data transition vs DCLK edge)
+#         tDV  MIN  0.6 ns   NOM 0.8 ns     (data valid per bit)
+#     The 1000 Mbps row of the data sheet (1 wire, 16 bit, 62.5 MSPS) gives
+#     tCD MIN -0.6 ns and tDV MIN 0.5 ns; see the risk note at the end.
+#
+# The input delays therefore describe where the data transition sits with
+# respect to the ADDCLK edge that produced it:
+#
+#     -min = tCD(min) = -0.200 ns      earliest transition
+#     -max = tCD(max) =  0.100 ns      latest transition
+#
+# Both DDR edges are constrained (-clock_fall -add_delay).  Board skew between
+# ADDCLK and the data lanes is not included: it is not documented in this
+# repository, see the risk note.
+#
+# Written out per port group instead of factored into a procedure: Vivado
+# rejects 'proc' in an XDC file (Designutils 20-1307), so red_pitaya_z20_ll_65.xdc
+# repeats these constraints after it replaces the adc_dclk object.
+set_input_delay -clock [get_clocks adc_dclk]             -min -add_delay -0.200 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+set_input_delay -clock [get_clocks adc_dclk]             -max -add_delay  0.100 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+set_input_delay -clock [get_clocks adc_dclk] -clock_fall -min -add_delay -0.200 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
+set_input_delay -clock [get_clocks adc_dclk] -clock_fall -max -add_delay  0.100 [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}]
 
+# Capture edge relationship.  The clock reaches the ISERDESE2 through
+# IBUFDS + BUFIO, the data through IBUFDS + IDELAYE2, and the two are not
+# equal: measured on the routed design, with the IDELAY tap that software
+# loads by default (6, see red_pitaya_hk_ll.v),
+#
+#     pad -> ISERDESE2/CLK    2.136 ns (fast) .. 3.320 ns (slow)
+#     pad -> ISERDESE2/DDLY   1.281 ns (fast) .. 2.143 ns (slow)
+#
+# so the sampling instant sits 0.83 ns (fast) .. 1.21 ns (slow) after the
+# ADDCLK edge that launched the bit: the bit is captured by the edge one unit
+# interval *before* the one the tool pairs it with by default.  One unit
+# interval is half an ADDCLK period, and a hold multicycle of 1 moves the hold
+# capture edge by exactly that pair of DDR edges, which restores the real
+# relationship.  With the data sheet skew above this leaves +0.386 ns of hold
+# margin.
+#
+# The setup check of the same segment keeps the default pairing, which is two
+# unit intervals away from the physical one, so its reported margin is not a
+# physical margin; it is kept only as a structural check that nothing but the
+# IBUFDS/IDELAYE2 pair sits in front of the deserializer.  The sampling point
+# itself is established at run time, per board, by the per lane VAR_LOAD IDELAY
+# taps and the fabric bitslip in adc366x_top.
+set_multicycle_path -hold 1 \
+  -from [get_ports {adc_data_i[*][*] adc_datb_i[*][*] adc_fclk_i[*]}] \
+  -to   [get_pins {i_adc366x/ser_dat[*].ISERDESE2_inst/DDLY}]
+
+# Risk note - data that would turn the numbers above into a verified budget:
+#   * tCD / tDV rows for the 16 bit two wire mode at 125 MSPS (1000 Mbps).
+#     The rows used are the 875 Mbps two wire ones; the 1000 Mbps row of a
+#     different output mode is wider (tCD MIN -0.6 ns), which would consume
+#     the whole hold margin.
+#   * ADDCLK to data lane skew of the STEMlab 125-14 TI board.
+#   * The IDELAY tap value production software actually loads, if it differs
+#     from the 25'h6318c6 (six taps per lane) default in red_pitaya_hk_ll.v.
+# The interface budget is tight by construction: 1.000 ns unit interval
+# against 0.221 ns of ISERDESE2 setup + hold, 0.035 ns clock uncertainty,
+# 0.38 ns of corner spread in the BUFIO/IBUFDS clock path and 0.3 ns of ADC
+# output skew.  It closes because the taps are calibrated per board, not
+# because a fixed set of delays covers every corner.
 
 set_output_delay -clock [get_clocks dac_wrta_o] -min -add_delay -1.500 [get_ports {dac_data_o[*]}]
 set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports {dac_data_o[*]}]
@@ -250,24 +318,136 @@ set_output_delay -clock [get_clocks dac_wrta_o] -min -add_delay -1.400 [get_port
 set_output_delay -clock [get_clocks dac_wrta_o] -max -add_delay 2.000 [get_ports {dac_datb_o[*]}]
 
 
+# DAC2904 tCW - deliberately NOT constrained, and it cannot be.
+#
+# The converter has a double latch: data enters the input latch on WRT rising,
+# moves to the DAC latch on WRT falling, and reaches the output on the next CLK
+# rising edge.  That ordering is the tCW row of the datasheet - "delay rising
+# CLK edge to rising WRT edge, 0 .. tPW-2 ns" - and the text next to it adds
+# that the condition "can simply be met by connecting the WRT and CLK lines
+# together", which is how TI characterised the part.  On this board they are
+# not connected: DAC_CLK comes from the on-board oscillator straight to the
+# converter and to dac_clk_i, while WRT is generated inside the FPGA.  With a
+# 4 ns pulse on both, the legal window is 2 ns wide.
+#
+# Measured on the routed design, arrival of the WRT rising edge at the port
+# relative to a dac_clk_i edge, over both process corners:
+#
+#     CLKOUT3   Slow 0.95V 85C      Fast 1.05V 0C      spread
+#     -225      16.592 .. 17.435    10.494 .. 11.296   6.94 ns
+#     -270      15.592 .. 16.435     9.494 .. 10.296   6.94 ns
+#     -315      14.592 .. 15.435     8.494 ..  9.296   6.94 ns
+#
+# The path is IBUF, PLL, BUFG, clock tree, ODDR, OBUF, and it spans 6.94 ns
+# between the corners against an 8.000 ns period.  Modulo the period that is
+# 87% of the cycle, so over the datasheet PVT range the CLK-to-WRT relationship
+# sweeps almost every value it can take, and no CLKOUT3 phase keeps it inside a
+# 2 ns window.  Taking the three phases above: -225 complies at the slow corner
+# and misses at the fast one, -315 the other way round, -270 straddles the
+# boundary at both.  Shifting the phase moves the arc, it cannot shorten it.
+#
+# Nor can the requirement be written as a constraint.  Vivado compares absolute
+# times, and because the delay exceeds one period the reference edge differs
+# per corner - 16.000 ns at the slow corner, 8.000 ns at the fast one.  A single
+# set_output_delay -min/-max pair applies the same window to both, so it checks
+# the lower bound where the upper one binds and vice versa: exactly the two
+# bounds that matter are the two it cannot see.  Multicycle paths do not help,
+# -hold only moves the capture edge earlier.  A constraint that covers one
+# corner out of two is worse than none, because it reads as a guarantee.
+#
+# What makes the interface work anyway is the failure mode.  A violation on the
+# "CLK rises shortly after WRT" side means the CLK edge transfers the word the
+# DAC latch already held, which costs one sample of latency, equally on both
+# channels, and is invisible in the output waveform.  The dangerous case is a
+# CLK edge landing on WRT falling, where it races the input-to-DAC-latch
+# transfer.  Both of the boards this was measured on are clean through the
+# whole loopback suite, and so is -315, which the analysis above puts outside
+# the window at the slow corner.
+#
+# So the phase in rtl/rtl/red_pitaya_pll_ll.sv is chosen on the data setup and
+# hold window against WRT, constrained just above, which is the relationship
+# that corrupts samples when it is missed.  tCW gives no basis to prefer any of
+# -225, -270 or -315.
+#
+# If tCW ever has to be met properly, the arc has to be shortened rather than
+# moved.  The PLL runs COMPENSATION = ZHOLD with CLKFBIN tied straight to
+# CLKFBOUT, so the BUFG and the clock tree sit outside the feedback loop and
+# their corner spread lands in full on the strobe.  Closing the loop through a
+# BUFG that matches the output one would leave roughly the ODDR and OBUF spread,
+# about 2.5 ns.  That changes every clock the PLL produces, the ADC capture
+# included, so it needs a board to verify and is not done here.
+#
+# Each build writes out/datasheet.rpt.  Its "Clock to port" rows for dac_wrta_o
+# and dac_wrtb_o are the same measurement for the design as built, quoted as max
+# and min against dac_clk with the clock uncertainty already folded in - so the
+# figure to read there is the spread between the two columns, 7.26 ns for the
+# build this note was written against.  The absolute values are referenced to
+# whichever dac_clk edge Vivado picks and are 12 ns lower than the arrivals
+# tabulated above; the spread is what a phase change has to be judged on.
 
 
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff*/D}]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_write_csff*/D}]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_read_csff*/D}]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff*/D}]
-set_false_path -from [get_clocks pll_adc_clk] -to [get_pins {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_pins {spi_done_csff*/D}]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_araddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/wr_awaddr*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins ps/axi_slave_gp0/rd_do*/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr*[*]*/D]
-set_false_path -from [get_pins ps/axi_slave_gp0/wr_wdata*[*]/C] -to [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata*[*]*/D]
-set_false_path -from [get_pins sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata*[*]*/C] -to [get_pins ps/axi_slave_gp0/axi\\.RDATA*[*]*/D]
-set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
-set_false_path -from [get_pins {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins {dac_dat_*[*]/D}]
+
+
+# These are the first stages of the explicit request/acknowledge synchronizers.
+# Their source clock varies per slave, so constrain the synchronizer endpoint
+# rather than assuming every slave is in the same destination domain.
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_do_csff_reg[0]/D}]
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_done_csff_reg[0]/D}]
+# sys[5] is the only slave clocked by pll_pwm_clk.  These are the first
+# ASYNC_REG stages that capture the stable write/read qualifiers after the
+# request toggle has crossed; the second stages remain timed normally.
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[5].inst_sys_bus_cdc/reg_we_csff_reg[0]/D}]
+set_false_path -to [get_pins {sys_bus_interconnect/for_bus[5].inst_sys_bus_cdc/reg_re_csff_reg[0]/D}]
+# First stage of the explicit two-flop PDM reset synchronizer.  The second
+# stage and all reset consumers remain timed in pll_pwm_clk.
+set_false_path -quiet -to [get_pins -quiet {pdm_rst_sync_reg[0]/D}]
+# First stages of the explicit LL clock-domain synchronizers.  Their second
+# stages and all downstream logic remain timed in the destination domain.
+set_false_path -quiet -to [get_pins -quiet {loop_en_meta_reg/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk4[*].sync_mode_tx_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk4[*].sync_mode_rx_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/genblk1[*].sync_mode_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/genblk1[*].par_train_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_tx/sync_mode_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/cfg_en_sync_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/i_rx/cfg_en_sync_r_reg[0]/CLR}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/cfg_en_par_r_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/cfg_en_par_r_reg[0]/CLR}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/ser_inv_meta_r_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/cfg_dly_meta_r_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_adc366x/i_drst/dst_in_csff_reg[0]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk3[*].i_test/tx_dat_rx_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/genblk3[*].i_test/stat_clr_rx_meta_reg/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/rxp_dat_sys_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/tst_err_cnt_sys_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/tst_dat_cnt_sys_meta_reg[*]/D}]
+set_false_path -quiet -to [get_pins -quiet {i_daisy/cfg_rx_trained_sys_reg[0]/D}]
+set_false_path -quiet -from [get_clocks -quiet pll_adc_clk] -to [get_pins -quiet {i_asg/ch*/inst_axi_dac/dac_rd_clr_r*/D}]
+set_false_path -quiet -from [get_clocks -quiet clk_fpga_0] -to [get_pins -quiet {spi_done_csff*/D}]
+# The request/acknowledge toggles qualify these bundled buses.  Each source
+# register is held stable until the synchronized transaction completes, so the
+# data only has to settle within one destination-clock period.  Constrain the
+# actual register-to-register bundles instead of hiding the paths from the PS
+# clock pins with broad false paths.
+set_max_delay -quiet -datapath_only 8.000 \
+  -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_addr_reg[*]}] \
+  -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr_reg[*]*}]
+set_max_delay -quiet -datapath_only 8.000 \
+  -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_wdata_reg[*]}] \
+  -to   [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]*}]
+set_max_delay -quiet -datapath_only 8.000 \
+  -from [get_cells -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]}] \
+  -to   [get_pins -quiet {ps/axi_slave_gp0/axi\\.RDATA_reg[*]/D}]
+set_bus_skew -quiet 6.000 \
+  -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_addr_reg[*]/Q}] \
+  -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.addr_reg[*]*/D}]
+set_bus_skew -quiet 6.000 \
+  -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/ctrl_wdata_reg[*]/Q}] \
+  -to   [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/bus_m\\.wdata_reg[*]*/D}]
+set_bus_skew -quiet 6.000 \
+  -from [get_pins -quiet {sys_bus_interconnect/for_bus[*].inst_sys_bus_cdc/reg_rdata_reg[*]/Q}] \
+  -to   [get_pins -quiet {ps/axi_slave_gp0/axi\\.RDATA_reg[*]/D}]
+set_max_delay -quiet -datapath_only 8.000 -from [get_pins -quiet i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins -quiet {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
+set_false_path -quiet -from [get_pins -quiet {i_adc366x/adc_dat_o*[*]/C}] -to [get_pins -quiet {dac_dat_*[*]/D}]
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-
-
-

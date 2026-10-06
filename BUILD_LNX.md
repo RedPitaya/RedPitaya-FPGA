@@ -72,6 +72,16 @@ Build the bitstream:
 make PRJ=v0.94 MODEL=Z20_250
 ```
 
+For STEMlab 65-16 TI, which shares `MODEL=Z20_ll` with STEMlab 125-14 TI,
+select the 250 MHz ADC serial clock constraint explicitly:
+
+```bash
+make PRJ=<project> MODEL=Z20_ll DEFINES=LL_ADC_65
+```
+
+Without `LL_ADC_65`, `Z20_ll` targets STEMlab 125-14 TI and constrains ADC
+ADDCLK to 500 MHz.
+
 Build only the device tree:
 
 ```bash

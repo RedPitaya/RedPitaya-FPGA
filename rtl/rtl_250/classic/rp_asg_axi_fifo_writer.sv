@@ -58,16 +58,22 @@ logic [AW-1:0] start_addr_q;
 logic [AW-1:0] stop_addr_q;
 logic [AW-1:0] issue_addr_q;
 logic [AW-1:0] req_next_addr_q;
+logic [AW-1:0] req_next_words_q;
 logic [AW-1:0] stream_addr_q;
 logic [AW-1:0] current_beat_addr_q;
-logic [AW-1:0] stop_addr_eff_c;
+logic [1:0]    init_cnt_q;
+logic [AW-1:0] stop_addr_eff_q;
+logic [AW-1:0] words_diff_q;
+logic [AW-1:0] period_words_q;
+logic          addr_range_valid_q;
 
 logic [ISSUE_BEAT_W-1:0] issue_beats_c;
 logic [ISSUE_BEAT_W-1:0] req_beats_q;
 logic [LW-1:0] issue_len_c;
-logic [AW-1:0] issue_words_left_c;
+logic [AW-1:0] issue_words_left_q;
 logic [AW-1:0] issue_addr_next_c;
-logic [AW-1:0] stream_words_left_c;
+logic [AW-1:0] issue_words_next_c;
+logic [AW-1:0] stream_words_left_q;
 
 logic [OUT_BEAT_W-1:0]  outstanding_beats_q;
 logic [OUT_BURST_W-1:0] outstanding_bursts_q;
@@ -153,6 +159,15 @@ always_ff @(posedge axi_sys.clk) begin
     wr_state_q <= wr_state_d;
 end
 
+always_ff @(posedge axi_sys.clk) begin
+  if (!axi_sys.rstn)
+    init_cnt_q <= '0;
+  else if (wr_state_q != WR_INIT)
+    init_cnt_q <= '0;
+  else if (init_cnt_q != 2'd3)
+    init_cnt_q <= init_cnt_q + 1'b1;
+end
+
 always_comb begin : fsm_axi_read
   wr_state_d = wr_state_q;
 
@@ -165,7 +180,7 @@ always_comb begin : fsm_axi_read
     WR_INIT: begin
       if (fsm_reset_sync)
         wr_state_d = WR_FLUSH;
-      else if (!dat_fifo_rst_busy)
+      else if (!dat_fifo_rst_busy && (init_cnt_q == 2'd3))
         wr_state_d = WR_RUN;
     end
 
@@ -189,28 +204,40 @@ end
 //
 //  Request generation
 
+// Compute the period once at startup.  Each arithmetic operation has its own
+// cycle; combining all three produced a 5.87 ns path in the 250 MHz domain.
+always_ff @(posedge axi_sys.clk) begin
+  if (!axi_sys.rstn) begin
+    stop_addr_eff_q   <= '0;
+    words_diff_q      <= '0;
+    period_words_q    <= '0;
+    addr_range_valid_q <= 1'b0;
+  end else begin
+    stop_addr_eff_q    <= req_stop_addr + AW'(32'd4);
+    words_diff_q       <= stop_addr_eff_q - req_start_addr;
+    addr_range_valid_q <= req_start_addr <= stop_addr_eff_q;
+    period_words_q     <= addr_range_valid_q
+                        ? (words_diff_q >> AXI_ADDR_SHIFT) + 1'b1
+                        : '0;
+  end
+end
+
 always_comb begin
-  stop_addr_eff_c   = stop_addr_q + AW'(32'd4);
-  issue_words_left_c = '0;
-  stream_words_left_c = '0;
 
-  if (issue_addr_q <= stop_addr_eff_c)
-    issue_words_left_c = ((stop_addr_eff_c - issue_addr_q) >> AXI_ADDR_SHIFT) + 1'b1;
-
-  if (stream_addr_q <= stop_addr_eff_c)
-    stream_words_left_c = ((stop_addr_eff_c - stream_addr_q) >> AXI_ADDR_SHIFT) + 1'b1;
-
-  if (issue_words_left_c > AXI_BURST_LEN)
+  if (issue_words_left_q > AXI_BURST_LEN)
     issue_beats_c = ISSUE_BEAT_W'(AXI_BURST_LEN);
   else
-    issue_beats_c = issue_words_left_c[ISSUE_BEAT_W-1:0];
+    issue_beats_c = issue_words_left_q[ISSUE_BEAT_W-1:0];
 
   issue_len_c = issue_beats_c - 1'b1;
 
-  if (issue_words_left_c <= AXI_BURST_LEN)
+  if (issue_words_left_q <= AXI_BURST_LEN) begin
     issue_addr_next_c = start_addr_q;
-  else
-    issue_addr_next_c = issue_addr_q + (AW'(issue_beats_c) << AXI_ADDR_SHIFT);
+    issue_words_next_c = period_words_q;
+  end else begin
+    issue_addr_next_c = issue_addr_q + AW'(AXI_BURST_LEN * DWB);
+    issue_words_next_c = issue_words_left_q - AW'(AXI_BURST_LEN);
+  end
 end
 
 always_comb begin
@@ -220,7 +247,7 @@ end
 assign prefetch_issue = (wr_state_q == WR_RUN) &&
                         !fsm_reset_sync &&
                         !axi_sys.rvalid &&
-                        (issue_beats_c != {ISSUE_BEAT_W{1'b0}}) &&
+                        (issue_words_left_q != {AW{1'b0}}) &&
                         (outstanding_bursts_q < MAX_OUTSTANDING_BURSTS) &&
                         (expected_fifo_lvl <= DATA_REQUEST_LEVEL);
 
@@ -233,6 +260,8 @@ always_ff @(posedge axi_sys.clk) begin
     stop_addr_q      <= '0;
     issue_addr_q     <= '0;
     req_next_addr_q  <= '0;
+    req_next_words_q <= '0;
+    issue_words_left_q <= '0;
     req_beats_q      <= '0;
     axi_sys.raddr    <= '0;
     axi_sys.rlen     <= '0;
@@ -243,6 +272,8 @@ always_ff @(posedge axi_sys.clk) begin
       stop_addr_q     <= req_stop_addr;
       issue_addr_q    <= req_start_addr;
       req_next_addr_q <= req_start_addr;
+      req_next_words_q <= period_words_q;
+      issue_words_left_q <= period_words_q;
       req_beats_q     <= '0;
       axi_sys.raddr   <= req_start_addr;
       axi_sys.rlen    <= '0;
@@ -253,12 +284,14 @@ always_ff @(posedge axi_sys.clk) begin
       if (ar_accept) begin
         axi_sys.rvalid <= 1'b0;
         issue_addr_q   <= req_next_addr_q;
+        issue_words_left_q <= req_next_words_q;
       end else if (prefetch_issue) begin
         axi_sys.raddr   <= issue_addr_q;
         axi_sys.rlen    <= issue_len_c;
         axi_sys.rvalid  <= 1'b1;
         req_beats_q     <= issue_beats_c;
         req_next_addr_q <= issue_addr_next_c;
+        req_next_words_q <= issue_words_next_c;
       end
     end
   end
@@ -299,6 +332,7 @@ end
 always_ff @(posedge axi_sys.clk) begin
   if (!axi_sys.rstn) begin
     stream_addr_q             <= '0;
+    stream_words_left_q       <= '0;
     current_beat_addr_q       <= '0;
     wrap_pulse_q              <= 1'b0;
     first_beat_new_period_q   <= 1'b0;
@@ -308,16 +342,19 @@ always_ff @(posedge axi_sys.clk) begin
 
     if (wr_state_q == WR_INIT) begin
       stream_addr_q       <= req_start_addr;
+      stream_words_left_q <= period_words_q;
       current_beat_addr_q <= req_start_addr;
     end else if ((wr_state_q == WR_RUN) && beat_accept) begin
       current_beat_addr_q     <= stream_addr_q;
       first_beat_new_period_q <= stream_addr_q == start_addr_q;
 
-      if (stream_words_left_c == AW'(1)) begin
+      if (stream_words_left_q == AW'(1)) begin
         wrap_pulse_q <= 1'b1;
         stream_addr_q <= start_addr_q;
+        stream_words_left_q <= period_words_q;
       end else begin
         stream_addr_q <= stream_addr_q + DWB;
+        stream_words_left_q <= stream_words_left_q - AW'(1);
       end
     end
   end
