@@ -5,8 +5,8 @@ set adc_clk [ create_bd_port -dir I -type clk -freq_hz 122880000 adc_clk ]
 set dac_dat_a [ create_bd_port -dir O -from 15 -to 0 dac_dat_a ]
 set dac_dat_b [ create_bd_port -dir O -from 15 -to 0 dac_dat_b ]
 
-set adc_data_ch1 [ create_bd_port -dir I -from 13 -to 0 adc_data_ch1 ]
-set adc_data_ch2 [ create_bd_port -dir I -from 13 -to 0 adc_data_ch2 ]
+set adc_data_ch1 [ create_bd_port -dir I -from 15 -to 0 adc_data_ch1 ]
+set adc_data_ch2 [ create_bd_port -dir I -from 15 -to 0 adc_data_ch2 ]
 
 set clk_out [ create_bd_port -dir O -type clk clk_out ]
 

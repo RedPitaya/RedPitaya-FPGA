@@ -3396,9 +3396,9 @@
     <spirit:fileSet>
       <spirit:name>xilinx_xpgui_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>rp_oscilloscope_v1_23.tcl</spirit:name>
+        <spirit:name>xgui/rp_oscilloscope_v1_16.tcl</spirit:name>
         <spirit:fileType>tclSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_71be77d5</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_7def6e3a</spirit:userFileType>
         <spirit:userFileType>XGUI_VERSION_2</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
