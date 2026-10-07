@@ -55,7 +55,7 @@ reg               adc_dly_end;
 reg               adc_we;
 
 
-assign adc_state_o = {2'h0, indep_mode_i, adc_dly_end, adc_we_keep_i, adc_trg_rd, 1'b0, adc_we};
+assign adc_state_o = {2'h0, indep_mode_i, adc_dly_end, adc_we_keep_i, adc_trg_rd, 1'b0, 1'b0};
 
 always @(posedge adc_clk_i) begin
   if (adc_rstn_i == 1'b0) begin
