@@ -580,6 +580,15 @@ end
 // Calculating the next read pointer
 ////////////////////////////////////////////////////////////
 
+// Address of the buffer to swap to, registered: the buffer addresses are configuration and
+// req_buf_addr_sel changes only on a swap, at least one burst before the next one, so the
+// one cycle latency is never seen. It keeps the 32-bit buffer mux off the 245.76 MHz pointer path.
+reg [AXI_ADDR_BITS-1:0] swap_buf_adr;
+always @(posedge m_axi_aclk)
+  swap_buf_adr <= req_buf_addr_sel ? dac_buf1_adr : dac_buf2_adr;
+
+wire swap_buf_rdy = req_buf_addr_sel ? buf1_rdy : buf2_rdy;
+
 always @(posedge m_axi_aclk)
 begin
   if (m_axi_aresetn == 0)
@@ -594,12 +603,8 @@ begin
       SEND_DMA_REQ: begin
         if (transf_end) begin
           if (final_transf || dac_trig) begin
-            if ((req_buf_addr_sel == 0) && buf2_rdy) begin //only start writing to buf2 if it's full
-              dac_rp_curr <= dac_buf2_adr;      
-            end 
-            if ((req_buf_addr_sel == 1) && buf1_rdy) begin //only start writing to buf1 if it's full
-              dac_rp_curr <= dac_buf1_adr;      
-            end             
+            if (swap_buf_rdy) // only start reading the next buffer if it's full
+              dac_rp_curr <= swap_buf_adr;
           end else begin
             dac_rp_curr <= dac_rp_next;
           end
@@ -607,15 +612,9 @@ begin
       end
 
       WAIT_BUF_FULL: begin
-        if (~next_buf_nfull) begin
-          // Swap the buffer if we have reached the end of the current one
-            if ((req_buf_addr_sel == 0) && buf2_rdy) begin // only switch addresses when next buffer is read out
-              dac_rp_curr <= dac_buf2_adr;      
-            end 
-            if ((req_buf_addr_sel == 1) && buf1_rdy) begin
-              dac_rp_curr <= dac_buf1_adr;      
-            end        
-        end   
+        // Swap the buffer if we have reached the end of the current one
+        if (~next_buf_nfull && swap_buf_rdy) // only switch addresses when next buffer is read out
+          dac_rp_curr <= swap_buf_adr;
       end   
     endcase
   end
