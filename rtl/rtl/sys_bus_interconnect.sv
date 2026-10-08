@@ -27,6 +27,8 @@ module sys_bus_interconnect #(
   SYNC_REG_OFS4   = -1, // synchronised reg 4
   SYNC_REG_OFS5   = -1, // synchronised reg 5
   SYNC_REG_OFS6   = -1, // synchronised reg 6
+  SYNC_REG_OFS7   = -1, // synchronised reg 7
+  SYNC_REG_OFS8   = -1, // synchronised reg 8
   PIPE_IN_BUS     =  0  // register the controller request before CDC fanout
 )(
   input        pll_locked_i,
@@ -110,7 +112,9 @@ assign bus_s_sync_adr[i] = bus_s_sync_cs[i] &&
                               (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS3) ||
                               (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS4) ||
                               (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS5) ||
-                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS6));
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS6) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS7) ||
+                              (`BUS_NAME_I2[SYNC_IN_BUS].addr[SW-1:0] == SYNC_REG_OFS8));
 
 assign syncd_cs[i]    =  (i == SYNC_OUT_BUS1) || 
                          (i == SYNC_OUT_BUS2) || 

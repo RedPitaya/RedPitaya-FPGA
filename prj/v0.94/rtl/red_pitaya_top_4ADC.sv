@@ -405,7 +405,11 @@ sys_bus_interconnect #(
   .SYNC_REG_OFS3 (16),
   .SYNC_REG_OFS4 (20),
   .SYNC_REG_OFS5 (40),
-  .SYNC_REG_OFS6 (148)
+  .SYNC_REG_OFS6 (148),
+  // timestamp init low word and high word (the high word write loads the counter):
+  // mirrored, so both scope cores start their timestamp counters on the same edge
+  .SYNC_REG_OFS7 (544),
+  .SYNC_REG_OFS8 (548)
 ) sys_bus_interconnect (
   .pll_locked_i(&pll_locked),
   .bus_m (ps_sys),
