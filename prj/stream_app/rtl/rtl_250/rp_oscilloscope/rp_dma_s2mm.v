@@ -30,14 +30,14 @@ module rp_dma_s2mm
   input  wire                           use_8bit,
 
   //
-  output wire [31:0]                    buf1_ms_cnt,
-  output wire [31:0]                    buf2_ms_cnt,
   output wire [63:0]                    buf1_timestamp,
   output wire [63:0]                    buf2_timestamp,
   input  wire                           s_axis_drop,
   input  wire                           s_axis_flush,
   output wire [63:0]                    buf1_lost,
   output wire [63:0]                    buf2_lost,
+  output wire [63:0]                    buf1_wait,
+  output wire [63:0]                    buf2_wait,
   input  wire                           buf_sel_in,
   output wire                           buf_sel_out,
   //                                        
@@ -95,12 +95,6 @@ wire [1:0]                upsize_lvl;
 reg                       ctl_start_r;
 reg                       use_8bit_r;
 
-wire [32-1:0]             missed_samps_ch1, missed_samps_ch2;
-wire [ 2-1:0]             shift=2'h2+{1'b0,use_8bit};
-
-assign                    buf1_ms_cnt = missed_samps_ch1 << shift;
-assign                    buf2_ms_cnt = missed_samps_ch2 << shift;
-
 assign m_axi_wdata  = fifo_rd_data;
 
 ////////////////////////////////////////////////////////////
@@ -115,9 +109,10 @@ wire        first_rst;
 reg  [ 2:0] first_rst_s;
 reg  [ 2:0] lost_ack_s;
 reg  [15:0] lost_acc, lost_xfer;
+reg  [15:0] wait_acc, wait_xfer;  // the part of the lost samples dropped while waiting for a trigger
 reg         lost_req;
 reg  [ 2:0] lost_req_m;
-reg  [15:0] lost_add;
+reg  [15:0] lost_add, wait_add;
 reg         lost_add_we;
 wire [15:0] lost_now = ((fifo_wr_we && ~fifo_wr_ok && ~first_rst_s[2]) ? (use_8bit ? 16'd8 : 16'd4) : 16'd0)
                      + s_axis_drop;
@@ -131,13 +126,17 @@ always @(posedge s_axis_aclk) begin
   lost_ack_s  <= {lost_ack_s[1:0], lost_req_m[2]};
   if (~aresetn) begin
     lost_acc <= 16'd0;
+    wait_acc <= 16'd0;
     lost_req <= 1'b0;
   end else if ((lost_req == lost_ack_s[2]) && ((lost_acc != 16'd0) || (lost_now != 16'd0))) begin
     lost_xfer <= lost_acc + lost_now;
+    wait_xfer <= wait_acc + s_axis_drop;
     lost_acc  <= 16'd0;
+    wait_acc  <= 16'd0;
     lost_req  <= ~lost_req;
   end else begin
     lost_acc  <= lost_acc + lost_now;
+    wait_acc  <= wait_acc + s_axis_drop;
   end
 end
 
@@ -145,6 +144,7 @@ always @(posedge m_axi_aclk) begin
   lost_req_m  <= {lost_req_m[1:0], lost_req};
   lost_add_we <= lost_req_m[2] ^ lost_req_m[1];
   lost_add    <= lost_xfer;  // stable since before the toggle
+  wait_add    <= wait_xfer;
 end
 assign m_axi_wstrb  = {AXI_DATA_BITS/8{1'b1}};
 assign m_axi_bready = m_axi_bvalid;
@@ -193,16 +193,17 @@ rp_dma_s2mm_ctrl #(
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
-  .buf1_ms_cnt    (missed_samps_ch1),
-  .buf2_ms_cnt    (missed_samps_ch2),
   .buf1_timestamp (buf1_timestamp),
   .buf2_timestamp (buf2_timestamp),
   .lost_add       (lost_add),
   .lost_add_we    (lost_add_we),
+  .wait_add       (wait_add),
   .first_rst_o    (first_rst),
   .flush_i        (s_axis_flush),
   .buf1_lost      (buf1_lost),
   .buf2_lost      (buf2_lost),
+  .buf1_wait      (buf1_wait),
+  .buf2_wait      (buf2_wait),
   .buf_sel_in     (buf_sel_in),
   .buf_sel_out    (buf_sel_out),
   .fifo_dis       (fifo_dis),

@@ -245,13 +245,13 @@ ADC streaming
 +----------+------------------------------------------------+------+-----+
 |          |  DMA buffer size                               | 31:0 | R/W |
 +----------+------------------------------------------------+------+-----+
-| **0x5C** |  **Number of lost samples - buffer 1**         |      |     |
+| **0x5C** | **Reserved**                                   |      |     |
 +----------+------------------------------------------------+------+-----+
-|          |  Counter of lost samples - buffer 1            |  31:0| R   |
+|          | The old 32 bit lost counters of CH1 (also      | 31:0 | R   |
 +----------+------------------------------------------------+------+-----+
-| **0x60** |  **Number of lost samples - buffer 2**         |      |     |
+|          | 0x60, CH2 0x9C/0xA0, CH3 0x15C/0x160, CH4      |      |     |
 +----------+------------------------------------------------+------+-----+
-|          |  Counter of lost samples - buffer 2            |  31:0| R   |
+|          | 0x19C/0x1A0): removed, they read 0. See 0x220  |      |     |
 +----------+------------------------------------------------+------+-----+
 | **0x64** |  **DMA destination address - buffer 1, CH1**   |      |     |
 +----------+------------------------------------------------+------+-----+
@@ -293,13 +293,9 @@ ADC streaming
 +----------+------------------------------------------------+------+-----+
 |          |  Calibration gain value CH2                    |  15:0| R/W |
 +----------+------------------------------------------------+------+-----+
-| **0x9C** |  **Number of lost samples - buffer 1 CH2**     |      |     |
+| **0x9C** | **Reserved** (0x9C, 0xA0: removed, read 0)     |      |     |
 +----------+------------------------------------------------+------+-----+
-|          |  Counter of lost samples - buffer 1            |  31:0| R   |
-+----------+------------------------------------------------+------+-----+
-| **0xA0** |  **Number of lost samples - buffer 2 CH2**     |      |     |
-+----------+------------------------------------------------+------+-----+
-|          |  Counter of lost samples - buffer 2            |  31:0| R   |
+|          | Reserved                                       | 31:0 | R   |
 +----------+------------------------------------------------+------+-----+
 | **0xA4** |  **Diagnostics - current write pointer CH1**   |      |     |
 +----------+------------------------------------------------+------+-----+
@@ -362,6 +358,12 @@ ADC streaming
 |          | Triggers that started or extended a series     | 31:0 | R   |
 +----------+------------------------------------------------+------+-----+
 |          | since the start event                          |      |     |
++----------+------------------------------------------------+------+-----+
+| 0x21C    | **Features**                                   |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Bit 0 block mode, bit 1 64 bit lost counters,  |  2:0 | R   |
++----------+------------------------------------------------+------+-----+
+|          | bit 2 wait counters (0x7); older bitstreams 0  |      |     |
 +----------+------------------------------------------------+------+-----+
 | 0x220    | **Lost before buffer 1 CH1 - low**             |      |     |
 +----------+------------------------------------------------+------+-----+
@@ -427,6 +429,22 @@ ADC streaming
 +----------+------------------------------------------------+------+-----+
 |          | Samples lost[63:32]                            | 31:0 | R   |
 +----------+------------------------------------------------+------+-----+
+| 0x260    | **Wait before buffer 1 - low**                 |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[31:0]        | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| 0x264    | **Wait before buffer 1 - high**                |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[63:32]       | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| 0x268    | **Wait before buffer 2 - low**                 |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[31:0]        | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| 0x26C    | **Wait before buffer 2 - high**                |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[63:32]       | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
 
 The 64 bit lost counters hold the samples (after decimation) that were not
 written right before the buffer: words dropped while the next buffer is not
@@ -435,6 +453,14 @@ not written while the block mode waits for a trigger. The value is latched with
 the first write request of the buffer, it does not saturate. The first buffer
 after a start without the trigger mode reports 0. Channels the board does not
 have read 0.
+
+The 64 bit wait counters (0x260..0x26C) hold the part of the lost samples that
+were not written while the trigger mode waited for a trigger (before the first
+trigger and between the series of the block mode), latched together with the
+lost counters. All channels wait together, so there is one pair per buffer. The
+rest of the lost count (lost - wait) are the samples dropped for want of a free
+buffer. Without the trigger mode the wait is 0. The input of the GPIO block has
+the same pair at 0xF0..0xFC.
 
 -------------
 DAC streaming
@@ -1005,13 +1031,11 @@ GPIO streaming
 +----------+------------------------------------------------+------+-----+
 |          |  DMA buffer address                            | 31:0 | R/W |
 +----------+------------------------------------------------+------+-----+
-| **0xB0** |  **Buffer 1 missed sample counter IN**         |      |     |
+| **0xB0** | **Reserved**                                   |      |     |
 +----------+------------------------------------------------+------+-----+
-|          |  Number of missed samples                      | 31:0 | R/W |
+|          | Old 32 bit input lost counters (and 0xB4):     | 31:0 | R   |
 +----------+------------------------------------------------+------+-----+
-| **0xB4** |  **Buffer 2 missed sample counter IN**         |      |     |
-+----------+------------------------------------------------+------+-----+
-|          |  Number of missed samples                      | 31:0 | R/W |
+|          | removed, they read 0. See 0xE0                 |      |     |
 +----------+------------------------------------------------+------+-----+
 | **0xB8** |  **GPIO IN - write pointer**                   |      |     |
 +----------+------------------------------------------------+------+-----+
@@ -1059,6 +1083,12 @@ GPIO streaming
 +----------+------------------------------------------------+------+-----+
 |          | since the start event                          |      |     |
 +----------+------------------------------------------------+------+-----+
+| **0xDC** | **Features**                                   |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Bit 0 input block mode, bit 1 64 bit lost      |  2:0 | R   |
++----------+------------------------------------------------+------+-----+
+|          | counters, bit 2 wait counters (0x7)            |      |     |
++----------+------------------------------------------------+------+-----+
 | **0xE0** | **Lost before input buffer 1 - low**           |      |     |
 +----------+------------------------------------------------+------+-----+
 |          | Samples lost[31:0]                             | 31:0 | R   |
@@ -1074,6 +1104,22 @@ GPIO streaming
 | **0xEC** | **Lost before input buffer 2 - high**          |      |     |
 +----------+------------------------------------------------+------+-----+
 |          | Samples lost[63:32]                            | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| **0xF0** | **Wait before input buffer 1 - low**           |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[31:0]        | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| **0xF4** | **Wait before input buffer 1 - high**          |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[63:32]       | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| **0xF8** | **Wait before input buffer 2 - low**           |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[31:0]        | 31:0 | R   |
++----------+------------------------------------------------+------+-----+
+| **0xFC** | **Wait before input buffer 2 - high**          |      |     |
++----------+------------------------------------------------+------+-----+
+|          | Samples not written while waiting[63:32]       | 31:0 | R   |
 +----------+------------------------------------------------+------+-----+
 
 Stream words. Input (32 bit, one per RLE run, or per sample without RLE):

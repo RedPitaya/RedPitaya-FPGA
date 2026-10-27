@@ -110,12 +110,12 @@ module scope_cfg
    output wire                         cfg_timestamp_init_we_o,
 
    input  wire [              64-1:0]  curr_timestamp_i    ,
-   input  wire [            4*32-1:0]  buf1_ms_cnt_i       ,
-   input  wire [            4*32-1:0]  buf2_ms_cnt_i       ,
    input  wire [            4*64-1:0]  buf1_timestamp_i    ,
    input  wire [            4*64-1:0]  buf2_timestamp_i    ,
    input  wire [            4*64-1:0]  buf1_lost_i         ,
    input  wire [            4*64-1:0]  buf2_lost_i         ,
+   input  wire [              64-1:0]  buf1_wait_i         ,  // samples not written while waiting for a trigger before the buffer
+   input  wire [              64-1:0]  buf2_wait_i         ,
 
    input  wire [            4*32-1:0]  curr_wp_i           ,
 
@@ -168,8 +168,6 @@ localparam DMA_CTRL_ADDR            = 12'h50;  // DMA control register
 localparam DMA_STS_ADDR             = 12'h54;  // DMA status register
 localparam DMA_BUF_SIZE_ADDR        = 12'h58;  // DMA buffer size
 
-localparam BUF1_LOST_SAMP_CNT_CH1   = 12'h5C;  // Number of lost samples in buffer 1
-localparam BUF2_LOST_SAMP_CNT_CH1   = 12'h60;  // Number of lost samples in buffer 2
 localparam DMA_DST_ADDR1_CH1        = 12'h64;  // DMA destination address 1
 localparam DMA_DST_ADDR2_CH1        = 12'h68;  // DMA destination address 2
 localparam DMA_DST_ADDR1_CH2        = 12'h6C;  // DMA destination address 1
@@ -179,8 +177,6 @@ localparam CALIB_GAIN_ADDR_CH1      = 12'h78;  // Calibraton gain CH1
 localparam CALIB_OFFSET_ADDR_CH2    = 12'h7C;  // Calibraton offset CH2
 localparam CALIB_GAIN_ADDR_CH2      = 12'h80;  // Calibraton gain CH2
 localparam LEGACY_CALIB_EN_ADDR     = 12'h84;  // bit0 enables legacy post-filter calibration
-localparam BUF1_LOST_SAMP_CNT_CH2   = 12'h9C;  // Number of lost samples in buffer 1
-localparam BUF2_LOST_SAMP_CNT_CH2   = 12'hA0;  // Number of lost samples in buffer 2
 localparam CURR_WP_CH1              = 12'hA4;  //current write pointer CH1
 localparam CURR_WP_CH2              = 12'hA8;  //current write pointer CH2
 
@@ -194,8 +190,6 @@ localparam FILT_COEFF_BB_CH2        = 12'hD4;  // Filter coeff BB address CH2
 localparam FILT_COEFF_KK_CH2        = 12'hD8;  // Filter coeff KK address CH2
 localparam FILT_COEFF_PP_CH2        = 12'hDC;  // Filter coeff PP address CH2
 
-localparam BUF1_LOST_SAMP_CNT_CH3   = 12'h15C;  // Number of lost samples in buffer 1
-localparam BUF2_LOST_SAMP_CNT_CH3   = 12'h160;  // Number of lost samples in buffer 2
 localparam DMA_DST_ADDR1_CH3        = 12'h164;  // DMA destination address 1
 localparam DMA_DST_ADDR2_CH3        = 12'h168;  // DMA destination address 2
 localparam DMA_DST_ADDR1_CH4        = 12'h16C;  // DMA destination address 1
@@ -204,8 +198,6 @@ localparam CALIB_OFFSET_ADDR_CH3    = 12'h174;  // Calibraton offset CH1
 localparam CALIB_GAIN_ADDR_CH3      = 12'h178;  // Calibraton gain CH1
 localparam CALIB_OFFSET_ADDR_CH4    = 12'h17C;  // Calibraton offset CH2
 localparam CALIB_GAIN_ADDR_CH4      = 12'h180;  // Calibraton gain CH2
-localparam BUF1_LOST_SAMP_CNT_CH4   = 12'h19C;  // Number of lost samples in buffer 1
-localparam BUF2_LOST_SAMP_CNT_CH4   = 12'h1A0;  // Number of lost samples in buffer 2
 localparam CURR_WP_CH3              = 12'h1A4;  //current write pointer CH1
 localparam CURR_WP_CH4              = 12'h1A8;  //current write pointer CH2
 
@@ -248,6 +240,12 @@ localparam BUF1_LOST_LO_CH4       = 12'h250;  // Samples lost before buffer 1, C
 localparam BUF1_LOST_HI_CH4       = 12'h254;  // Samples lost before buffer 1, CH4, high
 localparam BUF2_LOST_LO_CH4       = 12'h258;  // Samples lost before buffer 2, CH4, low
 localparam BUF2_LOST_HI_CH4       = 12'h25C;  // Samples lost before buffer 2, CH4, high
+localparam FEATURES_ADDR          = 12'h21C;  // Read only: bit 0 block mode, bit 1 64 bit lost counters, bit 2 wait counters
+localparam BUF1_WAIT_LO           = 12'h260;  // Samples not written while waiting for a trigger before buffer 1, low
+localparam BUF1_WAIT_HI           = 12'h264;  // ... high
+localparam BUF2_WAIT_LO           = 12'h268;  // ... before buffer 2, low
+localparam BUF2_WAIT_HI           = 12'h26C;  // ... high
+localparam FEATURES               = 32'h7;
 
 localparam CLKSEL_REG               = 16'h1000;  // FPGA mode
 
@@ -350,14 +348,11 @@ assign axi_clk_regs =  (bus.addr[12-1:0] == DMA_CTRL_ADDR          ||
                         bus.addr[12-1:0] == BUF1_LOST_HI_CH4       ||
                         bus.addr[12-1:0] == BUF2_LOST_LO_CH4       ||
                         bus.addr[12-1:0] == BUF2_LOST_HI_CH4       ||
-                        bus.addr[12-1:0] == BUF1_LOST_SAMP_CNT_CH1 ||
-                        bus.addr[12-1:0] == BUF2_LOST_SAMP_CNT_CH1 ||
-                        bus.addr[12-1:0] == BUF1_LOST_SAMP_CNT_CH2 ||
-                        bus.addr[12-1:0] == BUF2_LOST_SAMP_CNT_CH2 ||
-                        bus.addr[12-1:0] == BUF1_LOST_SAMP_CNT_CH3 ||
-                        bus.addr[12-1:0] == BUF2_LOST_SAMP_CNT_CH3 ||
-                        bus.addr[12-1:0] == BUF1_LOST_SAMP_CNT_CH4 ||
-                        bus.addr[12-1:0] == BUF2_LOST_SAMP_CNT_CH4 ||
+                        bus.addr[12-1:0] == FEATURES_ADDR          ||
+                        bus.addr[12-1:0] == BUF1_WAIT_LO           ||
+                        bus.addr[12-1:0] == BUF1_WAIT_HI           ||
+                        bus.addr[12-1:0] == BUF2_WAIT_LO           ||
+                        bus.addr[12-1:0] == BUF2_WAIT_HI           ||
                         bus.addr[12-1:0] == DMA_DST_ADDR1_CH1      ||
                         bus.addr[12-1:0] == DMA_DST_ADDR2_CH1      ||
                         bus.addr[12-1:0] == DMA_DST_ADDR1_CH2      ||
@@ -656,15 +651,7 @@ begin
       DMA_DST_ADDR2_CH3      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr2[3*32-1:2*32]; end
       DMA_DST_ADDR2_CH4      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr2[4*32-1:3*32]; end
 
-      BUF1_LOST_SAMP_CNT_CH1 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_ms_cnt_i[1*32-1:0*32];  end
-      BUF1_LOST_SAMP_CNT_CH2 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_ms_cnt_i[2*32-1:1*32];  end
-      BUF1_LOST_SAMP_CNT_CH3 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_ms_cnt_i[3*32-1:2*32];  end
-      BUF1_LOST_SAMP_CNT_CH4 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_ms_cnt_i[4*32-1:3*32];  end
 
-      BUF2_LOST_SAMP_CNT_CH1 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_ms_cnt_i[1*32-1:0*32];  end
-      BUF2_LOST_SAMP_CNT_CH2 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_ms_cnt_i[2*32-1:1*32];  end
-      BUF2_LOST_SAMP_CNT_CH3 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_ms_cnt_i[3*32-1:2*32];  end
-      BUF2_LOST_SAMP_CNT_CH4 : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_ms_cnt_i[4*32-1:3*32];  end
 
       BUF1_TIMESTAMP_LO_CH1  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[31:0];     end
       BUF1_TIMESTAMP_HI_CH1  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[63:32];    end
@@ -687,6 +674,11 @@ begin
       BUF1_LOST_HI_CH4      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_lost_i[3*64+63 -: 32]; end
       BUF2_LOST_LO_CH4      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_lost_i[3*64+31 -: 32]; end
       BUF2_LOST_HI_CH4      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_lost_i[3*64+63 -: 32]; end
+      FEATURES_ADDR         : begin  reg_ack_axi = 1'b1; reg_rdat_axi = FEATURES;           end
+      BUF1_WAIT_LO          : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_wait_i[31:0];  end
+      BUF1_WAIT_HI          : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_wait_i[63:32]; end
+      BUF2_WAIT_LO          : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_wait_i[31:0];  end
+      BUF2_WAIT_HI          : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_wait_i[63:32]; end
 
       CURR_WP_CH1            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[1*32-1:0*32];      end
       CURR_WP_CH2            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[2*32-1:1*32];      end

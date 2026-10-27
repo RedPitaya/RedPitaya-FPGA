@@ -361,6 +361,8 @@ wire                        cfg_legacy_calib;
 wire [16-1:0]               cfg_calib_offset_ch1;
 wire [4*64-1:0]             buf1_lost;
 wire [4*64-1:0]             buf2_lost;
+wire [4*64-1:0]             buf1_wait;
+wire [4*64-1:0]             buf2_wait;
 wire [16-1:0]               cfg_calib_gain_ch1;
 wire [16-1:0]               cfg_calib_offset_ch2;
 wire [16-1:0]               cfg_calib_gain_ch2;
@@ -385,8 +387,6 @@ wire [4*32-1:0]             cfg_dma_dst_addr2;
 wire [4*16-1:0]             cfg_calib_offset;
 wire [4*16-1:0]             cfg_calib_gain;
 
-wire [4*32-1:0]             buf1_ms_cnt;
-wire [4*32-1:0]             buf2_ms_cnt;
 wire [4*32-1:0]             curr_wp;
 
 wire [ 4*4-1:0]             osc_event_op;
@@ -410,6 +410,8 @@ generate
   for (GL = NUM_CHANNELS; GL < 4; GL = GL + 1) begin : no_lost
     assign buf1_lost[(GL+1)*64-1:GL*64] = 64'd0;
     assign buf2_lost[(GL+1)*64-1:GL*64] = 64'd0;
+    assign buf1_wait[(GL+1)*64-1:GL*64] = 64'd0;
+    assign buf2_wait[(GL+1)*64-1:GL*64] = 64'd0;
   end
 endgenerate
 
@@ -433,10 +435,6 @@ wire                        acq_tvalid;
 wire                        acq_tready;   
 wire                        acq_tlast;
 
-wire  [31:0]                buf1_ms_cnt_ch1;
-wire  [31:0]                buf2_ms_cnt_ch1;
-wire  [31:0]                buf1_ms_cnt_ch2;
-wire  [31:0]                buf2_ms_cnt_ch2;
 wire  [63:0]                buf1_timestamp_ch1;
 wire  [63:0]                buf2_timestamp_ch1;
 wire  [63:0]                buf1_timestamp_ch2;
@@ -627,8 +625,6 @@ scope_cfg #(
   .cfg_calib_offset_o       (cfg_calib_offset),
   .cfg_calib_gain_o         (cfg_calib_gain),
 
-  .buf1_ms_cnt_i            (buf1_ms_cnt),
-  .buf2_ms_cnt_i            (buf2_ms_cnt),
   .curr_wp_i                (curr_wp),
 
 */
@@ -641,16 +637,14 @@ scope_cfg #(
   .curr_timestamp_i         (timestamp_counter_axi_r2),
   //.cfg_dma_sts_i            (cfg_dma_sts[1*32-1:0*32]),
 
-  .buf1_ms_cnt_ch1_i        (buf1_ms_cnt_ch1),
-  .buf2_ms_cnt_ch1_i        (buf2_ms_cnt_ch1),
-  .buf1_ms_cnt_ch2_i        (buf1_ms_cnt_ch2),
-  .buf2_ms_cnt_ch2_i        (buf2_ms_cnt_ch2),
   .buf1_timestamp_ch1_i     (buf1_timestamp_ch1),
   .buf2_timestamp_ch1_i     (buf2_timestamp_ch1),
   .buf1_timestamp_ch2_i     (buf1_timestamp_ch2),
   .buf2_timestamp_ch2_i     (buf2_timestamp_ch2),
   .buf1_lost_i              (buf1_lost),
   .buf2_lost_i              (buf2_lost),
+  .buf1_wait_i              (buf1_wait[63:0]),  // the channels wait together: CH1
+  .buf2_wait_i              (buf2_wait[63:0]),
 
   .curr_wp_ch1_i            (curr_wp_ch1),
   .curr_wp_ch2_i            (curr_wp_ch2),
@@ -719,6 +713,8 @@ scope_cfg #(
   .cfg_8bit_dat_i           (cfg_8bit_dat),
   .buf1_lost_o              (buf1_lost[1*64-1:0*64]),
   .buf2_lost_o              (buf2_lost[1*64-1:0*64]),
+  .buf1_wait_o              (buf1_wait[1*64-1:0*64]),
+  .buf2_wait_o              (buf2_wait[1*64-1:0*64]),
   .cfg_legacy_calib_i       (cfg_legacy_calib),
   .cfg_calib_offset_i       (cfg_calib_offset_ch1),
   .cfg_calib_gain_i         (cfg_calib_gain_ch1),
@@ -739,8 +735,6 @@ scope_cfg #(
   .cfg_timestamp_init_we_i  (cfg_timestamp_init_we),
 
   .cfg_dma_sts_o            (cfg_dma_sts),
-  .buf1_ms_cnt_o            (buf1_ms_cnt_ch1),
-  .buf2_ms_cnt_o            (buf2_ms_cnt_ch1),
   .buf1_timestamp_o         (buf1_timestamp_ch1),
   .buf2_timestamp_o         (buf2_timestamp_ch1),
 
@@ -842,12 +836,12 @@ osc_top #(
   .cfg_timestamp_init_i     (cfg_timestamp_init),
   .cfg_timestamp_init_we_i  (cfg_timestamp_init_we),
 
-  .buf1_ms_cnt_o            (buf1_ms_cnt_ch2),
-  .buf2_ms_cnt_o            (buf2_ms_cnt_ch2),
   .buf1_timestamp_o         (buf1_timestamp_ch2),
   .buf2_timestamp_o         (buf2_timestamp_ch2),
   .buf1_lost_o              (buf1_lost[2*64-1:1*64]),
   .buf2_lost_o              (buf2_lost[2*64-1:1*64]),
+  .buf1_wait_o              (buf1_wait[2*64-1:1*64]),
+  .buf2_wait_o              (buf2_wait[2*64-1:1*64]),
 
   .curr_wp_o                (curr_wp_ch2),
 
@@ -949,8 +943,6 @@ osc_top #(
   .cfg_dma_ctrl_i           (cfg_dma_ctrl),
   .cfg_dma_ctrl_we_i        (cfg_dma_ctrl_we),
 
-  .buf1_ms_cnt_o            (buf1_ms_cnt[(GV+1)*32-1:GV*32]),
-  .buf2_ms_cnt_o            (buf2_ms_cnt[(GV+1)*32-1:GV*32]),
 
   .curr_wp_o                (curr_wp[(GV+1)*32-1:GV*32]),
   .diag1_o                  (diag1[(GV+1)*32-1:GV*32]),

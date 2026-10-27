@@ -257,12 +257,12 @@ wire [4*16-1:0]             cfg_calib_offset;
 wire [4*16-1:0]             cfg_calib_gain;
 wire                        cfg_legacy_calib;
 
-wire [4*32-1:0]             buf1_ms_cnt;
-wire [4*32-1:0]             buf2_ms_cnt;
 wire [4*64-1:0]             buf1_timestamp;
 wire [4*64-1:0]             buf2_timestamp;
 wire [4*64-1:0]             buf1_lost;
 wire [4*64-1:0]             buf2_lost;
+wire [4*64-1:0]             buf1_wait;
+wire [4*64-1:0]             buf2_wait;
 wire [4*32-1:0]             curr_wp;
 
 wire [ 4*4-1:0]             osc_event_op;
@@ -305,6 +305,8 @@ generate
   for (GL = NUM_CHANNELS; GL < 4; GL = GL + 1) begin : no_lost
     assign buf1_lost[(GL+1)*64-1:GL*64] = 64'd0;
     assign buf2_lost[(GL+1)*64-1:GL*64] = 64'd0;
+    assign buf1_wait[(GL+1)*64-1:GL*64] = 64'd0;
+    assign buf2_wait[(GL+1)*64-1:GL*64] = 64'd0;
   end
 endgenerate
 
@@ -506,12 +508,12 @@ scope_cfg #(
   .cfg_calib_gain_o         (cfg_calib_gain),
 
   .curr_timestamp_i         (timestamp_counter),
-  .buf1_ms_cnt_i            (buf1_ms_cnt),
-  .buf2_ms_cnt_i            (buf2_ms_cnt),
   .buf1_timestamp_i         (buf1_timestamp),
   .buf2_timestamp_i         (buf2_timestamp),
   .buf1_lost_i              (buf1_lost),
   .buf2_lost_i              (buf2_lost),
+  .buf1_wait_i              (buf1_wait[63:0]),  // the channels wait together: CH1
+  .buf2_wait_i              (buf2_wait[63:0]),
   .curr_wp_i                (curr_wp),
 
 
@@ -606,12 +608,12 @@ osc_top #(
   .cfg_timestamp_init_i     (cfg_timestamp_init),
   .cfg_timestamp_init_we_i  (cfg_timestamp_init_we),
 
-  .buf1_ms_cnt_o            (buf1_ms_cnt[(GV+1)*32-1:GV*32]),
-  .buf2_ms_cnt_o            (buf2_ms_cnt[(GV+1)*32-1:GV*32]),
   .buf1_timestamp_o         (buf1_timestamp[(GV+1)*64-1:GV*64]),
   .buf2_timestamp_o         (buf2_timestamp[(GV+1)*64-1:GV*64]),
   .buf1_lost_o              (buf1_lost[(GV+1)*64-1:GV*64]),
   .buf2_lost_o              (buf2_lost[(GV+1)*64-1:GV*64]),
+  .buf1_wait_o              (buf1_wait[(GV+1)*64-1:GV*64]),
+  .buf2_wait_o              (buf2_wait[(GV+1)*64-1:GV*64]),
 
   .curr_wp_o                (curr_wp[(GV+1)*32-1:GV*32]),
   .diag1_o                  (diag1[(GV+1)*32-1:GV*32]),

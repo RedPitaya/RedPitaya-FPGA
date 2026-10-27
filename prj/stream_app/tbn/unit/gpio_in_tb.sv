@@ -37,7 +37,7 @@ wire  [7:0]  awlen, wstrb;
 wire         awvalid, wvalid, wlast, bready;
 logic        awready = 1, wready = 1, bvalid = 0;
 wire  [31:0] reg_sts, reg_ctrl;
-wire  [63:0] lost1, lost2;
+wire  [63:0] lost1, lost2, wait1, wait2;
 wire         armed, taken;
 
 gpio_in_top #(.DN (2), .DT (DT), .TN (6), .M_AXI_GPIO_ADDR_BITS (32), .M_AXI_GPIO_DATA_BITS (64), .S_AXI_REG_ADDR_BITS (32), .CW (8)) dut (
@@ -49,9 +49,9 @@ gpio_in_top #(.DN (2), .DT (DT), .TN (6), .M_AXI_GPIO_ADDR_BITS (32), .M_AXI_GPI
   .reg_wr_data(reg_wr_data), .reg_wr_we(reg_wr_we), .reg_addr(reg_addr), .reg_ctrl(reg_ctrl),
   .ctl_rst(ctl_rst), .ctl_acq(ctl_acq), .ctl_stp(ctl_stp), .reg_sts(reg_sts), .gpio_ctrl_reg(8'd0), .gpio_sts_reg(),
   .gpio_buf_size(32'(WORDS * 4)), .gpio_buf1_adr(B1), .gpio_buf2_adr(B2), .gpio_step(32'd1),
-  .buf1_ms_cnt(), .buf2_ms_cnt(), .gpio_wp(), .dma_diags(),
+  .gpio_wp(), .dma_diags(),
   .cfg_trig_mode(tmode), .cfg_trig_blocks(nblk), .trig_i(trig), .sts_armed(armed), .sts_trig_taken(taken),
-  .buf1_lost(lost1), .buf2_lost(lost2),
+  .buf1_lost(lost1), .buf2_lost(lost2), .buf1_wait(wait1), .buf2_wait(wait2),
   .m_axi_gpio_awaddr(awaddr), .m_axi_gpio_awlen(awlen), .m_axi_gpio_awsize(), .m_axi_gpio_awburst(), .m_axi_gpio_awprot(), .m_axi_gpio_awcache(),
   .m_axi_gpio_awvalid(awvalid), .m_axi_gpio_awready(awready), .m_axi_gpio_wdata(wdata), .m_axi_gpio_wstrb(wstrb), .m_axi_gpio_wlast(wlast),
   .m_axi_gpio_wvalid(wvalid), .m_axi_gpio_wready(wready), .m_axi_gpio_bresp(2'b00), .m_axi_gpio_bvalid(bvalid), .m_axi_gpio_bready(bready));
@@ -132,6 +132,7 @@ task automatic read_buffer(input int timeout, input int ackDelay, output bit got
   begin
     logic [31:0] base = nextBuf ? B2 : B1;
     longint lost = nextBuf ? lost2 : lost1;
+    longint wt   = nextBuf ? wait2 : wait1;
     longint first, prev, v, expGap;
     int badRun = 0, badSeq = 0;
     for (int w = 0; w < WORDS; w++) begin
@@ -153,6 +154,8 @@ task automatic read_buffer(input int timeout, input int ackDelay, output bit got
     if (badSeq || badRun) fail($sformatf("buffer %0d: %0d sequence breaks, %0d wrong counts", buffers + 1, badSeq, badRun));
     if (lost != expGap) fail($sformatf("buffer %0d: lost register %0d, gap in the data %0d", buffers + 1, lost, expGap));
     else if (expGap != 0) ok($sformatf("buffer %0d: lost register %0d = gap in the data", buffers + 1, lost));
+    // the trigger mode runs acknowledge in time: their whole gap is the wait; without it 0
+    if (tmode ? (wt != lost) : (wt != 0)) fail($sformatf("buffer %0d: wait register %0d, lost %0d, trigger mode %0d", buffers + 1, wt, lost, tmode));
     lastJ = prev;
     buffers++;
   end

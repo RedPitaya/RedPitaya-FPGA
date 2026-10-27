@@ -35,8 +35,6 @@ module gpio_dma_s2mm_ctrl
   input  wire [7:0]                 req_data,
   input  wire                       req_we, 
   input  wire                       data_valid,
-  output wire [31:0]                buf1_ms_cnt,
-  output wire [31:0]                buf2_ms_cnt,
   input  wire                       buf_sel_in,
   output wire                       buf_sel_out,
   output reg                        fifo_dis,
@@ -46,6 +44,8 @@ module gpio_dma_s2mm_ctrl
   input  wire                       flush_i,         // no more data before the next trigger: send a last full burst
   output reg  [63:0]                buf1_lost,       // samples lost right before buffer 1, latched with its first request
   output reg  [63:0]                buf2_lost,
+  output reg  [63:0]                buf1_wait,       // the part of buf1_lost dropped while waiting for a trigger
+  output reg  [63:0]                buf2_wait,
   //
   output wire [(AXI_ADDR_BITS-1):0] m_axi_awaddr,     
   output reg  [7:0]                 m_axi_awlen,      
@@ -113,10 +113,6 @@ reg                       buf2_full;
 reg                       buf1_ovr;
 reg                       buf2_ovr;
 reg                       data_valid_reg;
-reg  [31:0]               buf1_missed_samp;
-reg  [31:0]               buf2_missed_samp;
-reg  [31:0]               buf1_ms_lvl;
-reg  [31:0]               buf2_ms_lvl;
 
 reg  [4:0]                fifo_rst_cnt;
 wire [7:0]                fifo_wr_data; 
@@ -138,9 +134,6 @@ assign m_axi_awsize  = $clog2(AXI_DATA_BITS/8);
 assign m_axi_awburst = 2'b01;     // INCR
 assign m_axi_awprot  = 3'b000;
 assign m_axi_awcache = 4'b0011;
-
-assign buf1_ms_cnt = buf1_missed_samp + buf1_ms_lvl;
-assign buf2_ms_cnt = buf2_missed_samp + buf2_ms_lvl;
 
 assign req_buf_addr_sel_pedge = req_buf_addr_sel & ~req_buf_addr_sel_p1;
 assign req_buf_addr_sel_nedge = ~req_buf_addr_sel & req_buf_addr_sel_p1;
@@ -435,6 +428,8 @@ wire          word_lost     = fifo_dis && upsized_we && ~first_rst;
 reg           first_d, first_sel_d;
 reg  [27:0]   add_d;
 reg  [64-1:0] lost_run;
+reg  [ 9-1:0] wait_d;
+reg  [64-1:0] wait_run;
 
 always @(posedge m_axi_aclk)
 begin
@@ -442,6 +437,7 @@ begin
   first_sel_d <= req_buf_addr_sel;
   add_d       <= (word_lost ? upsized_samples : 10'd0) + drop_i
                + ((axi_last_r2 && next_buf_full) ? fifo_samples : 27'd0);
+  wait_d      <= drop_i;
 end
 
 always @(posedge m_axi_aclk)
@@ -450,12 +446,20 @@ begin
     lost_run  <= 64'd0;
     buf1_lost <= 64'd0;
     buf2_lost <= 64'd0;
+    wait_run  <= 64'd0;
+    buf1_wait <= 64'd0;
+    buf2_wait <= 64'd0;
   end else begin
-    if (first_d && (first_sel_d == 1'b0))
+    if (first_d && (first_sel_d == 1'b0)) begin
       buf1_lost <= lost_run;
-    if (first_d && (first_sel_d == 1'b1))
+      buf1_wait <= wait_run;
+    end
+    if (first_d && (first_sel_d == 1'b1)) begin
       buf2_lost <= lost_run;
+      buf2_wait <= wait_run;
+    end
     lost_run <= (first_d ? 64'd0 : lost_run) + add_d;
+    wait_run <= (first_d ? 64'd0 : wait_run) + wait_d;
   end
 end
 
@@ -614,36 +618,6 @@ begin
 end  
 
 ////////////////////////////////////////////////////////////
-// Name : Buffer 1 number of missed samples
-// Set when buffer 1 is full, but SW has not read out
-// the buffer completely
-////////////////////////////////////////////////////////////
- 
-always @(posedge m_axi_aclk)
-begin
-  case (state_cs)
-    // IDLE - Wait for the DMA start signal
-    IDLE: begin
-      buf1_missed_samp <= 32'h0;  
-      buf1_ms_lvl      <= 32'h0;
-    end    
-
-    default: begin
-      // increase counter until SW confirms buffer was read
-        if ((req_buf_addr_sel == 1 && (fifo_dis || full_immed)) && upsized_we && buf1_missed_samp < 32'hFFFFFFF && ~first_rst) // buffer1 is overflowing, there was a sample
-          buf1_missed_samp <= buf1_missed_samp+32'h1;
-        else if(req_buf_addr_sel_pedge) // number of missed samples is reset when writing into the buffer starts.
-          buf1_missed_samp <= 32'd0;
-
-        if (req_buf_addr_sel == 1 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf1_ms_lvl <= fifo_lvl;
-        else if(req_buf_addr_sel_pedge)
-          buf1_ms_lvl <= 'h0;
-    end
-  endcase
-end  
-
-////////////////////////////////////////////////////////////
 // Name : Buffer 1 Overflow
 // Set when buffer 1 is full and cannot be switched into 
 // when still in buffer 2.
@@ -700,34 +674,6 @@ begin
   endcase
 end  
 
-////////////////////////////////////////////////////////////
-// Name : Buffer 2 number of missed samples
-// Set when buffer 2 is full, but SW has not read out
-// the buffer completely
-////////////////////////////////////////////////////////////
- 
-always @(posedge m_axi_aclk)
-begin
-  case (state_cs)
-    // IDLE - Wait for the DMA start signal
-    IDLE: begin
-      buf2_missed_samp <= 32'h0;  
-      buf2_ms_lvl      <= 32'h0;
-    end    
-
-    default: begin
-        if ((req_buf_addr_sel == 0 && (fifo_dis || full_immed)) && upsized_we && buf2_missed_samp < 32'hFFFFFFF && ~first_rst) // buffer2 is overflowing, there was a sample
-          buf2_missed_samp <= buf2_missed_samp+32'h1;
-        else if(req_buf_addr_sel_nedge) // number of missed samples is reset when writing into the buffer starts.
-          buf2_missed_samp <= 32'd0;   
-
-        if (req_buf_addr_sel == 0 && axi_last_r2 && next_buf_full) // save FIFO level at the end of final transfer
-          buf2_ms_lvl <= fifo_lvl;
-        else if(req_buf_addr_sel_nedge)
-          buf2_ms_lvl <= 'h0;
-      end     
-  endcase
-end  
 ////////////////////////////////////////////////////////////
 // Name : Buffer 1 Overflow
 // Set when buffer 1 is full and cannot be switched into 

@@ -29,14 +29,14 @@ module gpio_dma_s2mm
   input  wire                           ctl_start_ext,
 
   //
-  output wire [31:0]                    buf1_ms_cnt,
-  output wire [31:0]                    buf2_ms_cnt,
   input  wire                           buf_sel_in,
   output wire                           buf_sel_out,
   input  wire [8:0]                     drop_i,
   input  wire                           flush_i,
   output wire [63:0]                    buf1_lost,
   output wire [63:0]                    buf2_lost,
+  output wire [63:0]                    buf1_wait,
+  output wire [63:0]                    buf2_wait,
   //                                        
   output wire [(AXI_ADDR_BITS-1):0]     m_axi_awaddr,     
   output wire [7:0]                     m_axi_awlen,      
@@ -84,11 +84,6 @@ wire                      fifo_dis;
 wire [1:0]                upsize_lvl;
 reg                       ctl_start_r;
 
-wire [32-1:0]             missed_samps_ch1, missed_samps_ch2;
-wire [ 2-1:0]             shift=2'h2;
-
-assign                    buf1_ms_cnt = missed_samps_ch1 << shift;
-assign                    buf2_ms_cnt = missed_samps_ch2 << shift;
 
 assign m_axi_wdata  = fifo_rd_data;
 
@@ -146,8 +141,6 @@ gpio_dma_s2mm_ctrl #(
   .req_data       (req_data),
   .req_we         (req_we), 
   .data_valid     (s_axis_tvalid),
-  .buf1_ms_cnt    (missed_samps_ch1),
-  .buf2_ms_cnt    (missed_samps_ch2),
   .buf_sel_in     (buf_sel_in),
   .buf_sel_out    (buf_sel_out),
   .fifo_dis       (fifo_dis),
@@ -157,6 +150,8 @@ gpio_dma_s2mm_ctrl #(
   .flush_i        (flush_i),
   .buf1_lost      (buf1_lost),
   .buf2_lost      (buf2_lost),
+  .buf1_wait      (buf1_wait),
+  .buf2_wait      (buf2_wait),
   .m_axi_awaddr   (m_axi_awaddr),       
   .m_axi_awlen    (m_axi_awlen),        
   .m_axi_awsize   (m_axi_awsize),       

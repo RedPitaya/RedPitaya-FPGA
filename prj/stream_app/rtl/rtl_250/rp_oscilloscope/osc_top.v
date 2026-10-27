@@ -68,12 +68,12 @@ module osc_top
   output wire [              32-1:0]      cfg_dma_sts_o           ,
 
 
-  output wire [              32-1:0]      buf1_ms_cnt_o           ,
-  output wire [              32-1:0]      buf2_ms_cnt_o           ,
   output wire [              64-1:0]      buf1_timestamp_o        ,
   output wire [              64-1:0]      buf2_timestamp_o        ,
   output wire [              64-1:0]      buf1_lost_o             ,
   output wire [              64-1:0]      buf2_lost_o             ,
+  output wire [              64-1:0]      buf1_wait_o             ,
+  output wire [              64-1:0]      buf2_wait_o             ,
 
   output wire [              32-1:0]      curr_wp_o               ,
   output wire [              32-1:0]      diag1_o                 ,
@@ -194,8 +194,6 @@ wire                        acq_tvalid;
 wire                        acq_tready;   
 wire                        acq_tlast;
 
-wire  [31:0]                buf1_ms_cnt;
-wire  [31:0]                buf2_ms_cnt;
 
 wire [S_AXIS_DATA_BITS-1:0] filt_tdata;   
 wire                        filt_tvalid;   
@@ -495,14 +493,14 @@ rp_dma_s2mm #(
   .ctl_start_o    (ctl_start_o),
   .ctl_start_ext  (external_trig_val),
   .use_8bit       (cfg_8bit_dat_i),
-  .buf1_ms_cnt    (buf1_ms_cnt_o),
-  .buf2_ms_cnt    (buf2_ms_cnt_o),
   .buf1_timestamp (buf1_timestamp_o),
   .buf2_timestamp (buf2_timestamp_o),
   .s_axis_drop    (acq_drop),
   .s_axis_flush   (sts_armed_o),
   .buf1_lost      (buf1_lost_o),
   .buf2_lost      (buf2_lost_o),
+  .buf1_wait      (buf1_wait_o),
+  .buf2_wait      (buf2_wait_o),
   .buf_sel_in     (buf_sel_in),
   .buf_sel_out    (buf_sel_out),
   .m_axi_awaddr   (m_axi_awaddr), 

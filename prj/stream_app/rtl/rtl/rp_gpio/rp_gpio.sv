@@ -231,6 +231,7 @@ reg  [16-1:0] cfg_trig_blocks;
 wire          sts_in_trig_taken;
 reg  [32-1:0] sts_in_trig_count;
 wire [64-1:0] in_buf1_lost, in_buf2_lost;
+wire [64-1:0] in_buf1_wait, in_buf2_wait;  // samples not written while waiting for a trigger
 
 // AXI handshake counters of both DMA engines, free running (registers 0xC8..0xD4)
 reg  [16-1:0] axi_aw_cnt, axi_b_cnt, axi_ar_cnt, axi_rlast_cnt;
@@ -260,8 +261,6 @@ reg [M_AXI_GPIO_ADDR_BITS-1:0]   cfg_dma_step;
 
 wire [32-1:0]                    cfg_ctrl_reg_in_o;
 wire [32-1:0]                    cfg_ctrl_reg_out_o;
-wire [32-1:0]                    buf1_ms_cnt;
-wire [32-1:0]                    buf2_ms_cnt;
 wire [M_AXI_GPIO_ADDR_BITS-1:0]   gpio_in_wp;
 wire [M_AXI_GPIO_ADDR_BITS-1:0]   gpio_out_rp;
 wire [ 5-1:0]                    cfg_sts_reg_in;
@@ -630,8 +629,6 @@ begin
     'hA4 : reg_rd_data <=                  cfg_buf1_adr_out;
     'hA8 : reg_rd_data <=                  cfg_buf2_adr_in;
     'hAC : reg_rd_data <=                  cfg_buf2_adr_out;
-    'hB0 : reg_rd_data <=                  buf1_ms_cnt;
-    'hB4 : reg_rd_data <=                  buf2_ms_cnt;
     'hB8 : reg_rd_data <=                  gpio_in_wp;
     'hBC : reg_rd_data <=                  gpio_out_rp;
     'hC0 : reg_rd_data <=                  cfg_dma_step;
@@ -643,10 +640,15 @@ begin
     'hD0 : reg_rd_data <=                  {axi_ar_cnt, axi_rlast_cnt};
     'hD4 : reg_rd_data <=                  axi_r_cnt;
     'hD8 : reg_rd_data <=                  sts_in_trig_count;
+    'hDC : reg_rd_data <=                  32'h7;  // features: bit 0 input block mode, bit 1 64 bit lost counters, bit 2 wait counters
     'hE0 : reg_rd_data <=                  in_buf1_lost[31: 0];
     'hE4 : reg_rd_data <=                  in_buf1_lost[63:32];
     'hE8 : reg_rd_data <=                  in_buf2_lost[31: 0];
     'hEC : reg_rd_data <=                  in_buf2_lost[63:32];
+    'hF0 : reg_rd_data <=                  in_buf1_wait[31: 0];
+    'hF4 : reg_rd_data <=                  in_buf1_wait[63:32];
+    'hF8 : reg_rd_data <=                  in_buf2_wait[31: 0];
+    'hFC : reg_rd_data <=                  in_buf2_wait[63:32];
 
     default : reg_rd_data <= '0;
   endcase
@@ -718,8 +720,6 @@ gpio_in_top #(
   .gpio_buf_size     (cfg_dma_buf_size),
   .gpio_buf1_adr     (cfg_buf1_adr_in),
   .gpio_buf2_adr     (cfg_buf2_adr_in),
-  .buf1_ms_cnt      (buf1_ms_cnt),
-  .buf2_ms_cnt      (buf2_ms_cnt),
   .gpio_wp          (gpio_in_wp),
   .dma_diags        (in_dma_diags),
   .cfg_trig_mode    (cfg_trig_mode[0]),
@@ -729,6 +729,8 @@ gpio_in_top #(
   .sts_trig_taken   (sts_in_trig_taken),
   .buf1_lost        (in_buf1_lost),
   .buf2_lost        (in_buf2_lost),
+  .buf1_wait        (in_buf1_wait),
+  .buf2_wait        (in_buf2_wait),
 
   // AXI
   .m_axi_gpio_awaddr     (m_axi_gpio_awaddr), 
@@ -789,8 +791,6 @@ gpio_out_top #(
   .gpio_buf_size    (cfg_dma_buf_size),
   .gpio_buf1_adr    (cfg_buf1_adr_out),
   .gpio_buf2_adr    (cfg_buf2_adr_out),
-  //.buf1_ms_cnt      (buf1_ms_cnt),
-  //.buf2_ms_cnt      (buf2_ms_cnt),
   .gpio_wp          (gpio_out_rp),
 
   // AXI

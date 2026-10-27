@@ -85,6 +85,10 @@ initial begin
   dut.U_reg_ctrl.write(32'h0C, 32'h12345);
   dut.U_reg_ctrl.read(32'h0C, d);
   check(d == 32'h2345, $sformatf("0x0C keeps 16 bits (0x%0X)", d));
+  dut.U_reg_ctrl.read(32'hDC, d);
+  check(d == 32'h7, $sformatf("0xDC features 0x%0X (7: block mode, 64 bit lost, wait)", d));
+  dut.U_reg_ctrl.read(32'hF0, d);
+  check(d == 0, $sformatf("0xF0 wait before input buffer 1 after reset (0x%0X)", d));
 
   if (errors == 0) $display("PASS rp_gpio_regs_tb"); else $display("FAIL rp_gpio_regs_tb: %0d", errors);
   $finish;
