@@ -88,6 +88,9 @@ module dac_cfg
    output wire [                  8-1:0]  cfg_ctrl_reg_chb_o,
    input  wire [                 32-1:0]  sts_cha_i,
    input  wire [                 32-1:0]  sts_chb_i,
+   output wire [                 32-1:0]  cfg_loop_cnt_o,      // normal mode repeats of buffer 1, 0 - endless
+   input  wire [                 32-1:0]  loop_played_cha_i,
+   input  wire [                 32-1:0]  loop_played_chb_i,
 
    output wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_dma_buf_size_o,
    output wire [M_AXI_DAC_ADDR_BITS-1:0]  cfg_buf1_adr_cha_o,
@@ -180,6 +183,12 @@ localparam DIAG_REG_ADDR1       = 12'h70;
 localparam DIAG_REG_ADDR2       = 12'h74;
 localparam DIAG_REG_ADDR3       = 12'h78;
 localparam DIAG_REG_ADDR4       = 12'h8C;
+localparam FEATURES_ADDR        = 12'h90;  // Read only: bit 0 normal mode (buffer 1 repeated by the DMA)
+localparam DMA_LOOP_CNT         = 12'h94;  // Normal mode repeats of buffer 1, 0 - until reset
+localparam DMA_LOOP_PLAYED_CHA  = 12'h98;  // Read only: repeats read out since the start
+localparam DMA_LOOP_PLAYED_CHB  = 12'h9C;
+
+localparam FEATURES             = 32'h1;
 localparam STATUS_REG           = 12'h100;   // status of FPGA clock
 localparam CLKSEL_REG           = 16'h1000;  // FPGA mode
 
@@ -213,6 +222,7 @@ reg [ 8-1:0]                    cfg_ctrl_reg_chb;
 reg                             cfg_dma_ctrl_we;
 
 reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_dma_buf_size;
+reg [                 32-1:0]   cfg_loop_cnt;
 reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf1_adr_cha;
 reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf1_adr_chb;
 reg [M_AXI_DAC_ADDR_BITS-1:0]   cfg_buf2_adr_cha;
@@ -249,7 +259,11 @@ assign axi_clk_regs =  (bus.addr[12-1:0] == DMA_CTRL_ADDR          ||
                         bus.addr[12-1:0] == DMA_BUF1_ADR_CHB       ||
                         bus.addr[12-1:0] == DMA_BUF2_ADR_CHB       ||
                         bus.addr[12-1:0] == DAC_CHA_CUR_RP         ||
-                        bus.addr[12-1:0] == DAC_CHB_CUR_RP           );
+                        bus.addr[12-1:0] == DAC_CHB_CUR_RP         ||
+                        bus.addr[12-1:0] == FEATURES_ADDR          ||
+                        bus.addr[12-1:0] == DMA_LOOP_CNT           ||
+                        bus.addr[12-1:0] == DMA_LOOP_PLAYED_CHA    ||
+                        bus.addr[12-1:0] == DMA_LOOP_PLAYED_CHB      );
 
 sys_bus_if bus (.clk (s_axi_reg_aclk), .rstn (s_axi_reg_aresetn));
 axi4_if #(.DW (32), .AW (REG_ADDR_BITS), .IW (ID_WIDTHS), .LW (4)) axi_gp (.ACLK (s_axi_reg_aclk), .ARESETn (s_axi_reg_aresetn));
@@ -418,6 +432,7 @@ begin
       cfg_ctrl_reg_chb    <=  8'h0;
 
       cfg_dma_buf_size    <= 32'h0;
+      cfg_loop_cnt        <= 32'h0;
       cfg_buf1_adr_cha    <= 32'h0;
       cfg_buf1_adr_chb    <= 32'h0;
       cfg_buf2_adr_cha    <= 32'h0;
@@ -427,6 +442,7 @@ begin
                                                                               cfg_ctrl_reg_chb   <= reg_wdat_axi[16-1: 8]; end
 
       if ((reg_ofs_axi[12-1:0] == DMA_BUF_SIZE_ADDR ) && reg_write_axi)       cfg_dma_buf_size   <= reg_wdat_axi;
+      if ((reg_ofs_axi[12-1:0] == DMA_LOOP_CNT      ) && reg_write_axi)       cfg_loop_cnt       <= reg_wdat_axi;
       if ((reg_ofs_axi[12-1:0] == DMA_BUF1_ADR_CHA  ) && reg_write_axi)       cfg_buf1_adr_cha   <= reg_wdat_axi;
       if ((reg_ofs_axi[12-1:0] == DMA_BUF1_ADR_CHB  ) && reg_write_axi)       cfg_buf1_adr_chb   <= reg_wdat_axi;
       if ((reg_ofs_axi[12-1:0] == DMA_BUF2_ADR_CHA  ) && reg_write_axi)       cfg_buf2_adr_cha   <= reg_wdat_axi;
@@ -452,6 +468,10 @@ begin
 
       DAC_CHA_CUR_RP:          begin reg_ack_axi = 1'b1;       reg_rdat_axi = cfg_cha_rp_i;                                      end
       DAC_CHB_CUR_RP:          begin reg_ack_axi = 1'b1;       reg_rdat_axi = cfg_chb_rp_i;                                      end
+      FEATURES_ADDR:           begin reg_ack_axi = 1'b1;       reg_rdat_axi = FEATURES;                                          end
+      DMA_LOOP_CNT:            begin reg_ack_axi = 1'b1;       reg_rdat_axi = cfg_loop_cnt;                                      end
+      DMA_LOOP_PLAYED_CHA:     begin reg_ack_axi = 1'b1;       reg_rdat_axi = loop_played_cha_i;                                 end
+      DMA_LOOP_PLAYED_CHB:     begin reg_ack_axi = 1'b1;       reg_rdat_axi = loop_played_chb_i;                                 end
 
       default :                begin reg_ack_axi = 1'b1;       reg_rdat_axi = {32{1'b0}} ;                                       end
    endcase
@@ -491,6 +511,7 @@ assign cfg_ctrl_reg_chb_o     = cfg_ctrl_reg_chb;
 assign cfg_dma_ctrl_we_o      = cfg_dma_ctrl_we;
 
 assign cfg_dma_buf_size_o     = cfg_dma_buf_size;
+assign cfg_loop_cnt_o         = cfg_loop_cnt;
 assign cfg_buf1_adr_cha_o     = cfg_buf1_adr_cha;
 assign cfg_buf2_adr_cha_o     = cfg_buf2_adr_cha;
 assign cfg_buf1_adr_chb_o     = cfg_buf1_adr_chb;

@@ -41,6 +41,10 @@ module rp_dma_mm2s_ctrl
 
   input                             dac_trig,
   input  [            8-1:0]        dac_ctrl_reg,
+  // Normal mode (mode 0): buffer 1 is played loop_cnt times, 0 - until reset, with no buffer swaps
+  input  [           32-1:0]        loop_cnt,
+  output reg [       32-1:0]        loop_played,  // repeats read out of memory since the start
+  input                             ds_drained,   // s_axis_aclk: the downsizer has put out its last sample
   //
   input  wire                       m_axi_dac_arready_i  ,
   input  wire                       m_axi_dac_rvalid_i   ,
@@ -61,6 +65,7 @@ localparam WAIT_DATA_RDY    = 4'd2;
 localparam SEND_DMA_REQ     = 4'd3;
 localparam WAIT_DATA_DONE   = 4'd4;
 localparam WAIT_BUF_FULL    = 4'd5;
+localparam LOOP_END         = 4'd6;  // normal mode: all repeats read, waiting for the output to drain
 
 // DMA control reg
 localparam CTRL_STRT            = 0;
@@ -80,6 +85,7 @@ localparam SEND_DMA_STATE1      = 5;
 localparam SEND_DMA_STATE2      = 6;
 localparam BUF1_FREE            = 7;
 localparam BUF2_FREE            = 8;
+localparam LOOP_DONE            = 9;  // normal mode: the last repeat has been put out, the DMA is idle
 
 localparam AXI_BURST_BYTES  = AXI_BURST_LEN*AXI_DATA_BITS/8;
 localparam FULL_WAIT = AXI_BURST_LEN*8; //4 samples, 2x slower read
@@ -128,6 +134,11 @@ wire [AXI_ADDR_BITS-1:0] req_addr = dac_rp_curr;
 reg  [AXI_ADDR_BITS-1:0] dac_rp_next;
 
 reg [AXI_ADDR_BITS-1:0] buf_final;
+// The size register is shared by both buffers and written when a buffer is armed: each buffer
+// keeps the size it was armed with, so arming a short last block does not cut the one being read.
+reg [AXI_ADDR_BITS-1:0] buf1_size;
+reg [AXI_ADDR_BITS-1:0] buf2_size;
+reg [AXI_ADDR_BITS-1:0] req_buf_size;
 
 //wire                     buf_ovr_limit = req_addr + AXI_BURST_BYTES >= (req_buf_addr+dac_buf_size); 
 //wire                     buf_ovr_limit = dac_rp_next >= buf_final; 
@@ -137,9 +148,73 @@ assign m_axi_dac_araddr_o = req_addr;
 assign dac_rp             = req_addr;
 assign m_axi_dac_rready_o = m_axi_rready;
 
+////////////////////////////////////////////////////////////
+// Normal mode: buffer 1 repeated by the DMA itself
+////////////////////////////////////////////////////////////
+
+// A reset waits for the read in flight: the request stays valid until accepted and its data is
+// taken, then the DMA goes idle. No new request is made once the reset is asked for.
+reg         reset_pend;
+wire        rst_req = reg_ctrl[CTRL_RESET] | reset_pend;
+
 always @(posedge m_axi_aclk)
 begin
-  buf_final   <= req_buf_addr+dac_buf_size-AXI_DATA_BITS/8;
+  if (m_axi_aresetn == 0 || state_cs == IDLE)
+    reset_pend <= 1'b0;
+  else if (reg_ctrl[CTRL_RESET])
+    reset_pend <= 1'b1;
+end
+
+wire        loop = ~mode;
+wire        loop_wrap = loop && (state_cs == SEND_DMA_REQ) && transf_end && final_transf;  // a repeat read out
+reg  [31:0] loop_left;   // repeats still to read, the current one included
+reg         loop_inf;
+reg         loop_last;   // the repeat being read is the last one; loop_left changes a buffer before it is used
+reg         loop_done;
+reg         drained_r1, drained_r2;
+reg  [4:0]  drained_cnt;
+wire        drained = &drained_cnt;  // the downsizer stayed drained for 32 clocks: no data on the way
+
+always @(posedge m_axi_aclk)
+begin
+  if (m_axi_aresetn == 0) begin
+    loop_left   <= 'h0;
+    loop_inf    <= 1'b0;
+    loop_played <= 'h0;
+  end else if (state_cs == IDLE && reg_ctrl[CTRL_STRT]) begin
+    loop_left   <= loop_cnt;
+    loop_inf    <= loop_cnt == 0;
+    loop_played <= 'h0;
+  end else if (loop_wrap) begin
+    loop_left   <= loop_left - 1;
+    loop_played <= loop_played + 1;
+  end
+  loop_last <= ~loop_inf && (loop_left == 1);
+end
+
+always @(posedge m_axi_aclk)
+begin
+  drained_r1 <= ds_drained;
+  drained_r2 <= drained_r1;
+  if (state_cs != LOOP_END || ~drained_r2)
+    drained_cnt <= 'h0;
+  else if (~drained)
+    drained_cnt <= drained_cnt + 1;
+end
+
+always @(posedge m_axi_aclk)
+begin
+  if (m_axi_aresetn == 0)
+    loop_done <= 1'b0;
+  else if (state_cs == IDLE && reg_ctrl[CTRL_STRT])
+    loop_done <= 1'b0;
+  else if (state_cs == LOOP_END && drained && ~rst_req)
+    loop_done <= 1'b1;
+end
+
+always @(posedge m_axi_aclk)
+begin
+  buf_final   <= req_buf_addr+req_buf_size-AXI_DATA_BITS/8;
   dac_rp_next <= dac_rp_curr + AXI_BURST_BYTES;
   buf_ovr_limit <= dac_rp_next >= buf_final; 
 end
@@ -271,7 +346,7 @@ begin
   if (m_axi_aresetn == 0) begin
     reg_sts <= 32'h0;
   end else begin
-    reg_sts[31:9] <= 'h0;
+    reg_sts[31:10] <= 'h0;
     reg_sts[END_STATE_BUF1]   <= (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0);
     reg_sts[READ_STATE_BUF1]  <= (state_cs == WAIT_DATA_RDY     && req_buf_addr_sel == 1'b0);
     reg_sts[END_STATE_BUF2]   <= (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1);
@@ -281,6 +356,7 @@ begin
     reg_sts[SEND_DMA_STATE2]  <= (state_cs == SEND_DMA_REQ      && req_buf_addr_sel == 1'b1);
     reg_sts[BUF1_FREE]        <= req_buf_addr_sel == 1'b1 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0) || (state_cs == IDLE);
     reg_sts[BUF2_FREE]        <= req_buf_addr_sel == 1'b0 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1) || (state_cs == IDLE);
+    reg_sts[LOOP_DONE]        <= loop_done;
 
   end
 end
@@ -313,6 +389,7 @@ begin
     SEND_DMA_REQ:   state_ascii = "SEND_DMA_REQ";       
     WAIT_DATA_DONE: state_ascii = "WAIT_DATA_DONE";
     WAIT_BUF_FULL:  state_ascii = "WAIT_BUF_FULL";  
+    LOOP_END:       state_ascii = "LOOP_END";
   endcase
 end
 
@@ -335,7 +412,7 @@ begin
     
     // FIFO_RST - Reset the data FIFO
     FIFO_RST: begin
-      if (reg_ctrl[CTRL_RESET])
+      if (rst_req)
         state_ns = IDLE;
       else if (fifo_rst_cnt == 63) begin
         state_ns = WAIT_DATA_RDY;
@@ -344,7 +421,7 @@ begin
     
     // WAIT_DATA_RDY - Wait for the data to be buffered before sending the request
     WAIT_DATA_RDY: begin
-      if (reg_ctrl[CTRL_RESET])
+      if (rst_req)
         state_ns = IDLE;
       else begin
         if (fifo_full_reg)
@@ -359,10 +436,12 @@ begin
     // SEND_DMA_REQ - Send the request 
     SEND_DMA_REQ: begin
 
-        if (reg_ctrl[CTRL_RESET])
-          state_ns = IDLE;
-        else if (transf_end) begin
-          if (next_buf_nfull | final_transf) // if next transfer results in overwriting the buffer, wait until the buffer is completely read out.
+        if (transf_end) begin
+          if (rst_req) // the reset waits for the end of the burst
+           state_ns = IDLE;
+          else if (loop && final_transf) // normal mode: start the buffer over, or finish after the last repeat
+           state_ns = loop_last ? LOOP_END : WAIT_DATA_RDY;
+          else if (next_buf_nfull | final_transf) // if next transfer results in overwriting the buffer, wait until the buffer is completely read out.
            state_ns = WAIT_BUF_FULL;
           else
            state_ns = WAIT_DATA_RDY;     
@@ -371,12 +450,18 @@ begin
     end    
     
     WAIT_BUF_FULL: begin
-      if (reg_ctrl[CTRL_RESET])
+      if (rst_req)
           state_ns = IDLE;
       else if (next_buf_nfull_r)
         state_ns = WAIT_DATA_RDY;     
       else if (~next_buf_nfull) // if next buffer is full, then wait
         state_ns = FIFO_RST; // go back to filling FIFOs
+    end
+
+    // LOOP_END - no more reads; idle (output reset to 0) once the last sample is out
+    LOOP_END: begin
+      if (rst_req || drained)
+        state_ns = IDLE;
     end
 
   endcase
@@ -463,7 +548,7 @@ begin
       if (fifo_rst_cnt == 63) begin
         fifo_rst_cntdwn <= 1'b0;
       end
-      if (reg_ctrl[CTRL_RESET])
+      if (rst_req)
         fifo_rst_cntdwn <= 1'b0;
     end     
 
@@ -510,7 +595,7 @@ begin
     default: begin
         if (reg_ctrl[CTRL_BUF1_RDY] || reg_ctrl[CTRL_BUF2_RDY])
             next_buf_nfull <= 0;
-        else if (buf_ovr_limit & state_cs == SEND_DMA_REQ) begin
+        else if (~loop & buf_ovr_limit & state_cs == SEND_DMA_REQ) begin
           if (((req_buf_addr_sel == 0) && ~buf2_rdy) || ((req_buf_addr_sel == 1) && ~buf1_rdy)) begin // data loss is occuring
             next_buf_nfull <= 1;  
           end
@@ -601,8 +686,10 @@ begin
       end
 
       SEND_DMA_REQ: begin
-        if (transf_end) begin
-          if (final_transf || dac_trig) begin
+        if (loop_wrap) // normal mode: back to the start of buffer 1
+          dac_rp_curr <= req_buf_addr;
+        else if (transf_end) begin
+          if (~loop && (final_transf || dac_trig)) begin
             if (swap_buf_rdy) // only start reading the next buffer if it's full
               dac_rp_curr <= swap_buf_adr;
           end else begin
@@ -620,6 +707,14 @@ begin
   end
 end
 
+always @(posedge m_axi_aclk)
+begin
+  if (state_cs == IDLE || reg_ctrl[CTRL_BUF1_RDY])
+    buf1_size <= dac_buf_size;
+  if (reg_ctrl[CTRL_BUF2_RDY])
+    buf2_size <= dac_buf_size;
+end
+
 ////////////////////////////////////////////////////////////
 // Name : Request Buffer Address Select
 // Selects the current buffer to use in memory.
@@ -631,15 +726,18 @@ begin
     // IDLE - Wait for the DMA start signal
     IDLE: begin
       req_buf_addr <= dac_buf1_adr;  
+      req_buf_size <= dac_buf_size;
     end  
     
     SEND_DMA_REQ: begin
-      if (final_transf) begin
+      if (~loop && final_transf) begin
         if ((req_buf_addr_sel == 0) && buf2_rdy) begin //only start writing to buf2 if it's full
           req_buf_addr <= dac_buf2_adr;          
+          req_buf_size <= buf2_size;
         end 
         if ((req_buf_addr_sel == 1) && buf1_rdy) begin //only start writing to buf1 if it's full
           req_buf_addr <= dac_buf1_adr;
+          req_buf_size <= buf1_size;
         end   
       end
     end       
@@ -649,9 +747,11 @@ begin
         // Swap the buffer if we have reached the end of the current one
           if ((req_buf_addr_sel == 0) && buf2_rdy) begin // only switch addresses when next buffer is read out
             req_buf_addr <= dac_buf2_adr;          
+            req_buf_size <= buf2_size;
           end 
           if ((req_buf_addr_sel == 1) && buf1_rdy) begin
             req_buf_addr <= dac_buf1_adr;
+            req_buf_size <= buf1_size;
           end  
         end      
       end   
@@ -672,7 +772,7 @@ begin
     end  
     
     SEND_DMA_REQ: begin
-      if (final_transf) begin
+      if (~loop && final_transf) begin
         if ((req_buf_addr_sel == 1) && buf1_rdy)
           req_buf_addr_sel <= 1'b0;
         
@@ -700,6 +800,8 @@ begin
     SEND_DMA_REQ: begin
       if (m_axi_dac_rlast_i & buf_ovr_limit)
         final_transf <= 'h1;
+      else if (loop_wrap)
+        final_transf <= 0;
     end  
     
     WAIT_BUF_FULL: begin // only happens when exiting FIFO reset state after data loss
@@ -815,7 +917,7 @@ begin
   end else begin
     case (state_cs) 
       WAIT_DATA_RDY: begin // the address for this read transfer is ready
-        if (fifo_wait_full) begin
+        if (fifo_wait_full && ~rst_req) begin
           m_axi_dac_arvalid_o <= 1;  
         end 
       end

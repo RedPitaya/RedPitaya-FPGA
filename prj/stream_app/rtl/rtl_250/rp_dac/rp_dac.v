@@ -151,6 +151,9 @@ reg  [31:0]                     errs_cnt_chb;
 
 wire [31:0]                     sts_cha; 
 wire [31:0]                     sts_chb; 
+wire [31:0]                     cfg_loop_cnt;
+wire [31:0]                     loop_played_cha;
+wire [31:0]                     loop_played_chb;
 
 wire [31:0]                     diag1_ch1, diag1_ch2;
 wire [31:0]                     diag2_ch1, diag2_ch2;
@@ -284,6 +287,9 @@ dac_cfg #(
   .cfg_dma_ctrl_we_o        (cfg_dma_ctrl_we),
   .sts_cha_i                (sts_cha),
   .sts_chb_i                (sts_chb),
+  .cfg_loop_cnt_o           (cfg_loop_cnt),
+  .loop_played_cha_i        (loop_played_cha),
+  .loop_played_chb_i        (loop_played_chb),
 
   .cfg_dma_buf_size_o       (cfg_dma_buf_size),
   .cfg_buf1_adr_cha_o       (cfg_buf1_adr_cha),
@@ -346,6 +352,8 @@ dac_top #(
   .dac_rp           (cfg_cha_rp),
   .dac_trig         (cfg_trig_mask),
   .dac_ctrl_reg     (cfg_ctrl_reg_cha),
+  .loop_cnt         (cfg_loop_cnt),
+  .loop_played      (loop_played_cha),
   .ctrl_val         (cfg_dma_ctrl_we),
   .dac_buf_size     (cfg_dma_buf_size),
   .dac_buf1_adr     (cfg_buf1_adr_cha),
@@ -411,6 +419,8 @@ dac_top #(
   .dac_rp           (cfg_chb_rp),
   .dac_trig         (cfg_trig_mask),
   .dac_ctrl_reg     (cfg_ctrl_reg_chb),
+  .loop_cnt         (cfg_loop_cnt),
+  .loop_played      (loop_played_chb),
   .ctrl_val         (cfg_dma_ctrl_we),
   .dac_buf_size     (cfg_dma_buf_size),
   .dac_buf1_adr     (cfg_buf1_adr_chb),

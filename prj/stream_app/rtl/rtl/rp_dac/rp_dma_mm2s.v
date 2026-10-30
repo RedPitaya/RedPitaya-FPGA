@@ -32,6 +32,8 @@ module rp_dma_mm2s
 
   input                                 dac_trig,
   input  [ 8-1:0]                       dac_ctrl_reg,
+  input  [32-1:0]                       loop_cnt,
+  output [32-1:0]                       loop_played,
   //
   output wire [AXIS_DATA_BITS-1: 0]     dac_rdata_o,
   output wire                           dac_rvalid_o,
@@ -77,6 +79,7 @@ localparam FIFO_MAX      = 256-2;
 
 wire                      fifo_rst;
 wire                      downsize_rst;
+wire                      ds_drained;
 
 reg  [AXI_DATA_BITS-1:0]  fifo_wr_data; 
 reg                       fifo_wr_we;
@@ -141,6 +144,9 @@ rp_dma_mm2s_ctrl #(
   .dac_buf2_adr     (dac_buf2_adr),
   .dac_trig         (dac_trig),
   .dac_ctrl_reg     (dac_ctrl_reg),
+  .loop_cnt         (loop_cnt),
+  .loop_played      (loop_played),
+  .ds_drained       (ds_drained),
   .diag_reg         (diag_reg),
   .diag_reg2        (diag_reg2),
   .fifo_rst_o       (fifo_rst),
@@ -184,7 +190,8 @@ rp_dma_mm2s_downsize #(
   .trigger_pulse_i(trigger_pulse_i),
   .armed_o        (armed_o),
   .m_axis_tdata   (dac_rdata_o),
-  .m_axis_tvalid  (dac_rvalid_o));      
+  .m_axis_tvalid  (dac_rvalid_o),
+  .drained_o      (ds_drained));      
 
 
 ////////////////////////////////////////////////////////////

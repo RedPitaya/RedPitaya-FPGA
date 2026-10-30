@@ -21,7 +21,8 @@ module rp_dma_mm2s_downsize
   output reg                      armed_o,
 
   output reg [AXIS_DATA_BITS-1:0] m_axis_tdata,
-  output reg                      m_axis_tvalid
+  output reg                      m_axis_tvalid,
+  output reg                      drained_o      // the FIFO ran empty and the last sample is out
 );
 
 localparam NUM_SAMPS      = AXI_DATA_BITS/8;   // how many samples in one read from FIFO
@@ -166,6 +167,9 @@ begin
     end
   endcase
 end
+
+always @(posedge clk)
+  drained_o <= state_cs == EMPTY_W;
 
 always @(posedge clk)
 begin

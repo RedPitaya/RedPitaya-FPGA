@@ -65,3 +65,8 @@ else
     docker run --rm -v /dev/null:/lib/x86_64-linux-gnu/libudev.so.1:ro -v "$FPGA:$FPGA" -v "$WORK:$WORK" --user "$(id -u):$(id -g)" -e HOME=/tmp "$IMAGE" \
         bash -lc "export PATH=/opt/Xilinx/2025.1/Vivado/bin:\$PATH; $script"
 fi
+# DAC DMA normal mode (buffer repeated by the DMA), on both RTL variants with that DMA
+for v in rtl rtl_250; do
+    mkdir -p "$WORK/dac_$v"
+    VARIANT=$v WORK="$WORK/dac_$v" "$HERE/dac_loop.sh"
+done

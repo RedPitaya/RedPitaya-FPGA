@@ -49,6 +49,8 @@ module dac_top
 
   input  [TRIG_SRC_NUM-1:0]               dac_trig,
   input  [ 8-1:0]                         dac_ctrl_reg,
+  input  [32-1:0]                         loop_cnt,
+  output [32-1:0]                         loop_played,
 
   output [DAC_DATA_BITS-1:0]              dac_data_o,
   output [32-1:0]                         diag_reg,
@@ -162,6 +164,8 @@ rp_dma_mm2s #(
 
   .dac_trig         (ctl_trg),
   .dac_ctrl_reg     (dac_ctrl_reg),
+  .loop_cnt         (loop_cnt),
+  .loop_played      (loop_played),
 
   .dac_rdata_o      (dac_data_raw),
   .dac_rvalid_o     (dac_rvalid),
