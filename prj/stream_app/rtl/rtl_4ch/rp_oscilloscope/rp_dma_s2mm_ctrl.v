@@ -46,6 +46,7 @@ module rp_dma_s2mm_ctrl
   input  wire [15:0]                wait_add,       // the part of lost_add dropped while waiting for a trigger
   output wire                       first_rst_o,    // the FIFO reset after the start: words dropped then are not lost
   input  wire                       flush_i,        // no more data before the next trigger: send a last full burst
+  input  wire                       series_mode_i,  // block mode: the data comes in series, each one ends with the arm (flush_i)
   output reg  [63:0]                buf1_lost,      // samples lost before buffer 1, latched with its timestamp
   output reg  [63:0]                buf2_lost,
   output reg  [63:0]                buf1_wait,      // samples not written while waiting for a trigger before buffer 1
@@ -78,6 +79,7 @@ localparam SEND_DMA_REQ     = 3'd3;
 localparam WAIT_DATA_DONE   = 3'd4;
 localparam WAIT_BUF_FULL    = 3'd5;
 localparam BUF_FILLING      = 3'd6;
+localparam SERIES_WAIT      = 3'd7;  // block mode: the rest of a series that lost data is dropped
 
 localparam CTRL_STRT        = 0;  // Control - Bit[0] : Start DMA
 localparam CTRL_INTR_ACK    = 1;  // Control - Bit[1] : Interrupt ACK
@@ -205,6 +207,21 @@ assign dat_ctrl_req_data = m_axi_awlen+1;
 assign dat_ctrl_req_we   = (m_axi_awvalid & m_axi_awready) && ~fifo_dis; // writing data buffer is only enabled when not waiting on clearing of the next buffer. 
         
 ////////////////////////////////////////////////////////////
+// Name : Series of the block mode
+// A series that lost data (the FIFO reset, the next buffer not free) is not written further:
+// its rest is dropped (counted as lost) and the next series starts the free buffer, so every
+// buffer stays a whole number of series. Without it the buffers stay out of step with the series
+// for good. flush_i and series_mode_i come from the stream clock domain.
+////////////////////////////////////////////////////////////
+
+reg  [1:0] series_mode_s, flush_s;
+always @(posedge m_axi_aclk) begin
+  series_mode_s <= {series_mode_s[0], series_mode_i};
+  flush_s       <= {flush_s[0], flush_i};
+end
+wire series_on = series_mode_s[1] && ~flush_s[1];  // a series is being written
+
+////////////////////////////////////////////////////////////
 // Name : State machine seq logic
 // Sets the current state to the next state.
 ////////////////////////////////////////////////////////////
@@ -278,6 +295,7 @@ begin
     WAIT_DATA_DONE: state_ascii = "WAIT_DATA_DONE";
     WAIT_BUF_FULL:  state_ascii = "WAIT_BUF_FULL";  
     BUF_FILLING:    state_ascii = "BUF_FILLING";  
+    SERIES_WAIT:    state_ascii = "SERIES_WAIT";
   endcase
 end
 
@@ -305,6 +323,8 @@ begin
       else if (fifo_rst_cnt == 31) begin
         if (next_buf_full)
           state_ns = WAIT_BUF_FULL;
+        else if (series_on)
+          state_ns = SERIES_WAIT;
         else
           state_ns = BUF_FILLING;
       end
@@ -353,8 +373,15 @@ begin
       if (reg_ctrl[CTRL_RESET])
           state_ns = IDLE;
       else if (~next_buf_full) begin // if next buffer is full, then wait
-        state_ns = BUF_FILLING; // go back to filling FIFOs
+        state_ns = series_on ? SERIES_WAIT : BUF_FILLING; // go back to filling FIFOs
       end
+    end
+
+    SERIES_WAIT: begin
+      if (reg_ctrl[CTRL_RESET])
+          state_ns <= IDLE;
+      else if (~series_on)
+        state_ns = BUF_FILLING;
     end
 
     BUF_FILLING: begin
@@ -616,7 +643,11 @@ begin
       end
       
     WAIT_BUF_FULL: begin
-        fifo_dis <= next_buf_full; // disable signal
+        fifo_dis <= next_buf_full || series_on; // disable signal
+      end
+
+    SERIES_WAIT: begin
+        fifo_dis <= 1'b1;
       end
 
     default: begin

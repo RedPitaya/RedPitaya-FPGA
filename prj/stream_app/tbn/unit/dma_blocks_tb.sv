@@ -6,10 +6,11 @@
 // start with position 0 and hold one series in order. A slow consumer acknowledges some
 // buffers late: the DMA overflows at the start of a series and drops its first samples
 // (an overflow: lost above wait).
-// A buffer out of step with the series before any overflow is a FAIL. After an overflow the
-// DMA buffers stay out of step for good (the acquisition counts the series by the samples it
-// sends, the DMA fills a buffer by the words it writes): KNOWN until fixed. Also KNOWN: the
-// full flag of a buffer comes up to a burst before its last word reaches the memory.
+// A buffer out of step with the series is a FAIL, also after an overflow: the DMA drops the
+// rest of a series that lost data (SERIES_WAIT), so the next series starts the free buffer
+// (before, the acquisition counted the series by the samples it sent and the DMA closed a
+// buffer by the words it wrote, and the buffers stayed out of step for good).
+// KNOWN: the full flag of a buffer comes up to a burst before its last word reaches the memory.
 `timescale 1ns / 1ps
 
 module dma_blocks_tb;
@@ -82,7 +83,7 @@ rp_dma_s2mm #(.AXI_ADDR_BITS(32), .AXI_DATA_BITS(64), .AXIS_DATA_BITS(16), .AXI_
   .timestamp_counter (ts), .timestamp_init (64'd0), .timestamp_init_we (1'b0),
   .ctl_start_o (), .ctl_start_ext (1'b0), .use_8bit (1'b0),
   .buf1_timestamp (buf1_ts), .buf2_timestamp (buf2_ts),
-  .s_axis_drop (sdrop), .s_axis_flush (flush), .buf1_lost (buf1_lost), .buf2_lost (buf2_lost),
+  .s_axis_drop (sdrop), .s_axis_flush (flush), .s_axis_series (1'b1), .buf1_lost (buf1_lost), .buf2_lost (buf2_lost),
   .buf1_wait (buf1_wait), .buf2_wait (buf2_wait),
   .buf_sel_in (1'b0), .buf_sel_out (),
   .m_axi_awaddr (awaddr), .m_axi_awlen (awlen), .m_axi_awsize (), .m_axi_awburst (),
@@ -144,12 +145,12 @@ task automatic check_buf(input int unsigned addr, input [63:0] lost, input int i
     end
   end
   if (s0[9:0] != 0 || bad) begin
+    errors++;
     if (after_hole)
       shifted++;
-    else begin
-      errors++;
+    if (errors <= 5) begin
       $display("FAIL buffer %0d: starts at position %0d of series %0d, %0d samples out of order (first at %0d), lost %0d%s",
-               idx, s0[9:0], s0[15:10], bad, first_bad, lost, "");
+               idx, s0[9:0], s0[15:10], bad, first_bad, lost, after_hole ? ", after an overflow" : "");
     end
   end
 endtask
@@ -208,7 +209,7 @@ endtask
 initial begin
   run(8, 20, 0);    // no overflow: every buffer is one series
   run(8, 40, 20);   // late ACKs: overflows at the start of a series
-  if (shifted) $display("KNOWN %0d of %0d buffers out of step with the series after an overflow (block mode)", shifted, checks);
+  if (shifted) $display("FAIL %0d of %0d buffers out of step with the series after an overflow", shifted, checks);
   if (early)   $display("KNOWN %0d of %0d buffers full up to %0d clocks before their last word is written", early, checks, early_max);
   if (errors == 0) $display("PASS dma_blocks_tb (%0d buffers checked)", checks);
   else             $display("FAIL dma_blocks_tb: %0d errors in %0d buffers", errors, checks);

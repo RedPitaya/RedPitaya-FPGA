@@ -444,6 +444,7 @@ rp_dma_s2mm #(
   .buf2_timestamp (buf2_timestamp_o),
   .s_axis_drop    (acq_drop),
   .s_axis_flush   (sts_armed_o),
+  .s_axis_series  (cfg_trigger_mode_i && (cfg_trig_blocks_i != 16'd0)),
   .buf1_lost      (buf1_lost_o),
   .buf2_lost      (buf2_lost_o),
   .buf1_wait      (buf1_wait_o),

@@ -3,27 +3,6 @@
 Found with the streaming tests of redpitaya-regress (`streamtest.py` `test_trigger`, 2026-11-02,
 bitstreams of d12ee3e) and the unit benches in `tbn/unit`.
 
-## Scope DMA buffers out of step with the series after an overflow (block mode)
-
-In the block mode the acquisition (`rp_oscilloscope/osc_aquire.v`) counts a series by the
-samples it sends (`blk_rem`); the DMA (`rp_dma_s2mm_ctrl.v`) closes a buffer by its address, i.e.
-by the words it writes. When the next buffer is not free at the start of a series, the DMA resets
-its FIFO and drops the first L samples (`FIFO_RST`, `WAIT_BUF_FULL`, `fifo_dis`); the series still
-ends after its length, the buffer gets only the rest and is filled up by the next series. From
-then on every buffer holds the end of one series and the start of the next (offset L, for good).
-The data and the lost/wait counts stay right; a client that takes a buffer for a series does not.
-
-- Seen on rp31 (125-14 TI, `rtl_250`, L = 524) and rp38 (125-14 Gen2, `rtl`, L = 4).
-- Reproduced by `tbn/unit/dma_blocks_tb.sv` (rtl variant), reported there as KNOWN.
-- osc_aquire raises `tlast` only at the end of a normal mode capture; the DMA sees the end of a
-  series only as `s_axis_flush` (armed) and the drop strobes.
-- Possible fix: in the block mode, once a word of a series is lost (rejected by the FIFO, or the
-  FIFO reset while a series runs), drop the rest of the series up to the next arm; the next
-  series then starts at the start of the free buffer. Needs a block mode input to the DMA (in the
-  continuous mode there is no series end). A loss in the middle of a buffer (the FIFO full under
-  AXI stalls) also needs the write address back at the start of the buffer. In rtl, rtl_250 and
-  rtl_4ch.
-
 ## The full flag of a buffer comes before its last burst is written
 
 `buf1_full` / `buf2_full` (and the buffer switch with its interrupt) are set when the request
@@ -33,6 +12,15 @@ address reaches the last burst of the buffer, before the data of that burst is i
 may read up to 64 old samples at its end; at a high decimation that is a long time. Not seen on
 the boards yet (the server reads the buffers later through its ring). Reported as KNOWN by
 `dma_blocks_tb`.
+
+## dma_ts_tb fails in its run with gaps and overflows, depending on the seed
+
+The last run of `tbn/unit/dma_ts_tb` (gaps and late ACKs, continuous mode) reports a buffer whose
+wait is not the dropped slots before it and whose lost count is not the gap in the data (2 to 4
+errors). At HEAD before the block mode fix it fails with 3 of the seeds 1..4 (`xsim -sv_seed`) and
+passes with the default one; with the fix the default seed fails too (another random sequence: a
+new process in the DMA). The lost/wait accounting after an overflow in the middle of a gap is to
+be looked at.
 
 ## 250-12: lost scope interrupts at about 3815 buffers/s
 

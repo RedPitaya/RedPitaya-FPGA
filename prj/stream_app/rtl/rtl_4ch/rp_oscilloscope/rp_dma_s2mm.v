@@ -34,6 +34,7 @@ module rp_dma_s2mm
   output wire [63:0]                    buf2_timestamp,
   input  wire                           s_axis_drop,
   input  wire                           s_axis_flush,
+  input  wire                           s_axis_series,  // block mode: series that end with the arm (s_axis_flush)
   output wire [63:0]                    buf1_lost,
   output wire [63:0]                    buf2_lost,
   output wire [63:0]                    buf1_wait,
@@ -200,6 +201,7 @@ rp_dma_s2mm_ctrl #(
   .wait_add       (wait_add),
   .first_rst_o    (first_rst),
   .flush_i        (s_axis_flush),
+  .series_mode_i  (s_axis_series),
   .buf1_lost      (buf1_lost),
   .buf2_lost      (buf2_lost),
   .buf1_wait      (buf1_wait),
