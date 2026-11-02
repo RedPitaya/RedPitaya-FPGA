@@ -47,17 +47,20 @@ xsim gout_tb -R | grep -E '^(RLE|trigger|FAIL|PASS)'
 xvlog -sv \$LIB \$G/gpio_in_top.sv \$G/rle_rev.sv \$G/gpio_out_top.sv \$G/rp_gpio.sv $FPGA/rtl/rtl/debounce.sv $HERE/rp_gpio_regs_tb.sv > regs.log
 xelab -relax -debug off -timescale 1ns/1ps -L fifo_generator_v13_2_13 -L unisims_ver -L xpm rp_gpio_regs_tb glbl -s regs_tb >> regs.log
 xsim regs_tb -R | grep -E '^(ok|FAIL|PASS)'
-# scope DMA buffer timestamps: own directory, the scope FIFO IPs share their names with the GPIO ones
+# scope DMA buffer timestamps and the block mode buffers: own directory, the scope FIFO IPs share their names with the GPIO ones
 mkdir -p dma/sip && cd dma
 cp -r $RTL/rtl/rp_oscilloscope/fifo_axi_data $RTL/rtl/rp_oscilloscope/fifo_axi_req sip/
 sed -e 's#gip/#sip/#g' ../gip/gen.tcl > sip/gen.tcl
 vivado -mode batch -nojournal -nolog -source sip/gen.tcl > sip.log 2>&1
 O=$RTL/rtl/rp_oscilloscope
-xvlog -sv $HERE/dma_ts_tb.sv > dma.log
+xvlog -sv $HERE/dma_ts_tb.sv $HERE/dma_blocks_tb.sv > dma.log
 xvlog \$O/rp_dma_s2mm.v \$O/rp_dma_s2mm_ctrl.v \$O/rp_dma_s2mm_data_ctrl.v \$O/rp_dma_s2mm_upsize.v \
       sip/fifo_axi_data/sim/fifo_axi_data.v sip/fifo_axi_req/sim/fifo_axi_req.v sip/export/fifo_axi_data/xsim/glbl.v >> dma.log
 xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dma_ts_tb glbl -s dma_tb >> dma.log
 xsim dma_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
+# block mode, one buffer per trigger: the buffers against the series after an overflow
+xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dma_blocks_tb glbl -s blk_tb >> dma.log
+xsim blk_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
 "
 if command -v xvlog >/dev/null; then
     bash -c "$script"
