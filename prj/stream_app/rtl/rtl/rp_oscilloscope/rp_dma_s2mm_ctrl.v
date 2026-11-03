@@ -47,6 +47,10 @@ module rp_dma_s2mm_ctrl
   output wire                       first_rst_o,    // the FIFO reset after the start: words dropped then are not lost
   input  wire                       flush_i,        // no more data before the next trigger: send a last full burst
   input  wire                       series_mode_i,  // block mode: the data comes in series, each one ends with the arm (flush_i)
+  input  wire                       drop_i,         // block mode: the series is dropped from here on (stream clock domain)
+  output wire                       drop_busy_o,    // the drop is not done on the AXI side yet
+  output wire                       req_full_o,     // the request FIFO is full (stream clock domain)
+  input  wire                       req_keep_i,     // the burst of the request was written to the data FIFO
   output reg  [63:0]                buf1_lost,      // samples lost before buffer 1, latched with its timestamp
   output reg  [63:0]                buf2_lost,
   output reg  [63:0]                buf1_wait,      // samples not written while waiting for a trigger before buffer 1
@@ -131,6 +135,7 @@ wire [1:0]                buf_first_beat; // first beat of buffer 1 (bit 0) or 2
 reg                       fifo_rd_re;
 wire                      fifo_empty;
 reg                       next_buf_full;
+wire                      next_free;                 // the buffer after the current one is not full
 reg                       buf1_full_d, buf2_full_d;  // the interrupt is set on a buffer full edge
 reg                       fifo_rst_cntdwn;
 reg                       transf_end;
@@ -177,13 +182,13 @@ fifo_axi_req U_fifo_axi_req(
   .rst    (fifo_rst),    
   .din    (fifo_wr_data),     
   .wr_en  (fifo_wr_we),  
-  .full   (),  
+  .full   (req_full_o),
   .dout   (fifo_rd_data),   
   .rd_en  (fifo_rd_re), 
   .empty  (fifo_empty));
   
 assign fifo_wr_data = {2'b00, req_data};
-assign fifo_wr_we   = req_we && ~fifo_dis; // writing request buffer is only enabled when not waiting on clearing of the next buffer. 
+assign fifo_wr_we   = req_we && ~fifo_dis && ~drop_i && req_keep_i; // writing request buffer is only enabled when not waiting on clearing of the next buffer, nor in a series drop, nor for a dropped burst
 
 ////////////////////////////////////////////////////////////
 // Name : Data Control
@@ -221,6 +226,56 @@ always @(posedge m_axi_aclk) begin
   flush_s       <= {flush_s[0], flush_i};
 end
 wire series_on = series_mode_s[1] && ~flush_s[1];  // a series is being written
+// Block mode: when the next buffer is not free the DMA waits without a FIFO reset, its input
+// disabled: a word not taken then is lost at the FIFO input, where every channel sees it and
+// drops the series (series drop below). The reset threw away words of the next series already
+// taken, unseen by the other channels, and the channels ended up a buffer apart. (The FIFO taking
+// data on while waiting keeps a backlog of up to a series: the lost and wait counts are latched
+// at the first request of a buffer, and a late one took the wait of the next pause as well.)
+wire blk_mode  = series_mode_s[1];
+assign next_free = req_buf_addr_sel ? ~buf1_full : ~buf2_full;
+
+////////////////////////////////////////////////////////////
+// Name : Series drop of the block mode
+// When any channel loses a word of a series, every channel stops writing that series at the
+// same word (drop_i, stream clock domain, rp_dma_s2mm). Here the requests of the words before
+// it are sent, then the FIFO is reset (the words of the last, incomplete burst) and the buffer
+// that was being filled is started again from its beginning: its words are counted as lost and
+// its lost and wait marks go back to those of the buffer before. So the channels keep the same
+// series in the buffers of one index, also when one port stalls and only its FIFO overflows.
+// drop_busy_o holds the stream side in the drop until this is done.
+////////////////////////////////////////////////////////////
+
+reg  [1:0] drop_s;
+reg        drop_d, drop_pend, drop_rew;
+reg  [3:0] drop_wait;
+wire       drop_go;
+wire       rew_now;
+wire       rew_part;
+always @(posedge m_axi_aclk) begin
+  drop_s <= {drop_s[0], drop_i};
+  drop_d <= drop_s[1];
+  if ((m_axi_aresetn == 0) || (state_cs == IDLE)) begin
+    drop_pend <= 1'b0;
+    drop_rew  <= 1'b0;
+    drop_wait <= 4'd0;
+  end else begin
+    if (drop_s[1] && ~drop_d) begin
+      drop_pend <= 1'b1;
+      drop_wait <= 4'd0;  // the requests of the words before the drop cross into this clock domain
+    end else if (drop_pend && (drop_wait != 4'd15))
+      drop_wait <= drop_wait + 4'd1;
+    if (drop_go) begin
+      drop_pend <= 1'b0;
+      drop_rew  <= 1'b1;
+    end
+    if (rew_now)
+      drop_rew  <= 1'b0;
+  end
+end
+// every request sent, waiting for data or for a request: the rest in the FIFO is the dropped burst
+assign drop_go     = drop_pend && (drop_wait == 4'd15) && fifo_empty && ((state_cs == BUF_FILLING) || (state_cs == WAIT_DATA_RDY));
+assign drop_busy_o = drop_pend || drop_rew;
 
 ////////////////////////////////////////////////////////////
 // Name : State machine seq logic
@@ -322,7 +377,7 @@ begin
       if (reg_ctrl[CTRL_RESET])
         state_ns = IDLE;
       else if (fifo_rst_cnt == 31) begin
-        if (next_buf_full)
+        if (next_buf_full && ~(drop_rew && rew_part))  // a rewound buffer is filled again first
           state_ns = WAIT_BUF_FULL;
         else if (series_on)
           state_ns = SERIES_WAIT;
@@ -335,6 +390,8 @@ begin
     WAIT_DATA_RDY: begin
       if (reg_ctrl[CTRL_RESET])
         state_ns = IDLE;
+      else if (drop_go)
+        state_ns = FIFO_RST;
       else if (fifo_empty == 0) begin
         state_ns = SEND_DMA_REQ;
       end
@@ -348,7 +405,7 @@ begin
           state_ns = IDLE;
         else if (transf_end) begin
           if (next_buf_full) // if next transfer results in overwriting the buffer, wait until the buffer is completely read out.
-           state_ns = FIFO_RST; // first reset the FIFO, then wait. That way, we don't have to wait for the FIFO to finish its reset. 
+           state_ns = blk_mode ? WAIT_BUF_FULL : FIFO_RST; // first reset the FIFO, then wait (not in the block mode, see blk_mode)
           else if (req_xfer_last == 1) begin // Test for the last transfer
             state_ns = WAIT_DATA_DONE;   
           end else begin
@@ -373,8 +430,8 @@ begin
     WAIT_BUF_FULL: begin
       if (reg_ctrl[CTRL_RESET])
           state_ns = IDLE;
-      else if (~next_buf_full) begin // if next buffer is full, then wait
-        state_ns = series_on ? SERIES_WAIT : BUF_FILLING; // go back to filling FIFOs
+      else if (~next_buf_full && next_free) begin // if next buffer is full, then wait
+        state_ns = (series_on && ~blk_mode) ? SERIES_WAIT : BUF_FILLING; // go back to filling FIFOs
       end
     end
 
@@ -390,7 +447,10 @@ begin
           state_ns = IDLE;
       // A last burst at the end of a series of the block mode is sent too: nothing
       // follows it until the next trigger.
-      else if ((fifo_lvl > AXI_BURST_LEN) || (flush_i && (fifo_lvl >= AXI_BURST_LEN))) begin
+      else if (drop_go)
+        state_ns = FIFO_RST;
+      // In a series drop as well: no more data comes, the bursts left are sent before the drop.
+      else if ((fifo_lvl > AXI_BURST_LEN) || ((flush_i || drop_pend) && (fifo_lvl >= AXI_BURST_LEN))) begin
         state_ns = WAIT_DATA_RDY; // wait for FIFO 
       end
     end
@@ -458,7 +518,11 @@ begin
   if (m_axi_aresetn == 0)
     transf_end <= 0;
   else begin
-    if ((m_axi_wvalid == 1) && (m_axi_wlast == 1))
+    // The last beat of a burst taken by the memory, once per burst. On wvalid and wlast alone it
+    // held for every clock the memory stalled that beat: the next request left SEND_DMA_REQ at
+    // once on it and dropped its awvalid before the address was taken (the request lost, the
+    // data out of step with the addresses), and the buffer full flag came a burst early.
+    if ((m_axi_wvalid == 1) && (m_axi_wready == 1) && (m_axi_wlast == 1))
       transf_end <= 1'b1;
     else 
       transf_end <= 1'b0;
@@ -524,8 +588,23 @@ end
 
 // The total is never cleared: a buffer gets the total minus the mark of the previous buffer
 // start, so the buffer start (an address compare) is only an enable, not in the adder path.
-reg  [64-1:0] lost_total, lost_mark;
+reg  [64-1:0] lost_total, lost_mark, lost_mark_prev;
+
+// The rewind of a drop: the buffer being filled has words (not at its start) and is not full
+assign        rew_part = (req_addr != req_buf_addr[AXI_ADDR_BITS-1:0]) && ~(req_buf_addr_sel ? buf2_full : buf1_full);
+assign        rew_now  = drop_rew && (state_cs == FIFO_RST) && (fifo_rst_cnt == 31);
+reg  [32-1:0] rew_drop;
+reg           rew_we;
+always @(posedge m_axi_aclk) begin
+  rew_we   <= rew_now && rew_part;
+  rew_drop <= (req_addr - req_buf_addr[AXI_ADDR_BITS-1:0]) / (AXI_DATA_BITS / 8);
+end
 reg  [32-1:0] lost_inc;   // the samples lost in the previous clock
+// The words of a FIFO reset or of a rewind in samples, a clock later: out of the adder of
+// lost_inc (the samples per word come from the stream clock domain, a 4 ns path on the 250-12).
+reg  [32-1:0] lost_extra;
+always @(posedge m_axi_aclk)
+  lost_extra <= (rst_drop_we ? rst_drop * samps_per_word : 32'd0) | (rew_we ? rew_drop * samps_per_word : 32'd0);
 
 always @(posedge m_axi_aclk)
 begin
@@ -537,21 +616,23 @@ begin
     buf2_lost  <= 64'd0;
   end else begin
     // the words in the FIFO when it is reset are lost as well
-    lost_inc   <= (lost_add_we ? lost_add : 16'd0)
-                + (rst_drop_we ? rst_drop * samps_per_word : 32'd0);
+    lost_inc   <= (lost_add_we ? lost_add : 16'd0) + lost_extra;
     lost_total <= lost_total + lost_inc;
     if (buf1_timestamp_we)
       buf1_lost <= lost_total + lost_inc - lost_mark;
     if (buf2_timestamp_we)
       buf2_lost <= lost_total + lost_inc - lost_mark;
-    if (buf1_timestamp_we || buf2_timestamp_we)
-      lost_mark <= lost_total + lost_inc;
+    if (buf1_timestamp_we || buf2_timestamp_we) begin
+      lost_mark      <= lost_total + lost_inc;
+      lost_mark_prev <= lost_mark;
+    end else if (rew_we)
+      lost_mark      <= lost_mark_prev;  // the buffer starts again: its count from the buffer before
   end
 end
 
 // The samples not written while the acquisition waits for a trigger, latched like the lost
 // count (they are part of it): the series gap before a buffer, 0 without the trigger mode.
-reg  [64-1:0] wait_total, wait_mark;
+reg  [64-1:0] wait_total, wait_mark, wait_mark_prev;
 reg  [16-1:0] wait_inc;
 
 always @(posedge m_axi_aclk)
@@ -569,8 +650,11 @@ begin
       buf1_wait <= wait_total + wait_inc - wait_mark;
     if (buf2_timestamp_we)
       buf2_wait <= wait_total + wait_inc - wait_mark;
-    if (buf1_timestamp_we || buf2_timestamp_we)
-      wait_mark <= wait_total + wait_inc;
+    if (buf1_timestamp_we || buf2_timestamp_we) begin
+      wait_mark      <= wait_total + wait_inc;
+      wait_mark_prev <= wait_mark;
+    end else if (rew_we)
+      wait_mark      <= wait_mark_prev;
   end
 end
 
@@ -639,12 +723,12 @@ begin
       end
 
     SEND_DMA_REQ: begin
-      if (full_immed)
+      if (full_immed && ~blk_mode)
         fifo_dis <= 1'b1;
       end
       
     WAIT_BUF_FULL: begin
-        fifo_dis <= next_buf_full || series_on; // disable signal
+        fifo_dis <= next_buf_full; // disable signal: in the block mode a word not taken is seen by every channel (series drop)
       end
 
     SERIES_WAIT: begin
@@ -691,7 +775,14 @@ begin
     end    
 
     default: begin
-        if (reg_ctrl[CTRL_BUF1_ACK] || reg_ctrl[CTRL_BUF2_ACK])
+        // Cleared by the release of the buffer it waits for only: by the release of either one, a
+        // release of the current buffer let the DMA leave WAIT_BUF_FULL with the next one still
+        // full, the buffer select switched without the address and the writes left the buffers.
+        if ((reg_ctrl[CTRL_BUF2_ACK] && (req_buf_addr_sel == 0)) || (reg_ctrl[CTRL_BUF1_ACK] && (req_buf_addr_sel == 1)))
+            next_buf_full <= 0;
+        // set once the request address is at the last burst, before that burst is sent: a buffer
+        // started again by a series drop is far from its end
+        else if (rew_now && rew_part)
             next_buf_full <= 0;
         else if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
           if (((req_buf_addr_sel == 0) && buf2_full) || ((req_buf_addr_sel == 1) && buf1_full)) begin // data loss is occuring
@@ -719,10 +810,8 @@ begin
       if (reg_ctrl[CTRL_BUF1_ACK] == 1) begin
         buf1_full <= 0;     
       end else begin
-        // Only with the switch in SEND_DMA_REQ: transf_end holds while the memory stalls the last
-        // beat of a burst, and in the next state the request address is already at the last burst
-        // of the buffer: the flag came a burst early, a release in that time was undone by the
-        // second flag, and the buffer stayed full (an overflow a round later).
+        // With the switch in SEND_DMA_REQ, when the last beat of the buffer is taken (transf_end):
+        // a flag before it was undone by a release in that time, and the buffer stayed full.
         if (transf_end && (state_cs == SEND_DMA_REQ)) begin
           // Reset to the start of the buffer if we have reached the end
           if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
@@ -833,6 +922,11 @@ begin
     IDLE: begin
       req_addr <= reg_dst_addr1;  
     end
+
+    FIFO_RST: begin
+      if (rew_now)
+        req_addr <= req_buf_addr[AXI_ADDR_BITS-1:0];  // the buffer that was being filled again from its start
+    end
     
     SEND_DMA_REQ: begin
       if (transf_end) begin
@@ -930,7 +1024,7 @@ begin
     end  
     
     WAIT_BUF_FULL: begin // only happens when exiting FIFO reset state after data loss
-      if (~next_buf_full) begin
+      if (~next_buf_full && next_free) begin  // with the address, to a free buffer only
           req_buf_addr_sel <= ~req_buf_addr_sel;
         end      
       end        

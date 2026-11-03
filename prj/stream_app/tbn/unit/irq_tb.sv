@@ -78,7 +78,7 @@ for (C = 0; C < 2; C++) begin : ch
     .timestamp_counter (ts), .timestamp_init (64'd0), .timestamp_init_we (1'b0),
     .ctl_start_o (), .ctl_start_ext (1'b0), .use_8bit (1'b0),
     .buf1_timestamp (), .buf2_timestamp (),
-    .s_axis_drop (1'b0), .s_axis_flush (1'b0), .s_axis_series (1'b0), .buf1_lost (), .buf2_lost (),
+    .s_axis_drop (1'b0), .s_axis_flush (1'b0), .s_axis_series (1'b0), .series_lost_o (), .series_drop_i (1'b0), .buf1_lost (), .buf2_lost (),
     .buf1_wait (), .buf2_wait (),
     .buf_sel_in (sel[1 - C]), .buf_sel_out (sel[C]),
     .m_axi_awaddr (awaddr), .m_axi_awlen (awlen), .m_axi_awsize (), .m_axi_awburst (),

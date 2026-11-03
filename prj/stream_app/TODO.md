@@ -18,19 +18,17 @@ The full flags of 0x54 are of all channels since the 250-12 fix (a buffer is tak
 channel has written it), the overflow bits and the lost counter the server reads stay of CH1.
 An overflow of another channel alone shows only in its lost counter (0x230 ..).
 
-## The channels overflow apart (the 250-12 trigger test)
+## The channels overflow apart in the continuous mode
 
-Every channel has its own DMA and decides an overflow alone, when it needs its next buffer
-(next_buf_full) or, in the block mode, drops the rest of its series. A channel behind the other
-(its HP port loaded, the 250-12 at 3815 buffers/s) asks for the next buffer later: a release in
-between makes CH1 drop a series CH2 writes, and from then on the channels are a buffer apart for
-good (CH1 B1 / CH2 B0 in the write pointers of rp34). With the full flags of 0x54 of all
-channels the software holds every buffer a period longer while they are apart, and CH1
-overflows on every other series (rp34, 2026-11-03: no stall any more, 2300..5000 of ~7000 series
-with a loss; before the 0x54 change the software released CH2 buffers unwritten and stalled
-instead). `irq_tb` shows it as KNOWN with a stalling CH2 port.
+In the block mode a word lost by any channel makes every channel drop the series and start the
+buffer being filled again (`dma_blocks2_tb`). In the continuous mode every channel still drops
+on its own (whole bursts, so the data stays in order): with one port stalling, the buffers of one
+index hold different times in the channels (their lost counters differ; `irq_tb` KNOWN). A common
+drop there needs a common burst decision across the channels.
 
-To fix: one overflow decision for all channels. In the block mode at the start of a series (a
-common event): the series goes into the next buffer when it is free in every channel, else every
-channel drops the whole series; in the continuous mode the drop of one channel made common
-(every channel drops the same samples).
+## 250-12: two channels in the block mode lose a quarter of the series
+
+rp34, `streamtest.py` `test_trigger` with CH1 and CH2 (decimation 32, a 2 KB buffer per trigger,
+3815 triggers/s): ~1550 of ~6400 series dropped per 2 s run, with CH1 alone 2..20. The drops are
+counted and the channels stay in step; where the time goes (the server releasing buffers late,
+the HP ports) is to be looked at.

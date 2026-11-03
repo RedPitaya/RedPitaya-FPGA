@@ -35,6 +35,8 @@ module rp_dma_s2mm
   input  wire                           s_axis_drop,
   input  wire                           s_axis_flush,
   input  wire                           s_axis_series,  // block mode: series that end with the arm (s_axis_flush)
+  output wire                           series_lost_o,  // block mode: a word of a series not taken by the FIFO
+  input  wire                           series_drop_i,  // series_lost_o of any channel: every channel drops the series
   output wire [63:0]                    buf1_lost,
   output wire [63:0]                    buf2_lost,
   output wire [63:0]                    buf1_wait,
@@ -107,6 +109,12 @@ assign m_axi_wdata  = fifo_rd_data;
 ////////////////////////////////////////////////////////////
 
 wire        first_rst;
+wire        drop_busy;      // series drop of the block mode, see below
+reg  [ 1:0] drop_busy_s;
+reg         drop_ser, drop_ack;
+wire        burst_first, req_full;  // a burst is written whole or not at all, see below
+reg         burst_ok_r;
+wire        burst_ok;
 reg  [ 2:0] first_rst_s;
 reg  [ 2:0] lost_ack_s;
 reg  [15:0] lost_acc, lost_xfer;
@@ -202,6 +210,10 @@ rp_dma_s2mm_ctrl #(
   .first_rst_o    (first_rst),
   .flush_i        (s_axis_flush),
   .series_mode_i  (s_axis_series),
+  .drop_i         (drop_ser),
+  .drop_busy_o    (drop_busy),
+  .req_full_o     (req_full),
+  .req_keep_i     (burst_ok_r),
   .buf1_lost      (buf1_lost),
   .buf2_lost      (buf2_lost),
   .buf1_wait      (buf1_wait),
@@ -235,6 +247,7 @@ rp_dma_s2mm_upsize #(
   .req_data       (req_data),
   .req_we         (req_we),
   .upsize_lvl     (upsize_lvl),
+  .burst_first    (burst_first),
   .use_8bit       (use_8bit),
   .ts_i           (timestamp_counter),
   .s_axis_tdata   (s_axis_tdata),      
@@ -268,9 +281,55 @@ fifo_axi_data
   
 assign fifo_rd_re = m_axi_wvalid & m_axi_wready;  
 
-assign fifo_wr_en = fifo_wr_we && ~fifo_dis_s;
+assign fifo_wr_en = fifo_wr_we && ~fifo_dis_s && ~drop_ser && burst_ok;
 // a word the FIFO does not take (disabled, in reset or full) is lost
 assign fifo_wr_ok = fifo_wr_en && ~fifo_full;
+
+////////////////////////////////////////////////////////////
+// Name : Whole bursts
+// The request FIFO holds 15 bursts, the data FIFO 512 words: a port that stalls longer than 15
+// bursts filled the request FIFO first, and a request that found it full was lost without a
+// trace while its words stayed in the data FIFO: the next bursts took the wrong words and the
+// buffers no longer held the data in order. A burst is now taken only when its request has room
+// (decided at its first word): else all its words are dropped (lost) and its request is not
+// written, so the data and the requests stay together.
+////////////////////////////////////////////////////////////
+
+always @(posedge s_axis_aclk) begin
+  if (~aresetn)
+    burst_ok_r <= 1'b1;
+  else if (fifo_wr_we && burst_first)
+    burst_ok_r <= ~req_full;
+end
+assign burst_ok = burst_first ? ~req_full : burst_ok_r;
+
+////////////////////////////////////////////////////////////
+// Name : Series drop of the block mode
+// A word of a series the FIFO does not take (full: the port of this channel stalls, or disabled:
+// the next buffer not free) makes every channel drop the series from that word on
+// (series_drop_i, the OR over the channels in rp_oscilloscope), and the controller starts the
+// buffer being filled again: the channels keep the same series in the buffers of one index. The
+// drop ends in the pause before the next series once the controller is done (drop_busy).
+////////////////////////////////////////////////////////////
+
+// any word of the block mode (none come in the pause; the last ones of a series leave the upsizer
+// after the arm)
+assign series_lost_o = s_axis_series && fifo_wr_we && ~fifo_wr_ok && ~first_rst_s[2];
+always @(posedge s_axis_aclk) begin
+  drop_busy_s <= {drop_busy_s[0], drop_busy};
+  if (~aresetn || ~s_axis_series) begin
+    drop_ser <= 1'b0;
+    drop_ack <= 1'b0;
+  end else if (~drop_ser) begin
+    drop_ser <= series_drop_i;
+    drop_ack <= 1'b0;
+  end else begin
+    if (drop_busy_s[1])
+      drop_ack <= 1'b1;
+    if (drop_ack && ~drop_busy_s[1] && s_axis_flush && ~series_drop_i)
+      drop_ser <= 1'b0;
+  end
+end
 
 always @(posedge s_axis_aclk) begin
   if (~aresetn)

@@ -170,6 +170,8 @@ reg  signed [16-1:0]            adc_data_ch3_signed;
 reg  signed [16-1:0]            adc_data_ch4_signed;
 
 wire [NUM_CHANNELS-1:0]         buf_sel;
+wire [NUM_CHANNELS-1:0]         series_lost;  // a channel lost a word of a series (block mode)
+wire                            series_drop = |series_lost;  // every channel drops that series
 wire [NUM_CHANNELS-1:0]         dma_intr;                            
 
 wire                            adc_sign_ch1 = adc_data_ch1[ADC_DATA_BITS-1];
@@ -641,6 +643,8 @@ osc_top #(
 
   .buf_sel_in       (bufs_in),
   .buf_sel_out      (buf_sel[GV]),
+  .series_lost_o    (series_lost[GV]),
+  .series_drop_i    (series_drop),
   .dma_intr         (dma_intr[GV]),
 
   .m_axi_awaddr(m_axi_osc_awaddr[(GV+1)*M_AXI_OSC1_ADDR_BITS-1:GV*M_AXI_OSC1_ADDR_BITS]),

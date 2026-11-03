@@ -10,6 +10,7 @@ module rp_dma_s2mm_upsize
   output reg  [7:0]                 req_data,
   output reg                        req_we,
   output      [1:0]                 upsize_lvl,
+  output wire                       burst_first,   // the next word is the first of a burst
   input  wire                       use_8bit,
   input  wire [63:0]                ts_i,          // timestamp of the sample at the input
 
@@ -40,6 +41,7 @@ assign output_transfer = m_axis_tvalid & m_axis_tready;
 assign word_complete = input_transfer &
                        ((&(mux_sel | {2'b0, ~use_8bit})) | s_axis_tlast);
 assign req_len = xfer_cnt+1;
+assign burst_first = (xfer_cnt == 0);
 assign upsize_lvl = mux_sel;
 
 assign m_axis_tdata ={upsize_buf[7], 

@@ -70,6 +70,7 @@ end
 reg  [31:0] reg_wr_data = 0;
 reg         reg_wr_we   = 0;
 wire [31:0] reg_sts, reg_ctrl, reg_diags;
+wire        ser_lost;
 wire [63:0] buf1_ts, buf2_ts, buf1_lost, buf2_lost, buf1_wait, buf2_wait;
 
 wire [31:0] awaddr;  wire [7:0] awlen;  wire awvalid;  reg awready = 0;
@@ -85,7 +86,7 @@ rp_dma_s2mm #(.AXI_ADDR_BITS(32), .AXI_DATA_BITS(64), .AXIS_DATA_BITS(16), .AXI_
   .timestamp_counter (ts), .timestamp_init (64'd0), .timestamp_init_we (1'b0),
   .ctl_start_o (), .ctl_start_ext (1'b0), .use_8bit (1'b0),
   .buf1_timestamp (buf1_ts), .buf2_timestamp (buf2_ts),
-  .s_axis_drop (sdrop), .s_axis_flush (flush), .s_axis_series (1'b1), .buf1_lost (buf1_lost), .buf2_lost (buf2_lost),
+  .s_axis_drop (sdrop), .s_axis_flush (flush), .s_axis_series (1'b1), .series_lost_o (ser_lost), .series_drop_i (ser_lost), .buf1_lost (buf1_lost), .buf2_lost (buf2_lost),
   .buf1_wait (buf1_wait), .buf2_wait (buf2_wait),
   .buf_sel_in (1'b0), .buf_sel_out (),
   .m_axi_awaddr (awaddr), .m_axi_awlen (awlen), .m_axi_awsize (), .m_axi_awburst (),

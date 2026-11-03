@@ -177,6 +177,8 @@ wire signed [15:0]              s_axis_osc3_tdata;
 wire signed [15:0]              s_axis_osc4_tdata;
 
 wire [NUM_CHANNELS-1:0]         buf_sel;
+wire [NUM_CHANNELS-1:0]         series_lost;  // a channel lost a word of a series (block mode)
+wire                            series_drop = |series_lost;  // every channel drops that series
 wire [NUM_CHANNELS-1:0]         dma_intr;                            
 
 wire                            adc_sign_ch1 = ~adc_data_ch1[ADC_DATA_BITS-1];
@@ -757,6 +759,8 @@ scope_cfg #(
 
   .buf_sel_in       (buf_sel[1]),
   .buf_sel_out      (buf_sel[0]),
+  .series_lost_o    (series_lost[0]),
+  .series_drop_i    (series_drop),
   .dma_intr         (dma_intr[0]),
 
   .m_axi_awaddr     (m_axi_osc1_awaddr), 
@@ -859,6 +863,8 @@ osc_top #(
 
   .buf_sel_in       (buf_sel[0]),
   .buf_sel_out      (buf_sel[1]),
+  .series_lost_o    (series_lost[1]),
+  .series_drop_i    (series_drop),
   .dma_intr         (dma_intr[1]),
   .m_axi_awaddr     (m_axi_osc2_awaddr), 
   .m_axi_awlen      (m_axi_osc2_awlen),  

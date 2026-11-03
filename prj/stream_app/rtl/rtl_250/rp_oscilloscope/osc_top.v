@@ -88,6 +88,8 @@ module osc_top
   //
   input  wire                             buf_sel_in,
   output wire                             buf_sel_out,
+  output wire                             series_lost_o,  // block mode: this channel lost a word of a series
+  input  wire                             series_drop_i,  // block mode: a channel lost one, every channel drops the series
   //   
   output wire                             dma_intr,
   //
@@ -504,6 +506,8 @@ rp_dma_s2mm #(
   .buf2_wait      (buf2_wait_o),
   .buf_sel_in     (buf_sel_in),
   .buf_sel_out    (buf_sel_out),
+  .series_lost_o  (series_lost_o),
+  .series_drop_i  (series_drop_i),
   .m_axi_awaddr   (m_axi_awaddr), 
   .m_axi_awlen    (m_axi_awlen),  
   .m_axi_awsize   (m_axi_awsize), 

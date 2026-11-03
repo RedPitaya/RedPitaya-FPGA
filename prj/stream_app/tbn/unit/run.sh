@@ -53,7 +53,7 @@ cp -r $RTL/rtl/rp_oscilloscope/fifo_axi_data $RTL/rtl/rp_oscilloscope/fifo_axi_r
 sed -e 's#gip/#sip/#g' ../gip/gen.tcl > sip/gen.tcl
 vivado -mode batch -nojournal -nolog -source sip/gen.tcl > sip.log 2>&1
 O=$RTL/rtl/rp_oscilloscope
-xvlog -sv $HERE/dma_ts_tb.sv $HERE/dma_blocks_tb.sv > dma.log
+xvlog -sv $HERE/dma_ts_tb.sv $HERE/dma_blocks_tb.sv $HERE/dma_blocks2_tb.sv > dma.log
 xvlog \$O/rp_dma_s2mm.v \$O/rp_dma_s2mm_ctrl.v \$O/rp_dma_s2mm_data_ctrl.v \$O/rp_dma_s2mm_upsize.v \
       sip/fifo_axi_data/sim/fifo_axi_data.v sip/fifo_axi_req/sim/fifo_axi_req.v sip/export/fifo_axi_data/xsim/glbl.v >> dma.log
 xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dma_ts_tb glbl -s dma_tb >> dma.log
@@ -61,6 +61,9 @@ xsim dma_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
 # block mode, one buffer per trigger: the buffers against the series after an overflow
 xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dma_blocks_tb glbl -s blk_tb >> dma.log
 xsim blk_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
+# two channels in the block mode, the port of CH2 stalling: the same series in both, buffer by buffer
+xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dma_blocks2_tb glbl -s blk2_tb >> dma.log
+xsim blk2_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
 # the scope interrupt with two channels, also a buffer apart: every wait ends in an interrupt
 xvlog -sv $HERE/irq_tb.sv >> dma.log
 xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm irq_tb glbl -s irq_tb >> dma.log
