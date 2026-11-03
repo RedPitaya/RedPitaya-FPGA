@@ -879,6 +879,7 @@ reg  [32-1:0] fclk_rdat;
 assign ctrl_ack  = axi_clk_regs ? ctrl_ack_axi : ctrl_ack_adc;
 // The ADC registers are read in the ADC clock: their read mux is registered there, the read
 // acknowledge reaches the bus clock several clocks later through sync_rw_single
+// (sdc/red_pitaya_z20_250.xdc lets the path from reg_ofs_adc through the mux take two clocks)
 reg  [32-1:0] reg_rdat_adc_r;
 always @(posedge clk_adc_i) reg_rdat_adc_r <= reg_rdat_adc;
 assign reg_rdat  = axi_clk_regs ? reg_rdat_axi : reg_rdat_adc_r;

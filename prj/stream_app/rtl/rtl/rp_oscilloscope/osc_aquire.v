@@ -82,6 +82,29 @@ begin
   pre_samp_nz  <= (cfg_trig_pre_samp != 0);
 end
 
+// The counters reach the last pre / post sample: compared a clock ahead and registered, so the
+// state machine gets a flag, not a wide compare (the post compare was the worst path at 250 MHz).
+// The flag of the next clock: the count after this clock against the last sample.
+reg  [CNT_BITS-1:0] pre_samp_m2, post_samp_m2;
+reg                 pre_last, post_last;
+always @(posedge clk)
+begin
+  pre_samp_m2  <= cfg_trig_pre_samp - 2;
+  post_samp_m2 <= cfg_trig_post_samp - 2;
+  if ((rst_n == 0) || (ctl_rst == 1))
+    pre_last <= (pre_samp_m1 == 0);
+  else if ((s_axis_tvalid == 1) && ((state_cs == PRE_SAMP_FILL) || (state_cs == PRE_SAMP_WAIT_TRIG)))
+    pre_last <= (sts_trig_pre_cnt == pre_samp_m2);
+  else
+    pre_last <= (sts_trig_pre_cnt == pre_samp_m1);
+  if ((rst_n == 0) || (ctl_rst == 1))
+    post_last <= (post_samp_m1 == 0);
+  else if ((s_axis_tvalid == 1) && (state_cs == POST_SAMP_FILL))
+    post_last <= (sts_trig_post_cnt == post_samp_m2);
+  else
+    post_last <= (sts_trig_post_cnt == post_samp_m1);
+end
+
 // Only a rising edge of the trigger seen while armed is accepted, as in the DAC playback:
 // a trigger that is already high when the core arms waits for its next edge.
 reg ctl_trig_d1;
@@ -224,7 +247,7 @@ begin
     
     // PRE_SAMP_FILL - Fills the pre sample buffer 
     PRE_SAMP_FILL: begin
-      if ((s_axis_tvalid == 1) && (sts_trig_pre_cnt == pre_samp_m1)) begin
+      if ((s_axis_tvalid == 1) && pre_last) begin
         state_ns = PRE_SAMP_WAIT_TRIG;  
       end
     end
@@ -251,7 +274,7 @@ begin
     
     // POST_SAMP_FILL - Fills the post sample buffer 
     POST_SAMP_FILL: begin
-      if ((s_axis_tvalid == 1) && (sts_trig_post_cnt == post_samp_m1)) begin
+      if ((s_axis_tvalid == 1) && post_last) begin
         state_ns = IDLE;  
       end
     end    
@@ -331,7 +354,7 @@ begin
     case (state_cs)
       // POST_SAMP_FILL - Fills the post sample buffer 
       POST_SAMP_FILL: begin
-        if ((s_axis_tvalid == 1) && (sts_trig_post_cnt == post_samp_m1)) begin
+        if ((s_axis_tvalid == 1) && post_last) begin
           sts_last = 1;  
         end
       end    

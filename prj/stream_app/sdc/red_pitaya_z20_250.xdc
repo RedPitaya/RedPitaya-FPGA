@@ -22,3 +22,11 @@ set_clock_groups -asynchronous -group [get_clocks adc_clk] -group [get_clocks cl
 # The frequency meter gate crosses from the reference clock into the measured
 # clock domain through a synchronizer, so only the data path needs bounding.
 set_max_delay -datapath_only 8.000 -from [get_pins i_hk/i_freq_meter/ref_gate_reg/C] -to [get_pins {i_hk/i_freq_meter/mes_gate_csff*[0]/D}]
+
+# Register reads of the scope in the ADC clock (scope_cfg): the read address is loaded a clock
+# before the read acknowledge, which reaches the bus clock through sync_rw_single (a register in
+# the ADC clock, two in the bus clock) at least four ADC clocks later; the read data register is
+# taken every clock. The path from the address through the read mux may take two clocks (it was
+# the second worst path at 250 MHz, 5 LUT levels, mostly routing).
+set_multicycle_path -setup 2 -from [get_cells -hier -filter {NAME =~ */U_scope_cfg/reg_ofs_adc_reg*}] -to [get_cells -hier -filter {NAME =~ */U_scope_cfg/reg_rdat_adc_r_reg*}]
+set_multicycle_path -hold 1  -from [get_cells -hier -filter {NAME =~ */U_scope_cfg/reg_ofs_adc_reg*}] -to [get_cells -hier -filter {NAME =~ */U_scope_cfg/reg_rdat_adc_r_reg*}]
