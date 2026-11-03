@@ -346,6 +346,12 @@ wire                        cfg_dma_ctrl_we;
 wire [63:0]                 cfg_timestamp_init;
 wire                        cfg_timestamp_init_we;
 wire [31:0]                 cfg_dma_sts;
+// The status the software reads: a buffer is full when every channel has written it. The
+// software releases a buffer by this flag; by the flag of CH1 alone it released a buffer CH2
+// was still writing (its port behind), CH2 missed the release, overflowed a round later and
+// stayed a buffer off CH1 (the 250-12 under load).
+wire [31:0]                 cfg_dma_sts_ch2;
+wire [31:0]                 cfg_dma_sts_sw = {cfg_dma_sts[31:2], cfg_dma_sts[1:0] & cfg_dma_sts_ch2[1:0]};
 reg                         timestamp_init_toggle_axi;
 reg  [1:0]                  timestamp_init_toggle_adc;
 reg                         timestamp_load_adc;  // the init value arrived: load it next clock
@@ -633,7 +639,7 @@ scope_cfg #(
   .cfg_dma_ctrl_we_o        (cfg_dma_ctrl_we),
   .cfg_timestamp_init_o     (cfg_timestamp_init),
   .cfg_timestamp_init_we_o  (cfg_timestamp_init_we),
-  .cfg_dma_sts_i            (cfg_dma_sts),
+  .cfg_dma_sts_i            (cfg_dma_sts_sw),
   .curr_timestamp_i         (timestamp_counter_axi_r2),
   //.cfg_dma_sts_i            (cfg_dma_sts[1*32-1:0*32]),
 
@@ -843,6 +849,7 @@ osc_top #(
   .buf1_wait_o              (buf1_wait[2*64-1:1*64]),
   .buf2_wait_o              (buf2_wait[2*64-1:1*64]),
 
+  .cfg_dma_sts_o            (cfg_dma_sts_ch2),
   .curr_wp_o                (curr_wp_ch2),
 
   .trig_ip          (trig_ip_l),

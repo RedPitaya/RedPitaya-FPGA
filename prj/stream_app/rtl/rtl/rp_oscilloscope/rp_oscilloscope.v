@@ -238,6 +238,19 @@ wire                        cfg_timestamp_init_we;
 reg  [63:0]                 timestamp_counter;
 wire                        cfg_8bit_dat;
 wire [4*32-1:0]             cfg_dma_sts;
+// The status the software reads: a buffer is full when every channel has written it. The
+// software releases a buffer by this flag; by the flag of CH1 alone it released a buffer CH2
+// was still writing (its port behind), CH2 missed the release, overflowed a round later and
+// stayed a buffer off CH1 (the 250-12 under load).
+wire [31:0]                 cfg_dma_sts_sw;
+reg  [1:0]                  dma_full_all;
+integer                     FI;
+always @(*) begin
+  dma_full_all = 2'b11;
+  for (FI = 0; FI < NUM_CHANNELS; FI = FI + 1)
+    dma_full_all = dma_full_all & cfg_dma_sts[FI*32 +: 2];
+end
+assign cfg_dma_sts_sw = {cfg_dma_sts[31:2], dma_full_all};
 wire [ 4*4-1:0]             cfg_event_sts;
 wire [4*TRIG_CNT_BITS-1:0]  sts_trig_pre_cnt;
 wire [   4-1:0]             sts_trig_pre_overflow;
@@ -520,7 +533,7 @@ scope_cfg #(
   .cfg_dma_buf_size_o       (cfg_dma_buf_size),
   .cfg_dma_ctrl_o           (cfg_dma_ctrl),
   .cfg_dma_ctrl_we_o        (cfg_dma_ctrl_we),
-  .cfg_dma_sts_i            (cfg_dma_sts[1*32-1:0*32]),
+  .cfg_dma_sts_i            (cfg_dma_sts_sw),
 
   .diag1_i                  (diag1[1*32-1:0*32]),
   .diag2_i                  (diag2[1*32-1:0*32]),

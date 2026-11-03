@@ -10,7 +10,9 @@
 // rest of a series that lost data (SERIES_WAIT), so the next series starts the free buffer
 // (before, the acquisition counted the series by the samples it sent and the DMA closed a
 // buffer by the words it wrote, and the buffers stayed out of step for good).
-// KNOWN: the full flag of a buffer comes up to a burst before its last word reaches the memory.
+// A full flag more than a few clocks before the last word of the buffer is taken by the memory
+// is a FAIL: it came a burst early (the end of a burst held while the memory stalled its last
+// beat). It comes with the last beat presented, so a stall of that beat is allowed.
 `timescale 1ns / 1ps
 
 module dma_blocks_tb;
@@ -210,7 +212,11 @@ initial begin
   run(8, 20, 0);    // no overflow: every buffer is one series
   run(8, 40, 20);   // late ACKs: overflows at the start of a series
   if (shifted) $display("FAIL %0d of %0d buffers out of step with the series after an overflow", shifted, checks);
-  if (early)   $display("KNOWN %0d of %0d buffers full up to %0d clocks before their last word is written", early, checks, early_max);
+  if (early_max > 16) begin
+    errors += early;
+    $display("FAIL %0d of %0d buffers full up to %0d clocks before their last word is written", early, checks, early_max);
+  end else if (early)
+    $display("ok    %0d of %0d buffers full up to %0d clocks before their last word is written (its beat stalled)", early, checks, early_max);
   if (errors == 0) $display("PASS dma_blocks_tb (%0d buffers checked)", checks);
   else             $display("FAIL dma_blocks_tb: %0d errors in %0d buffers", errors, checks);
   $finish;

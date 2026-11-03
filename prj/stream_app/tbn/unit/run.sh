@@ -61,6 +61,10 @@ xsim dma_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
 # block mode, one buffer per trigger: the buffers against the series after an overflow
 xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dma_blocks_tb glbl -s blk_tb >> dma.log
 xsim blk_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
+# the scope interrupt with two channels, also a buffer apart: every wait ends in an interrupt
+xvlog -sv $HERE/irq_tb.sv >> dma.log
+xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm irq_tb glbl -s irq_tb >> dma.log
+xsim irq_tb -R | grep -E '^(ok|FAIL|PASS|KNOWN)'
 "
 if command -v xvlog >/dev/null; then
     bash -c "$script"

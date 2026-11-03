@@ -51,7 +51,7 @@ module rp_dma_s2mm_ctrl
   output reg  [63:0]                buf2_lost,
   output reg  [63:0]                buf1_wait,      // samples not written while waiting for a trigger before buffer 1
   output reg  [63:0]                buf2_wait,
-  input  wire                       buf_sel_in,
+  input  wire                       buf_sel_in,     // unused: the interrupt is set on a buffer full edge
   output wire                       buf_sel_out,
   output reg                        fifo_dis,
   //
@@ -131,6 +131,7 @@ wire [1:0]                buf_first_beat; // first beat of buffer 1 (bit 0) or 2
 reg                       fifo_rd_re;
 wire                      fifo_empty;
 reg                       next_buf_full;
+reg                       buf1_full_d, buf2_full_d;  // the interrupt is set on a buffer full edge
 reg                       fifo_rst_cntdwn;
 reg                       transf_end;
 reg                       bit_start;
@@ -718,7 +719,11 @@ begin
       if (reg_ctrl[CTRL_BUF1_ACK] == 1) begin
         buf1_full <= 0;     
       end else begin
-        if (transf_end) begin
+        // Only with the switch in SEND_DMA_REQ: transf_end holds while the memory stalls the last
+        // beat of a burst, and in the next state the request address is already at the last burst
+        // of the buffer: the flag came a burst early, a release in that time was undone by the
+        // second flag, and the buffer stayed full (an overflow a round later).
+        if (transf_end && (state_cs == SEND_DMA_REQ)) begin
           // Reset to the start of the buffer if we have reached the end
           if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
             if (req_buf_addr_sel == 0) begin // buffer 1 is full if next transfer goes over specified buffer size
@@ -776,7 +781,7 @@ begin
       if (reg_ctrl[CTRL_BUF2_ACK] == 1) begin
         buf2_full <= 0;     
       end else begin
-        if (transf_end) begin          // Reset to the start of the buffer if we have reached the end
+        if (transf_end && (state_cs == SEND_DMA_REQ)) begin  // as buffer 1
           if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
             if (req_buf_addr_sel == 1) begin // buffer 2 is full if next transfer goes over specified buffer size
               buf2_full <= 1;  
@@ -935,6 +940,8 @@ end
 always @(posedge m_axi_aclk)
 begin
   req_buf_addr_sel_p1 <= req_buf_addr_sel;
+  buf1_full_d         <= buf1_full;
+  buf2_full_d         <= buf2_full;
 end
 
 ////////////////////////////////////////////////////////////
@@ -987,11 +994,16 @@ begin
       if (m_axi_aresetn == 0) begin
         intr <= 0;
       end else begin
-        if (reg_ctrl[CTRL_INTR_ACK] == 1)
-          intr <= 0; 
-        else if (((state_cs == WAIT_DATA_DONE) && (dat_ctrl_busy == 0)) ||
-          (((req_buf_addr_sel_pedge == 1 && buf_sel_in == 0) || (req_buf_addr_sel_nedge == 1 && buf_sel_in == 1)))) // Set if streaming mode and buffer is full
-          intr <= 1;  // interrupt only triggers if the channel is not lagging behind.
+        // Set when a buffer of this channel gets full. It was set on a buffer switch, and only
+        // when the other channel was not behind (buf_sel_in): with the channels a buffer apart
+        // both switch the opposite way at once and neither set it, and a channel whose next
+        // buffer is full gets its buffer full without a switch. The software takes a buffer
+        // when every channel has it full (0x54), an extra interrupt only wakes it for nothing.
+        // A buffer full in the clock of an ACK wins over it.
+        if (((state_cs == WAIT_DATA_DONE) && (dat_ctrl_busy == 0)) || (buf1_full && ~buf1_full_d) || (buf2_full && ~buf2_full_d))
+          intr <= 1;
+        else if (reg_ctrl[CTRL_INTR_ACK] == 1)
+          intr <= 0;
       end
     end
   endcase
