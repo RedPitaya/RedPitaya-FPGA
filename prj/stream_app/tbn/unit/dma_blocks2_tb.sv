@@ -21,6 +21,7 @@ localparam CH_OFS    = 32'h0010_0000;
 int unsigned DEC;
 int unsigned errors = 0, checks = 0, apart = 0, shifted = 0;
 bit          port2_stalls = 0, port1_stalls = 0;
+int unsigned flush_early = 0;  // the arm (flush) rises this many clocks before the last sample of a series
 
 reg clk = 0;
 always #4 clk = ~clk;
@@ -55,7 +56,8 @@ always @(posedge clk) begin
       end else
         slot <= slot + 1;
     end
-    flush <= (slot >= BUF_SMP);
+    // the arm can come a few clocks before the last sample reaches the DMA (registers on the way)
+    flush <= (slot >= BUF_SMP) || (flush_early > 0 && slot == BUF_SMP - 1 && dcnt + flush_early >= DEC);
   end
 end
 
@@ -193,9 +195,10 @@ function automatic int buf_series(input int c, input int unsigned addr);
   return s0[15:10];
 endfunction
 
-task automatic run(input int unsigned dec, input int unsigned nbuf, input int unsigned slow, input bit stalls, input bit stalls1 = 0);
+task automatic run(input int unsigned dec, input int unsigned nbuf, input int unsigned slow, input bit stalls, input bit stalls1 = 0,
+                   input int unsigned early = 0);
   int unsigned got = 0, ovf[2] = '{0, 0};
-  DEC = dec; port2_stalls = stalls; port1_stalls = stalls1;
+  DEC = dec; port2_stalls = stalls; port1_stalls = stalls1; flush_early = early;
   aresetn = 0; run_stream = 0; repeat (20) @(posedge clk); aresetn = 1; repeat (20) @(posedge clk);
   mem[0].delete(); mem[1].delete();
   wr(32'h0000_0200);  // streaming mode
@@ -253,8 +256,8 @@ task automatic run(input int unsigned dec, input int unsigned nbuf, input int un
       got++;
     end
   end
-  $display("ok    decimation %0d, %0d %% slow%s%s: %0d buffers, overflows before them %0d / %0d",
-           dec, slow, stalls ? ", CH2 port stalls" : "", stalls1 ? ", CH1 port stalls" : "", got, ovf[0], ovf[1]);
+  $display("ok    decimation %0d, %0d %% slow%s%s%s: %0d buffers, overflows before them %0d / %0d",
+           dec, slow, early ? ", arm early" : "", stalls ? ", CH2 port stalls" : "", stalls1 ? ", CH1 port stalls" : "", got, ovf[0], ovf[1]);
   run_stream = 0;
   wr(32'h0000_0010);  // reset
 endtask
@@ -269,6 +272,10 @@ initial begin
   run(8, 60, 20, 1);
   run(8, 120, 30, 1, 1);  // both ports stall, a slow software: the waits for a free buffer and the drops mix
   run(4, 120, 30, 1, 1);
+  // the arm a few clocks before the last sample (the 250-12 at decimation 32): a drop that ended
+  // before the last word let a request through without its data, the stream stopped
+  run(8, 80, 30, 0, 0, 2);
+  run(8, 80, 30, 1, 1, 2);
   if (apart)   $display("FAIL %0d of %0d buffers with another series in CH1 and CH2", apart, checks);
   if (shifted) $display("FAIL %0d of %0d buffers out of step with the series", shifted, checks);
   if (errors == 0) $display("PASS dma_blocks2_tb (%0d buffers checked)", checks);

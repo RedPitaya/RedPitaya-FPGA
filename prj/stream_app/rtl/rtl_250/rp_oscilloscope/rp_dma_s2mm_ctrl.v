@@ -47,10 +47,10 @@ module rp_dma_s2mm_ctrl
   output wire                       first_rst_o,    // the FIFO reset after the start: words dropped then are not lost
   input  wire                       flush_i,        // no more data before the next trigger: send a last full burst
   input  wire                       series_mode_i,  // block mode: the data comes in series, each one ends with the arm (flush_i)
-  input  wire                       drop_i,         // block mode: the series is dropped from here on (stream clock domain)
+  input  wire                       drop_tog_i,     // block mode: toggles on a series drop (stream clock domain)
   output wire                       drop_busy_o,    // the drop is not done on the AXI side yet
   output wire                       req_full_o,     // the request FIFO is full (stream clock domain)
-  input  wire                       req_keep_i,     // the burst of the request was written to the data FIFO
+  input  wire                       req_keep_i,     // the data FIFO took every word of the burst of the request
   output reg  [63:0]                buf1_lost,      // samples lost before buffer 1, latched with its timestamp
   output reg  [63:0]                buf2_lost,
   output reg  [63:0]                buf1_wait,      // samples not written while waiting for a trigger before buffer 1
@@ -188,7 +188,7 @@ fifo_axi_req U_fifo_axi_req(
   .empty  (fifo_empty));
   
 assign fifo_wr_data = {2'b00, req_data};
-assign fifo_wr_we   = req_we && ~fifo_dis && ~drop_i && req_keep_i; // writing request buffer is only enabled when not waiting on clearing of the next buffer, nor in a series drop, nor for a dropped burst
+assign fifo_wr_we   = req_we && req_keep_i; // a request only for a burst the data FIFO took whole (not waiting for the next buffer, not dropped)
 
 ////////////////////////////////////////////////////////////
 // Name : Data Control
@@ -238,7 +238,7 @@ assign next_free = req_buf_addr_sel ? ~buf1_full : ~buf2_full;
 ////////////////////////////////////////////////////////////
 // Name : Series drop of the block mode
 // When any channel loses a word of a series, every channel stops writing that series at the
-// same word (drop_i, stream clock domain, rp_dma_s2mm). Here the requests of the words before
+// same word (drop_tog_i, stream clock domain, rp_dma_s2mm). Here the requests of the words before
 // it are sent, then the FIFO is reset (the words of the last, incomplete burst) and the buffer
 // that was being filled is started again from its beginning: its words are counted as lost and
 // its lost and wait marks go back to those of the buffer before. So the channels keep the same
@@ -253,14 +253,14 @@ wire       drop_go;
 wire       rew_now;
 wire       rew_part;
 always @(posedge m_axi_aclk) begin
-  drop_s <= {drop_s[0], drop_i};
+  drop_s <= {drop_s[0], drop_tog_i};
   drop_d <= drop_s[1];
   if ((m_axi_aresetn == 0) || (state_cs == IDLE)) begin
     drop_pend <= 1'b0;
     drop_rew  <= 1'b0;
     drop_wait <= 4'd0;
   end else begin
-    if (drop_s[1] && ~drop_d) begin
+    if (drop_s[1] != drop_d) begin  // a new drop
       drop_pend <= 1'b1;
       drop_wait <= 4'd0;  // the requests of the words before the drop cross into this clock domain
     end else if (drop_pend && (drop_wait != 4'd15))
