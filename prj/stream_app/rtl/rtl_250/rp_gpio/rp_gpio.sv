@@ -246,6 +246,7 @@ reg [ 8-1:0]                    cfg_ctrl_reg_in;
 reg [ 8-1:0]                    cfg_ctrl_reg_out;
 wire [32-1:0]                   dma_sts_reg_in;
 wire [32-1:0]                   dma_sts_reg_out;
+wire [64-1:0]                   out_wait;  // the output waited for a word, clocks
 
 // in the IOB, as the input registers below: the self loop and the line timing do not depend
 // on the placement
@@ -588,6 +589,8 @@ begin
     'h2c : reg_rd_data <=              32'(cts_trg >> 32);
     'h30 : reg_rd_data <=              32'(cts_stp >>  0);
     'h34 : reg_rd_data <=              32'(cts_stp >> 32);
+    'h38 : reg_rd_data <=                  out_wait[31: 0];
+    'h3C : reg_rd_data <=                  out_wait[63:32];
 
     // trigger detection
     'h40 : reg_rd_data <= {{32- 16{1'b0}}, cfg_cmp_msk};
@@ -640,7 +643,7 @@ begin
     'hD0 : reg_rd_data <=                  {axi_ar_cnt, axi_rlast_cnt};
     'hD4 : reg_rd_data <=                  axi_r_cnt;
     'hD8 : reg_rd_data <=                  sts_in_trig_count;
-    'hDC : reg_rd_data <=                  32'hF;  // features: bit 0 input block mode, bit 1 64 bit lost counters, bit 2 wait counters, bit 3 output buffer free flags (0x98 bits 7/8)
+    'hDC : reg_rd_data <=                  32'h1F;  // features: bit 0 input block mode, bit 1 64 bit lost counters, bit 2 wait counters, bit 3 output buffer free flags (0x98 bits 7/8), bit 4 output wait counter (0x38)
     'hE0 : reg_rd_data <=                  in_buf1_lost[31: 0];
     'hE4 : reg_rd_data <=                  in_buf1_lost[63:32];
     'hE8 : reg_rd_data <=                  in_buf2_lost[31: 0];
@@ -792,6 +795,7 @@ gpio_out_top #(
   .gpio_buf1_adr    (cfg_buf1_adr_out),
   .gpio_buf2_adr    (cfg_buf2_adr_out),
   .gpio_wp          (gpio_out_rp),
+  .out_wait         (out_wait),
 
   // AXI
   .m_axi_gpio_arid_o    (m_axi_gpio_arid), 

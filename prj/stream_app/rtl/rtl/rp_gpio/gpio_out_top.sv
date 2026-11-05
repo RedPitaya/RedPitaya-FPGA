@@ -39,6 +39,7 @@ module gpio_out_top   #(
   output [32-1:0]                       buf1_ms_cnt,
   output [32-1:0]                       buf2_ms_cnt,
   output [M_AXI_GPIO_ADDR_BITS-1:0]     gpio_wp,
+  output reg [64-1:0]                   out_wait,  // clocks the output waited for a word since it began to play
   input  [ 8-1:0]                       gpio_ctrl_reg,
 
   output wire [3:0]                       m_axi_gpio_arid_o     , // read address ID
@@ -67,6 +68,7 @@ wire [32-1:0] gpio_data_o;
 wire [M_AXI_GPIO_ADDR_BITS-1:0] gpio_rp;  // read pointer of the output DMA, register 0xBC
 assign gpio_wp = gpio_rp;
 wire          gpio_rvalid;
+wire          dma_idle;      // the output DMA is stopped
 
 ////////////////////////////////////////////////////////////////////////////////
 // bitwise input polarity
@@ -119,6 +121,7 @@ gpio_dma_mm2s #(
   .dac_rdata_o      (gpio_data_o),
   .dac_rvalid_o     (gpio_rvalid),
   .gpio_rready_i    (new_read),
+  .idle_o           (dma_idle),
   .trigger_mode_i   (cfg_trig_mode),
   .trigger_i        (trig_i),
   .armed_o          (sts_armed),
@@ -141,6 +144,30 @@ gpio_dma_mm2s #(
   .m_axi_rready_o   (m_axi_gpio_rready_o));
   
   
+////////////////////////////////////////////////////////////
+// The output waited for a word: it has played since the start, takes the next word and the DMA
+// has none (its next buffer came late). Not while armed in the trigger mode. Cleared by the
+// start, kept after the stop for the software to read.
+////////////////////////////////////////////////////////////
+reg  dma_idle_r;
+reg  out_played;
+always @(posedge clk) begin
+  dma_idle_r <= dma_idle;
+  if (~rst_n) begin
+    out_played <= 1'b0;
+    out_wait   <= 64'd0;
+  end else if (dma_idle) begin
+    out_played <= 1'b0;
+  end else begin
+    if (dma_idle_r)
+      out_wait <= 64'd0;
+    else if (out_played && new_read && ~gpio_rvalid && ~sts_armed)
+      out_wait <= out_wait + 64'd1;
+    if (new_read && gpio_rvalid)
+      out_played <= 1'b1;
+  end
+end
+
 assign sti1.TDATA  = {gpio_data_o[7:0],gpio_data_o[31:16]};
 assign sti1.TVALID = gpio_rvalid;
 assign sti1.TLAST  = 1'b0;

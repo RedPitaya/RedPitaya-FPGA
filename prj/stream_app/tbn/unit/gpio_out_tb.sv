@@ -2,7 +2,8 @@
 // played for count+1 clocks with RLE (count 0..3 here, count 0 included), for one clock without.
 // The value of a word is its address / 4, so the sequence and the run lengths are known.
 // Continuous streaming: a driver hands the slots again on their free flags (0x98 bits 7/8): the
-// output plays without a gap.
+// output plays without a gap. The wait counter (0x38) counts the clocks the output waited for a
+// buffer: none while the driver keeps up, every clock while it does not, kept after the stop.
 `timescale 1ns / 1ps
 module gpio_out_tb;
 parameter int WE_CLOCKS = 2;
@@ -16,6 +17,7 @@ logic        reg_wr_we = 0, ctl_rst = 0, rle = 0, tmode = 0, trig = 0;
 wire         armed;
 logic [7:0]  ctrl8 = 0;     // rp_gpio keeps the last write of 0x90 in an 8 bit register
 wire  [31:0] reg_ctrl, reg_sts, rp;
+wire  [63:0] out_wait;
 wire  [31:0] araddr; wire [3:0] arlen; wire arvalid, rready;
 logic        arready = 1, rvalid = 0, rlast = 0;
 logic [63:0] rdata = 0;
@@ -24,7 +26,7 @@ gpio_out_top #(.DN (1), .GPIO_BITS (8), .M_AXI_GPIO_ADDR_BITS (32), .M_AXI_GPIO_
                .CTRL_ADDR ('h90), .STS_ADDR ('h98), .CW (8)) dut (
   .clk(clk), .rst_n(rstn), .sto(sto), .cfg_pol(16'd0), .cfg_rle(rle), .cfg_trig_mode(tmode), .trig_i(trig), .sts_armed(armed),
   .reg_wr_data(reg_wr_data), .reg_wr_we(reg_wr_we), .reg_addr(reg_addr), .reg_ctrl(reg_ctrl), .ctl_rst(ctl_rst), .reg_sts(reg_sts),
-  .gpio_ctrl_reg(ctrl8), .gpio_step(32'h100), .gpio_buf_size(32'h10000), .gpio_buf1_adr(32'h3000), .gpio_buf2_adr(32'h20000), .gpio_wp(rp),
+  .gpio_ctrl_reg(ctrl8), .gpio_step(32'h100), .gpio_buf_size(32'h10000), .gpio_buf1_adr(32'h3000), .gpio_buf2_adr(32'h20000), .gpio_wp(rp), .out_wait(out_wait),
   .m_axi_gpio_arid_o(), .m_axi_gpio_araddr_o(araddr), .m_axi_gpio_arlen_o(arlen), .m_axi_gpio_arsize_o(), .m_axi_gpio_arburst_o(),
   .m_axi_gpio_arlock_o(), .m_axi_gpio_arcache_o(), .m_axi_gpio_arprot_o(), .m_axi_gpio_arvalid_o(arvalid), .m_axi_gpio_arready_i(arready),
   .m_axi_gpio_rid_i(4'd0), .m_axi_gpio_rdata_i(rdata), .m_axi_gpio_rresp_i(2'd0), .m_axi_gpio_rlast_i(rlast), .m_axi_gpio_rvalid_i(rvalid),
@@ -118,8 +120,31 @@ initial begin
   active = 0;
   $display("refill: %0d buffers handed again, %0d samples, %0d wrong run lengths, %0d buffer changes, %0d gaps", handed, samples, badRun, jumps, gaps);
   if (handed < 6 || badRun > 0 || gaps > 0 || jumps > handed + 2) errors++;
+  $display("refill: output wait %0d clocks (0)", out_wait);
+  if (out_wait != 0) errors++;
   wr(32'h90, 32'h2);
   repeat (8) @(negedge clk);
+  // no refill: after its two buffers the output waits, every clock counted; then refilled, it
+  // plays on and the count stops; the stop keeps it
+  begin
+    longint w1, w2, w3, w4;
+    wr(32'h90, 32'h22);
+    wr(32'h90, 32'h1);
+    wr(32'h90, 32'h80);
+    repeat (40000) @(negedge clk);  // the two buffers take 0x8000 clocks
+    w1 = out_wait;
+    repeat (10000) @(negedge clk);
+    w2 = out_wait;
+    refill(40000);
+    w3 = out_wait;
+    repeat (8) @(negedge clk);
+    wr(32'h90, 32'h2);
+    repeat (8) @(negedge clk);
+    w4 = out_wait;
+    $display("wait: %0d clocks waited by 40000 clocks, %0d more in 10000 clocks, %0d after a refill of 40000 clocks, %0d after the stop", w1, w2 - w1, w3 - w2, w4);
+    // after a wait the DMA starts again (FIFO reset and fill): some 600 clocks more
+    if (w1 == 0 || w2 - w1 != 10000 || w3 - w2 > 1000 || w4 != w3) errors++;
+  end
   // trigger mode: armed once the FIFO is full, silent until the trigger edge, then plays
   tmode = 1; rle = 1;
   wr(32'h90, 32'h22);

@@ -34,6 +34,7 @@ module gpio_dma_mm2s
   output [32-1:0]                       diag_reg,
   output [32-1:0]                       diag_reg2,
   input  wire                           gpio_rready_i,
+  output wire                           idle_o,  // stopped (reset): nothing to play
   input  wire                           trigger_mode_i,
   input  wire                           trigger_i,
   output wire                           armed_o,
@@ -104,6 +105,7 @@ wire                      ctrl_strm  = dac_ctrl_reg[CTRL_MODE_STREAM];
 
 assign dac_rdata_o  = downsized_data;
 assign dac_rvalid_o = downsized_valid;
+assign idle_o       = dma_idle;
 
 assign fifo_wr_data  = m_axi_rdata_i;
 assign fifo_wr_we = m_axi_rvalid_i && m_axi_rready_o;
