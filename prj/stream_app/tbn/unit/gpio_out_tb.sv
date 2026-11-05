@@ -1,6 +1,8 @@
 // GPIO output stream from memory, self checking: every 32 bit word {P, N, 0, count} is
 // played for count+1 clocks with RLE (count 0..3 here, count 0 included), for one clock without.
 // The value of a word is its address / 4, so the sequence and the run lengths are known.
+// Continuous streaming: a driver hands the slots again on their free flags (0x98 bits 7/8): the
+// output plays without a gap.
 `timescale 1ns / 1ps
 module gpio_out_tb;
 parameter int WE_CLOCKS = 2;
@@ -90,12 +92,34 @@ task run_case(input bit r, input int clocks);
   if (samples > 0) begin errors++; $display("  %0d samples after the stop", samples); end
 endtask
 
+// the driver: the slots in turn, each once its free flag is up
+int handed = 0;
+task refill(input int clocks);
+  int next = 0;  // buffer 1 plays first, buffer 2 is ready: buffer 1 is the next to hand again
+  repeat (clocks) begin
+    @(negedge clk);
+    if (reg_sts[7 + next]) begin wr(32'h90, next ? 32'h80 : 32'h40); handed++; next ^= 1; end
+  end
+endtask
+
 initial begin
   repeat (20) @(negedge clk);
   rstn = 1;
   repeat (200) @(negedge clk);
   run_case(1, 30000);
   run_case(0, 30000);
+  // continuous, without RLE a buffer of 0x4000 words plays in 0x4000 clocks
+  rle = 0;
+  wr(32'h90, 32'h22);
+  samples = 0; values = 0; badRun = 0; jumps = 0; gaps = 0; started = 0; handed = 0; active = 1;
+  wr(32'h90, 32'h1);
+  wr(32'h90, 32'h80);
+  refill(150000);
+  active = 0;
+  $display("refill: %0d buffers handed again, %0d samples, %0d wrong run lengths, %0d buffer changes, %0d gaps", handed, samples, badRun, jumps, gaps);
+  if (handed < 6 || badRun > 0 || gaps > 0 || jumps > handed + 2) errors++;
+  wr(32'h90, 32'h2);
+  repeat (8) @(negedge clk);
   // trigger mode: armed once the FIFO is full, silent until the trigger edge, then plays
   tmode = 1; rle = 1;
   wr(32'h90, 32'h22);

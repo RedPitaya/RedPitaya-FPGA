@@ -42,7 +42,7 @@ xvlog \$G/gpio_dma_s2mm.v \$G/gpio_dma_s2mm_ctrl.v \$G/gpio_dma_s2mm_data_ctrl.v
 xelab -relax -debug off -timescale 1ns/1ps -L fifo_generator_v13_2_13 -L unisims_ver -L xpm gpio_in_tb glbl -s gin_tb >> gpio.log
 xsim gin_tb -R | grep -E '^(ok|FAIL|PASS)'
 xelab -relax -debug off -timescale 1ns/1ps -L fifo_generator_v13_2_13 -L unisims_ver -L xpm gpio_out_tb glbl -s gout_tb >> gpio.log
-xsim gout_tb -R | grep -E '^(RLE|trigger|FAIL|PASS)'
+xsim gout_tb -R | grep -E '^(RLE|refill|trigger|FAIL|PASS)'
 # register path of rp_gpio (the bridge IP is modelled in the bench)
 xvlog -sv \$LIB \$G/gpio_in_top.sv \$G/rle_rev.sv \$G/gpio_out_top.sv \$G/rp_gpio.sv $FPGA/rtl/rtl/debounce.sv $HERE/rp_gpio_regs_tb.sv > regs.log
 xelab -relax -debug off -timescale 1ns/1ps -L fifo_generator_v13_2_13 -L unisims_ver -L xpm rp_gpio_regs_tb glbl -s regs_tb >> regs.log

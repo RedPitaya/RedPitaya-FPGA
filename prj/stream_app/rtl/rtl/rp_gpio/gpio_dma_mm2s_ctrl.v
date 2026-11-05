@@ -78,6 +78,8 @@ localparam END_STATE_BUF2       = 3;
 localparam RESET_STATE          = 4;
 localparam SEND_DMA_STATE1      = 5;
 localparam SEND_DMA_STATE2      = 6;
+localparam BUF1_FREE            = 7;  // buffer 1 may take the next address: the DMA reads buffer 2 or waits for 1
+localparam BUF2_FREE            = 8;
 
 
 localparam AXI_BURST_BYTES  = AXI_BURST_LEN*AXI_DATA_BITS/8;
@@ -260,6 +262,8 @@ begin
     reg_sts[SEND_DMA_STATE1]  <= (state_cs == SEND_DMA_REQ  && ~req_buf_addr_sel);
     reg_sts[SEND_DMA_STATE2]  <= (state_cs == SEND_DMA_REQ  &&  req_buf_addr_sel);
     reg_sts[RESET_STATE] <= (state_cs == FIFO_RST);
+    reg_sts[BUF1_FREE]        <= req_buf_addr_sel == 1'b1 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b0) || (state_cs == IDLE);
+    reg_sts[BUF2_FREE]        <= req_buf_addr_sel == 1'b0 || (((state_cs == WAIT_BUF_FULL)) && req_buf_addr_sel == 1'b1) || (state_cs == IDLE);
   end
 end
 

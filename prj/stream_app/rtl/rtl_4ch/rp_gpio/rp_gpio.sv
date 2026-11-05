@@ -640,7 +640,7 @@ begin
     'hD0 : reg_rd_data <=                  {axi_ar_cnt, axi_rlast_cnt};
     'hD4 : reg_rd_data <=                  axi_r_cnt;
     'hD8 : reg_rd_data <=                  sts_in_trig_count;
-    'hDC : reg_rd_data <=                  32'h7;  // features: bit 0 input block mode, bit 1 64 bit lost counters, bit 2 wait counters
+    'hDC : reg_rd_data <=                  32'hF;  // features: bit 0 input block mode, bit 1 64 bit lost counters, bit 2 wait counters, bit 3 output buffer free flags (0x98 bits 7/8)
     'hE0 : reg_rd_data <=                  in_buf1_lost[31: 0];
     'hE4 : reg_rd_data <=                  in_buf1_lost[63:32];
     'hE8 : reg_rd_data <=                  in_buf2_lost[31: 0];

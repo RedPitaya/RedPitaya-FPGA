@@ -86,7 +86,7 @@ initial begin
   dut.U_reg_ctrl.read(32'h0C, d);
   check(d == 32'h2345, $sformatf("0x0C keeps 16 bits (0x%0X)", d));
   dut.U_reg_ctrl.read(32'hDC, d);
-  check(d == 32'h7, $sformatf("0xDC features 0x%0X (7: block mode, 64 bit lost, wait)", d));
+  check(d == 32'hF, $sformatf("0xDC features 0x%0X (F: block mode, 64 bit lost, wait, output free flags)", d));
   dut.U_reg_ctrl.read(32'hF0, d);
   check(d == 0, $sformatf("0xF0 wait before input buffer 1 after reset (0x%0X)", d));
 
