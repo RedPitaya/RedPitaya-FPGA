@@ -20,4 +20,11 @@
 		};
 
 	};
+
+	/* user-space access to dma_region (/dev/rp_resmem), drivers/redpitaya/rp_resmem.c */
+	rp_resmem: rp-resmem {
+		compatible = "redpitaya,rp-resmem";
+		memory-region = <&dma_region>;
+		label = "rp_resmem";
+	};
 };
