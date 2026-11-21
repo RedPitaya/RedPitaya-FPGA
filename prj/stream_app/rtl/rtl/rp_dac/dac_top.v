@@ -114,6 +114,10 @@ wire [DAC_DATA_BITS-1:0]    dac_calibrated;
 wire set_zero = dac_conf[OUT_ZERO];
 wire set_8bit = dac_conf[BIT_MODE];
 reg  hw_trigger_adc;
+// the generator trigger bits of the trigger bus (rp_concat: {.., gen2, gen1})
+localparam [TRIG_SRC_NUM-1:0] TRIG_GEN_BITS = 2'b11;  // zero-extended to the bus width
+reg  hw_swap_adc;   // the hardware trigger of the legacy buffer swap: no generator bits
+wire play_start;
 wire playback_trigger_adc = event_num_trig | hw_trigger_adc;
 
 assign dac_data_o      = loopback_en ? dac_data_raw : dac_calibrated;
@@ -166,6 +170,7 @@ rp_dma_mm2s #(
   .trigger_mode_i   (trigger_mode_i),
   .trigger_pulse_i  (playback_trigger_adc),
   .armed_o          (armed_o),
+  .play_start_o     (play_start),
 
   .m_axi_arid_o     (m_axi_dac_arid_o), 
   .m_axi_araddr_o   (m_axi_dac_araddr_o),  
@@ -208,12 +213,17 @@ begin
     event_num_stop  <= 0;    
     event_num_reset <= 0;
     hw_trigger_adc  <= 0;
+    hw_swap_adc     <= 0;
   end else begin
     event_num_trig  <= event_ip_trig[event_sel];    
     event_num_start <= event_ip_start[event_sel];   
     event_num_stop  <= event_ip_stop[event_sel];     
     event_num_reset <= event_ip_reset[event_sel];
     hw_trigger_adc  <= |(trig_ip & dac_trig);
+    // The generator outputs pulse when a channel starts: in the streaming mode they must not
+    // swap the buffers (the server keeps GEN_A in the mask outside the trigger mode, and the
+    // pulse of the channel itself would cut its first buffer). They only start a playback.
+    hw_swap_adc     <= |(trig_ip & dac_trig & ~TRIG_GEN_BITS);
   end
 end
 
@@ -233,7 +243,7 @@ begin
   end else begin
     event_trig_r        <= event_num_trig;
     event_trig_r2       <= event_trig_r;
-    hw_trigger_axi_r    <= hw_trigger_adc;
+    hw_trigger_axi_r    <= hw_swap_adc;
     hw_trigger_axi_r2   <= hw_trigger_axi_r;
     trigger_mode_axi_r  <= trigger_mode_i;
     trigger_mode_axi_r2 <= trigger_mode_axi_r;
@@ -251,9 +261,11 @@ always @(posedge clk_axi)
   ctl_trg_r <= axi_rstn & ~trigger_mode_axi_r2 & (event_trig_r2 | hw_trigger_axi_r2);
 assign ctl_trg = ctl_trg_r;
 
-////////////////////////////////////////////////////////////
-// Name : 
-// 
-////////////////////////////////////////////////////////////
+// The trigger output of the channel (gen1/gen2 trigger of the bus): one clock of the DAC
+// clock when the playback starts, registered for the bus
+reg trig_op_r;
+always @(posedge clk_adc)
+  trig_op_r <= rstn_cal & play_start;
+assign trig_op = trig_op_r;
 
 endmodule

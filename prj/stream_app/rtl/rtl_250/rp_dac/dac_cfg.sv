@@ -183,12 +183,13 @@ localparam DIAG_REG_ADDR1       = 12'h70;
 localparam DIAG_REG_ADDR2       = 12'h74;
 localparam DIAG_REG_ADDR3       = 12'h78;
 localparam DIAG_REG_ADDR4       = 12'h8C;
-localparam FEATURES_ADDR        = 12'h90;  // Read only: bit 0 normal mode (buffer 1 repeated by the DMA)
+localparam FEATURES_ADDR        = 12'h90;  // Read only: bit 0 normal mode (buffer 1 repeated by the DMA),
+                                             // bit 1 trigger outputs (gen1/gen2 trigger pulses when a channel starts)
 localparam DMA_LOOP_CNT         = 12'h94;  // Normal mode repeats of buffer 1, 0 - until reset
 localparam DMA_LOOP_PLAYED_CHA  = 12'h98;  // Read only: repeats read out since the start
 localparam DMA_LOOP_PLAYED_CHB  = 12'h9C;
 
-localparam FEATURES             = 32'h1;
+localparam FEATURES             = 32'h3;
 localparam STATUS_REG           = 12'h100;   // status of FPGA clock
 localparam CLKSEL_REG           = 16'h1000;  // FPGA mode
 

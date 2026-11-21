@@ -45,6 +45,7 @@ module rp_dma_mm2s
   input  wire                           trigger_mode_i,
   input  wire                           trigger_pulse_i,
   output wire                           armed_o,
+  output wire                           play_start_o, // one clock when the playback starts
 
   // 
   output wire [3:0]                       m_axi_arid_o     , // read address ID
@@ -191,7 +192,8 @@ rp_dma_mm2s_downsize #(
   .armed_o        (armed_o),
   .m_axis_tdata   (dac_rdata_o),
   .m_axis_tvalid  (dac_rvalid_o),
-  .drained_o      (ds_drained));      
+  .drained_o      (ds_drained),
+  .play_start_o   (play_start_o));      
 
 
 ////////////////////////////////////////////////////////////

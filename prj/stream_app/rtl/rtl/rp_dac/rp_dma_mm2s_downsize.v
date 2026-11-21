@@ -22,7 +22,8 @@ module rp_dma_mm2s_downsize
 
   output reg [AXIS_DATA_BITS-1:0] m_axis_tdata,
   output reg                      m_axis_tvalid,
-  output reg                      drained_o      // the FIFO ran empty and the last sample is out
+  output reg                      drained_o,     // the FIFO ran empty and the last sample is out
+  output reg                      play_start_o   // one clock: the playback starts (once per start or trigger)
 );
 
 localparam NUM_SAMPS      = AXI_DATA_BITS/8;   // how many samples in one read from FIFO
@@ -170,6 +171,16 @@ end
 
 always @(posedge clk)
   drained_o <= state_cs == EMPTY_W;
+
+// INIT_RD is passed once per playback: after the start outside the trigger mode, after an
+// accepted trigger in it. A FIFO that ran empty comes back through EMPTY_REC, not INIT_RD.
+always @(posedge clk)
+begin
+  if (rst == 0)
+    play_start_o <= 1'b0;
+  else
+    play_start_o <= state_cs == INIT_RD;
+end
 
 always @(posedge clk)
 begin

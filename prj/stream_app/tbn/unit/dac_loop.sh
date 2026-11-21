@@ -8,6 +8,7 @@ RTL=$FPGA/prj/stream_app/rtl
 WORK=${WORK:-$(mktemp -d)}
 IMAGE=${IMAGE:-vivado:2025.1}
 VARIANT=${VARIANT:-rtl}
+# SEED=n: another seed of the AXI stalls of the bench (+seed=n, default 1)
 
 script="
 set -e
@@ -27,7 +28,7 @@ xvlog -sv $HERE/dac_loop_tb.sv > dac.log || { grep ERROR dac.log; exit 1; }
 xvlog \$D/rp_dma_mm2s.v \$D/rp_dma_mm2s_ctrl.v \$D/rp_dma_mm2s_data_ctrl.v \$D/rp_dma_mm2s_downsize.v \
       dip/fifo_axi_data_dac/sim/fifo_axi_data_dac.v dip/export/fifo_axi_data_dac/xsim/glbl.v >> dac.log || { grep ERROR dac.log; exit 1; }
 xelab -debug off -L fifo_generator_v13_2_13 -L unisims_ver -L xpm dac_loop_tb glbl -s dac_tb >> dac.log || { grep ERROR dac.log; exit 1; }
-xsim dac_tb -R | grep -E '^(ok|FAIL|PASS)'
+xsim dac_tb ${SEED:+-testplusarg seed=$SEED} -R | grep -E '^(ok|FAIL|PASS)'
 "
 if command -v xvlog >/dev/null; then
     bash -c "$script"

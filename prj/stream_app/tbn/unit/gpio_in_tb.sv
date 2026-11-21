@@ -26,6 +26,7 @@ assign sti.TLAST  = 1'b0;
 
 logic [31:0] reg_addr = 0, reg_wr_data = 0;
 logic        reg_wr_we = 0;
+logic [31:0] bsize = 32'(WORDS * 4), b1 = B1, b2 = B2;  // test 9 leaves them unset
 logic        ctl_acq = 0, ctl_stp = 0, ctl_rst = 0;
 logic        tmode = 0, trig = 0;
 logic [15:0] epos = 0;
@@ -48,7 +49,7 @@ gpio_in_top #(.DN (2), .DT (DT), .TN (6), .M_AXI_GPIO_ADDR_BITS (32), .M_AXI_GPI
   .cfg_trg(6'd0), .ctl_trg(6'd0), .trg_out(latrg),
   .reg_wr_data(reg_wr_data), .reg_wr_we(reg_wr_we), .reg_addr(reg_addr), .reg_ctrl(reg_ctrl),
   .ctl_rst(ctl_rst), .ctl_acq(ctl_acq), .ctl_stp(ctl_stp), .reg_sts(reg_sts), .gpio_ctrl_reg(8'd0), .gpio_sts_reg(),
-  .gpio_buf_size(32'(WORDS * 4)), .gpio_buf1_adr(B1), .gpio_buf2_adr(B2), .gpio_step(32'd1),
+  .gpio_buf_size(bsize), .gpio_buf1_adr(b1), .gpio_buf2_adr(b2), .gpio_step(32'd1),
   .gpio_wp(), .dma_diags(),
   .cfg_trig_mode(tmode), .cfg_trig_blocks(nblk), .trig_i(trig), .sts_armed(armed), .sts_trig_taken(taken),
   .buf1_lost(lost1), .buf2_lost(lost2), .buf1_wait(wait1), .buf2_wait(wait2),
@@ -69,6 +70,10 @@ always @(posedge clk) begin
   end
   bvalid <= wvalid && wready && wlast;
 end
+
+// ---- test 9: the burst addresses of a run
+bit collect = 0; logic [31:0] seenAw[$];
+always @(posedge clk) if (collect && awvalid && awready) seenAw.push_back(awaddr);
 
 // ---- the first word the gate takes after a start: reference of the first lost count
 int unsigned startJ, startSamples; bit startSeen = 0;
@@ -256,6 +261,27 @@ initial begin
     epos = 0;
     if (n0 < 510 || n0 > 514 || n1 < 1 || n1 > 3) fail($sformatf("pattern trigger: P0 rising %0d (512), N0 rising %0d (2)", n0, n1));
     else ok($sformatf("pattern trigger: P0 rising %0d, N0 rising %0d in 1024 clocks", n0, n1));
+  end
+
+  // 9: buffers not set up (the register tests leave all ones, a fresh board zeros): every burst
+  // goes to the start of a buffer, as with the modulo 2^32 end compare; a wrapped end address
+  // let the DMA write on through the whole memory (rp30 rebooted, 2026-11-11)
+  begin
+    logic [31:0] cfg [3][3] = '{'{32'h0, 32'h0, 32'h0}, '{32'hFFFFFF80, 32'hFFFFFF80, 32'hFFFFFF}, '{32'h40, 32'h0, 32'h40}};
+    for (int c = 0; c < 3; c++) begin
+      int bad = 0;
+      b1 = cfg[c][0]; b2 = cfg[c][1]; bsize = cfg[c][2];
+      seenAw.delete(); collect = 1;
+      begin_run(0, 0, 0);
+      repeat (40 * 16) @(negedge clk);
+      collect = 0;
+      end_run();
+      foreach (seenAw[i]) if (seenAw[i] != b1 && seenAw[i] != b2) bad++;
+      if (seenAw.size() == 0 || bad) fail($sformatf("unset buffers %h/%h size %h: %0d of %0d bursts outside the buffer starts (first %h)",
+                                                    b1, b2, bsize, bad, seenAw.size(), seenAw.size() ? seenAw[0] : 0));
+      else ok($sformatf("unset buffers %h/%h size %h: %0d bursts, all at a buffer start", b1, b2, bsize, seenAw.size()));
+    end
+    b1 = B1; b2 = B2; bsize = 32'(WORDS * 4);
   end
 
   if (errors == 0) $display("PASS gpio_in_tb"); else $display("FAIL gpio_in_tb: %0d", errors);

@@ -30,6 +30,7 @@ reg         trig_mode = 0, trig_pulse = 0, dma_trig = 0;
 wire [31:0] sts, played;
 wire [15:0] dout;
 wire        dvalid;
+wire        pstart;
 
 wire [31:0] araddr; wire [7:0] arlen; wire arvalid; reg arready = 0;
 reg  [63:0] rdata = 0; reg rlast = 0, rvalid = 0; wire rready;
@@ -40,7 +41,7 @@ rp_dma_mm2s #(.AXI_ADDR_BITS(32), .AXI_DATA_BITS(64), .AXIS_DATA_BITS(16), .AXI_
   .dac_step (32'h1_0000), .dac_buf_size (buf_size), .dac_buf1_adr (BUF1), .dac_buf2_adr (BUF2),
   .dac_rp (), .dac_trig (dma_trig), .dac_ctrl_reg (ctrl), .loop_cnt (loop_cnt), .loop_played (played),
   .dac_rdata_o (dout), .dac_rvalid_o (dvalid), .diag_reg (), .diag_reg2 (),
-  .set_8bit_i (1'b0), .trigger_mode_i (trig_mode), .trigger_pulse_i (trig_pulse), .armed_o (),
+  .set_8bit_i (1'b0), .trigger_mode_i (trig_mode), .trigger_pulse_i (trig_pulse), .armed_o (), .play_start_o (pstart),
   .m_axi_arid_o (), .m_axi_araddr_o (araddr), .m_axi_arlen_o (arlen), .m_axi_arsize_o (),
   .m_axi_arburst_o (), .m_axi_arlock_o (), .m_axi_arcache_o (), .m_axi_arprot_o (),
   .m_axi_arvalid_o (arvalid), .m_axi_arready_i (arready), .m_axi_arqos_o (),
@@ -57,7 +58,13 @@ endtask
 // AXI read slave: one burst at a time, random stalls on the address and between the beats
 int unsigned STALL = 30;     // % of clocks without a beat
 int unsigned AR_DELAY = 0;   // clocks before a read address is accepted, besides the random ones
+// The stalls come from this process alone, seeded by +seed=N: the same stalls whatever other
+// processes the design has (a new register in the DUT changed them through the default seeding).
+int unsigned SEED = 1;
+initial void'($value$plusargs("seed=%d", SEED));
+bit seeded = 0;
 always begin
+  if (!seeded) begin process::self().srandom(SEED); seeded = 1; end
   @(posedge aclk);
   if (arvalid) begin
     int unsigned a, n;
@@ -88,8 +95,9 @@ end
 // output samples, as the DAC takes them
 bit [15:0] out[$];
 bit        out_v[$];
+bit        out_p[$];  // play_start_o: the trigger output of the channel (dac_top trig_op)
 bit        rec = 0;
-always @(posedge sclk) if (rec) begin out.push_back(dout); out_v.push_back(dvalid); end
+always @(posedge sclk) if (rec) begin out.push_back(dout); out_v.push_back(dvalid); out_p.push_back(pstart); end
 
 task automatic write_ctrl(bit [7:0] v);
   @(posedge aclk); ctrl <= v; ctrl_val <= 1;
@@ -100,6 +108,30 @@ endtask
 task automatic check(bit ok, string what);
   if (!ok) begin errors++; $display("FAIL  %s (t=%0t)", what, $time); end
   else $display("ok    %s", what);
+endtask
+
+// play_start_o pulses recorded, and the first one
+function automatic int pulses();
+  int c = 0;
+  for (int i = 0; i < out_p.size(); i++) c += out_p[i];
+  return c;
+endfunction
+
+function automatic int first_pulse();
+  for (int i = 0; i < out_p.size(); i++) if (out_p[i]) return i;
+  return -1;
+endfunction
+
+// one play_start_o pulse for the whole playback, as the output turns valid (the DAC starts):
+// later swaps, refills after an empty FIFO and further triggers give no pulse. The first sample of
+// the buffer `f` follows the valid zeros the output starts with.
+task automatic check_start(int f, string what);
+  int p = first_pulse();
+  int v = -1;
+  for (int i = 0; i < out_v.size(); i++) if (out_v[i]) begin v = i; break; end
+  check(pulses() == 1 && p >= 0 && v >= p && v - p <= 2 && f >= v,
+        $sformatf("%s: one start pulse, %0d clock(s) before the output turns valid (%0d pulses, sample 0 after %0d valid zeros)",
+                  what, v - p, pulses(), f - v));
 endtask
 
 // first valid sample of the buffer at the output
@@ -136,7 +168,7 @@ task automatic start_loop(int unsigned n, int unsigned count);
   write_ctrl(C_RESET | C_NORM);
   buf_size = n * 2; loop_cnt = count;
   write_ctrl(C_BUF1);
-  out.delete(); out_v.delete(); rec = 1;
+  out.delete(); out_v.delete(); out_p.delete(); rec = 1;
   write_ctrl(C_START);
 endtask
 
@@ -154,6 +186,7 @@ task automatic endless(int unsigned n, int unsigned reps);
   check(f >= 0 && zeros_before(f), $sformatf("endless, %0d samples: the playback starts with sample 0", n));
   check(played >= reps, $sformatf("endless, %0d samples: %0d repeats read", n, played));
   check(!sts[S_LOOP_DONE], "endless: not done");
+  check_start(f, $sformatf("endless, %0d samples", n));
   write_ctrl(C_RESET);
   repeat (200) @(posedge aclk);
   rec = 0;
@@ -188,6 +221,7 @@ task automatic finite(int unsigned n, int unsigned count);
   end
   check(sts[S_LOOP_DONE], $sformatf("%0d x %0d: done in the status", count, n));
   check(played == count, $sformatf("%0d x %0d: %0d repeats read", count, n, played));
+  check_start(f, $sformatf("%0d x %0d", count, n));
 endtask
 
 // trigger mode with the normal mode: armed and quiet until the first trigger, which starts the
@@ -200,6 +234,7 @@ task automatic triggered(int unsigned n, int unsigned count);
   start_loop(n, count);
   repeat (3000) @(posedge sclk);
   check(out.size() > 0 && first_of(TAG1) < 0 && !played_out(), $sformatf("triggered %s: nothing played before the trigger", what));
+  check(pulses() == 0, $sformatf("triggered %s: no start pulse while armed", what));
   @(posedge sclk) trig_pulse <= 1;
   @(posedge sclk) trig_pulse <= 0;
   // more triggers of both kinds while playing
@@ -224,6 +259,7 @@ task automatic triggered(int unsigned n, int unsigned count);
   rec = 0;
   f = first_of(TAG1);
   l = f < 0 ? 0 : run_len(f, n, TAG1);
+  check_start(f, $sformatf("triggered %s, 8 more triggers", what));
   if (count) begin
     check(f >= 0 && l == count * n, $sformatf("triggered %s: exactly %0d in a row despite 8 more triggers (%0d)", what, count * n, l));
     check(sts[S_LOOP_DONE] && played == count, $sformatf("triggered %s: done, %0d repeats read", what, played));
@@ -246,7 +282,7 @@ task automatic streaming(int unsigned n, int unsigned swaps, int unsigned last =
   buf_size = n * 2;
   write_ctrl(C_BUF1);
   write_ctrl(C_BUF2);
-  out.delete(); out_v.delete(); rec = 1;
+  out.delete(); out_v.delete(); out_p.delete(); rec = 1;
   write_ctrl(C_START);
   idx = 0;
   for (int s = 0; s < swaps; s++) begin
@@ -276,6 +312,7 @@ task automatic streaming(int unsigned n, int unsigned swaps, int unsigned last =
     check(f >= 0 && (f + total >= out.size() || out[f + total] != (((swaps - 1) % 2) ? TAG2 : TAG1) + last),
           "streaming: nothing past the end of the short last buffer");
   check(!sts[S_LOOP_DONE], "streaming: no loop done");
+  check_start(f, $sformatf("streaming, %0d buffers", swaps));
   write_ctrl(C_RESET);
 endtask
 

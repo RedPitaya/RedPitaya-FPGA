@@ -112,6 +112,25 @@ reg  [2:0]                state_ns;                // Next state
 reg  [199:0]              state_ascii;             // ASCII state
 reg  [AXI_ADDR_BITS-1:0]  req_addr;
 reg  [AXI_ADDR_BITS-1:0]  req_buf_addr;
+// Where the last burst of a buffer starts. The buffer addresses and the size are static while the
+// DMA runs: the end of the buffer being filled is switched with req_buf_addr, so the end test of
+// the request address is one comparison, without the two adders on that path (timing at 125 MHz).
+// A buffer whose last burst would start below 0 or past the address space (a size below one
+// burst, or registers not set up: the register tests write all ones) ends with every burst,
+// as the modulo 2^32 comparison did before; a wrapped end address must never be compared,
+// or the DMA writes on through the whole memory.
+reg  [AXI_ADDR_BITS-1:0]  buf1_last, buf2_last, req_buf_last;
+reg                       buf1_last_any, buf2_last_any, req_buf_last_any;
+wire [AXI_ADDR_BITS+1:0]  buf1_last_w = {2'b00, reg_dst_addr1[AXI_ADDR_BITS-1:0]} + reg_buf_size[BUF_SIZE_BITS-1:0] - AXI_BURST_BYTES;
+wire [AXI_ADDR_BITS+1:0]  buf2_last_w = {2'b00, reg_dst_addr2[AXI_ADDR_BITS-1:0]} + reg_buf_size[BUF_SIZE_BITS-1:0] - AXI_BURST_BYTES;
+wire                      req_at_last = req_buf_last_any | (req_addr >= req_buf_last);
+always @(posedge m_axi_aclk)
+begin
+  buf1_last     <= buf1_last_w[AXI_ADDR_BITS-1:0];
+  buf2_last     <= buf2_last_w[AXI_ADDR_BITS-1:0];
+  buf1_last_any <= |buf1_last_w[AXI_ADDR_BITS+1:AXI_ADDR_BITS];
+  buf2_last_any <= |buf2_last_w[AXI_ADDR_BITS+1:AXI_ADDR_BITS];
+end
 reg                       req_buf_addr_sel;
 reg                       req_buf_addr_sel_p1;
 wire                      req_buf_addr_sel_pedge;
@@ -169,8 +188,18 @@ assign buf_sel_out = req_buf_addr_sel_p1;
 assign ctl_start_o = (reg_ctrl[CTRL_STRT] == 1) | ctl_start_ext | bit_start; // create a pulse of length of 2 clock periods
 assign full_immed  = m_axi_wvalid & m_axi_wlast & next_buf_full;
 assign dma_req_start = m_axi_awvalid & m_axi_awready;
-assign buf1_timestamp_we = dma_req_start & (req_buf_addr_sel == 1'b0) & (req_addr == reg_dst_addr1);
-assign buf2_timestamp_we = dma_req_start & (req_buf_addr_sel == 1'b1) & (req_addr == reg_dst_addr2);
+// The address handshake (awvalid & awready) comes a clock after the request address changes at
+// the earliest: req_addr changes in other states than the one that raises awvalid and is held
+// while awvalid is up. So the start of a buffer is compared a clock ahead, out of the enable path
+// of the timestamps and of the 64 bit lost and wait marks (timing at 125 MHz).
+reg                       req_at_dst1, req_at_dst2;
+always @(posedge m_axi_aclk)
+begin
+  req_at_dst1 <= req_addr == reg_dst_addr1[AXI_ADDR_BITS-1:0];
+  req_at_dst2 <= req_addr == reg_dst_addr2[AXI_ADDR_BITS-1:0];
+end
+assign buf1_timestamp_we = dma_req_start & (req_buf_addr_sel == 1'b0) & req_at_dst1;
+assign buf2_timestamp_we = dma_req_start & (req_buf_addr_sel == 1'b1) & req_at_dst2;
 ////////////////////////////////////////////////////////////
 // Name : Request FIFO 
 // Stores the DMA requests.
@@ -784,7 +813,7 @@ begin
         // started again by a series drop is far from its end
         else if (rew_now && rew_part)
             next_buf_full <= 0;
-        else if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+        else if (req_at_last) begin
           if (((req_buf_addr_sel == 0) && buf2_full) || ((req_buf_addr_sel == 1) && buf1_full)) begin // data loss is occuring
             next_buf_full <= 1;  
           end
@@ -814,7 +843,7 @@ begin
         // a flag before it was undone by a release in that time, and the buffer stayed full.
         if (transf_end && (state_cs == SEND_DMA_REQ)) begin
           // Reset to the start of the buffer if we have reached the end
-          if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+          if (req_at_last) begin
             if (req_buf_addr_sel == 0) begin // buffer 1 is full if next transfer goes over specified buffer size
               buf1_full <= 1;
             end
@@ -844,7 +873,7 @@ begin
         buf1_ovr <= 0;     
       end else begin
           // Reset to the start of the buffer if we have reached the end
-        if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+        if (req_at_last) begin
             if ((req_buf_addr_sel == 1) && buf1_full)
               buf1_ovr <= 1;  
         end
@@ -871,7 +900,7 @@ begin
         buf2_full <= 0;     
       end else begin
         if (transf_end && (state_cs == SEND_DMA_REQ)) begin  // as buffer 1
-          if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+          if (req_at_last) begin
             if (req_buf_addr_sel == 1) begin // buffer 2 is full if next transfer goes over specified buffer size
               buf2_full <= 1;  
             end
@@ -900,7 +929,7 @@ begin
       if (reg_ctrl[CTRL_BUF2_ACK] == 1) begin
         buf2_ovr <= 0;     
       end else begin
-        if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+        if (req_at_last) begin
             if ((req_buf_addr_sel == 0) && buf2_full) 
               buf2_ovr <= 1;  
         end
@@ -931,7 +960,7 @@ begin
     SEND_DMA_REQ: begin
       if (transf_end) begin
         // Swap the buffer if we have reached the end of the current one
-        if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+        if (req_at_last) begin
           if ((req_buf_addr_sel == 0) && ~buf2_full) begin // only switch addresses when next buffer is read out
             req_addr <= reg_dst_addr2;          
           end 
@@ -968,17 +997,17 @@ begin
   case (state_cs)
     // IDLE - Wait for the DMA start signal
     IDLE: begin
-      req_buf_addr <= reg_dst_addr1;  
+      begin req_buf_addr <= reg_dst_addr1; req_buf_last <= buf1_last; req_buf_last_any <= buf1_last_any; end  
     end  
     
     SEND_DMA_REQ: begin
       if (transf_end) begin        // Reset to the start of the buffer if we have reached the end
-        if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+        if (req_at_last) begin
           if ((req_buf_addr_sel == 0) && ~buf2_full) begin //only start writing to buf2 if it's empty
-            req_buf_addr <= reg_dst_addr2;          
+            begin req_buf_addr <= reg_dst_addr2; req_buf_last <= buf2_last; req_buf_last_any <= buf2_last_any; end          
           end 
           if ((req_buf_addr_sel == 1) && ~buf1_full) begin //only start writing to buf1 if it's empty
-            req_buf_addr <= reg_dst_addr1;
+            begin req_buf_addr <= reg_dst_addr1; req_buf_last <= buf1_last; req_buf_last_any <= buf1_last_any; end
           end   
         end
       end  
@@ -988,10 +1017,10 @@ begin
       if (~next_buf_full) begin
         // Swap the buffer if we have reached the end of the current one
           if ((req_buf_addr_sel == 0) && ~buf2_full) begin // only switch addresses when next buffer is read out
-            req_buf_addr <= reg_dst_addr2;          
+            begin req_buf_addr <= reg_dst_addr2; req_buf_last <= buf2_last; req_buf_last_any <= buf2_last_any; end          
           end 
           if ((req_buf_addr_sel == 1) && ~buf1_full) begin
-            req_buf_addr <= reg_dst_addr1;
+            begin req_buf_addr <= reg_dst_addr1; req_buf_last <= buf1_last; req_buf_last_any <= buf1_last_any; end
           end  
         end      
       end          
@@ -1013,7 +1042,7 @@ begin
     
     SEND_DMA_REQ: begin
       if (transf_end) begin        // Reset to the start of the buffer if we have reached the end
-        if ((req_addr+AXI_BURST_BYTES) >= (req_buf_addr[AXI_ADDR_BITS-1:0]+reg_buf_size[BUF_SIZE_BITS-1:0])) begin
+        if (req_at_last) begin
           if (~buf1_full && req_buf_addr_sel == 1'b1) 
             req_buf_addr_sel <= 1'b0;
         

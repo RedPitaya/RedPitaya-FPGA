@@ -197,6 +197,17 @@ task automatic run(input int unsigned dec, input int unsigned nbuf, input int un
   wr(32'h0000_0010);  // reset
 endtask
 
+// rp_dma_s2mm_ctrl compares the buffer start a clock ahead of the address handshake: at every
+// handshake the registered compare must be what the address says
+int unsigned ahead_errors = 0;
+always @(posedge clk)
+  if (dut.U_dma_s2mm_ctrl.dma_req_start &&
+      ((dut.U_dma_s2mm_ctrl.req_at_dst1 != (dut.U_dma_s2mm_ctrl.req_addr == DST1)) ||
+       (dut.U_dma_s2mm_ctrl.req_at_dst2 != (dut.U_dma_s2mm_ctrl.req_addr == DST2)))) begin
+    if (ahead_errors == 0) $display("FAIL the buffer start compared ahead differs from the address 0x%h (t=%0t)", dut.U_dma_s2mm_ctrl.req_addr, $time);
+    ahead_errors++;
+  end
+
 initial begin
   run(1, 40, 30, 0);
   run(4, 30, 30, 0);
@@ -205,6 +216,7 @@ initial begin
   run(4, 30, 0, 2000);
   run(1, 40, 30, 3000);  // gaps and overflow: wait <= lost
   if (breaks) $display("KNOWN buffers with a break inside (DMA overflow handling): %0d of %0d", breaks, checks);
+  errors += ahead_errors;
   if (errors == 0) $display("PASS dma_ts_tb (%0d buffers checked)", checks);
   else             $display("FAIL dma_ts_tb: %0d errors in %0d buffers", errors, checks);
   $finish;
