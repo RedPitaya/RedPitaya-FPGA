@@ -3,9 +3,23 @@
 // Author: Iztok Jeras <iztok.jeras@redpitaya.com>
 // (c) Red Pitaya  (redpitaya.com)
 //
-// The datapath is pipelined to close timing; the output is delayed by 2 clock
+// The datapath is pipelined to close timing; the output is delayed by 3 clock
 // cycles. In steady state the pulse pattern is bit identical, except for one
 // spurious output cycle on reset release, when the pre-computed dsr is still 0.
+//
+// The module runs at 250 MHz (4 ns), where a long route is already a violation,
+// and it sits in designs that fill the 7z010 (the logic project: every slice).
+// The changes against the first pipelined version keep the paths short and add
+// no control set (a reset or enable of its own), which a full device cannot pack:
+//  - the output register has no reset: it sits in the IO block, far from the
+//    rest, and the reset of the top reached it over a route of 3 ns. Its input
+//    is reset, so the output is 0 one cycle later;
+//  - the load of the data copy is a registered strobe (ld), not the counter
+//    compare straight into the clock enables. A new str_dat is taken one clock
+//    later than the cycle end, only seen in the first cycle of a period after
+//    the value changed;
+//  - the output decision is taken one clock after the subtraction (sub_q): the
+//    carry chain and the zero detect in one clock were five logic levels.
 ////////////////////////////////////////////////////////////////////////////////
 
 module pdm #(
@@ -42,6 +56,11 @@ end
 // counter next value
 assign nxt = cnt + cke;
 
+// load strobe of the data copy (the counter reached its end), registered
+logic ld;
+always_ff @(posedge clk)
+  ld <= ena & str_rdy;
+
 // counter cycle end
 assign str_rdy = nxt == rng;
 
@@ -49,7 +68,6 @@ generate
 for (genvar i=0; i<CHN; i++) begin: for_chn
 
 logic [DWC-1:0] dat;      // stream input data copy
-logic [DWC-1:0] dat_nxt;  // stream input data copy (next value)
 logic [DWC-1:0] dat_q;    // stream input data copy (pipelined)
 logic [DWC  :0] dsr;      // pre-computed (dat_q - rng), modulo 2**(DWC+1)
 
@@ -58,10 +76,9 @@ logic [DWC-1:0] acu;  // accumulator
 (* keep = "true" *) logic [DWC  :0] sum;  // summation      (acu + dat_q)
 (* keep = "true" *) logic [DWC  :0] sub;  // subtraction    (acu + dat_q - rng)
 
+logic [DWC  :0] sub_q;  // sub, registered for the output decision
+logic           ena_q;  // ena, registered with it
 logic           pdm_d;  // PDM output (pipelined)
-
-// stream input data copy
-assign dat_nxt = ~rstn ? '0 : ((ena & str_rdy) ? str_dat[i] : dat);
 
 // The accumulator loop needs both (acu+dat) and (acu+dat-rng). Chaining the two
 // adders puts two carry chains in series in the feedback loop, which does not
@@ -77,8 +94,10 @@ end else begin
   dsr   <= {1'b0, dat} - {1'b0, rng};
 end
 
+// stream input data copy
 always_ff @(posedge clk)
-  dat <= dat_nxt;
+if (~rstn)    dat <= '0;
+else if (ld)  dat <= str_dat[i];
 
 // summation
 assign sum = {1'b0, acu} + {1'b0, dat_q};
@@ -98,12 +117,21 @@ end
 // The output register sits in the IO block, far from the accumulator logic, so
 // this extra stage splits that path into a logic part and a route only part.
 always_ff @(posedge clk)
-if (~rstn)  pdm_d <= 1'b0;
-else        pdm_d <= ena & (~sub[DWC] | ~|sub[DWC-1:0]);
+if (~rstn) begin
+  sub_q <= '0;
+  ena_q <= 1'b0;
+end else begin
+  sub_q <= sub;
+  ena_q <= ena;
+end
 
 always_ff @(posedge clk)
-if (~rstn)  pdm[i] <= 1'b0;
-else        pdm[i] <= pdm_d;
+if (~rstn)  pdm_d <= 1'b0;
+else        pdm_d <= ena_q & (~sub_q[DWC] | ~|sub_q[DWC-1:0]);
+
+// no reset: pdm_d is reset, the output follows it one cycle later
+always_ff @(posedge clk)
+  pdm[i] <= pdm_d;
 
 end: for_chn
 endgenerate

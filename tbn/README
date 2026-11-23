@@ -47,6 +47,12 @@ line.
   xelab -debug typical --timescale 1ns/1ps rp_decim_tb -s sim
   xsim sim -runall
 
+  # pdm against its reference model (tbn/pdm_ref.sv, before the timing pipeline);
+  # rtl/rtl_250/pdm.sv is the same file
+  xvlog -sv rtl/rtl/pdm.sv tbn/pdm_ref.sv tbn/pdm_eq_tb.sv
+  xelab --timescale 1ns/1ps pdm_eq_tb -s sim
+  xsim sim -runall
+
 xsim writes its work directory into the current directory, so run these from a
 scratch directory if you do not want xsim.dir next to the sources.
 
